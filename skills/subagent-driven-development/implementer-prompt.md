@@ -3,9 +3,10 @@
 Use this template when dispatching an implementer subagent.
 
 ```
-Task tool (general-purpose):
-  description: "Implement Task N: [task name]"
-  prompt: |
+Codex subagent packet (preferred v2):
+  task_name: "<stable_task_name>"
+  agent_type: "worker"
+  message: |
     You are implementing Task N: [task name]
 
     ## Task Description
@@ -24,7 +25,7 @@ Task tool (general-purpose):
     - Dependencies or assumptions
     - Anything unclear in the task description
 
-    **Ask them now.** Raise any concerns before starting work.
+    **Raise them now.** Return a blocking question before starting work if anything is unclear.
 
     ## Your Job
 
@@ -38,7 +39,7 @@ Task tool (general-purpose):
 
     Work from: [directory]
 
-    **While you work:** If you encounter something unexpected or unclear, **ask questions**.
+    **While you work:** If you encounter something unexpected or unclear, stop and report a blocking question.
     It's always OK to pause and clarify. Don't guess or make assumptions.
 
     ## Code Organization
@@ -68,7 +69,7 @@ Task tool (general-purpose):
 
     **How to escalate:** Report back with status BLOCKED or NEEDS_CONTEXT. Describe
     specifically what you're stuck on, what you've tried, and what kind of help you need.
-    The controller can provide more context, re-dispatch with a more capable model,
+    The controller can provide more context, tighten the packet, preserve inherited config,
     or break the task into smaller pieces.
 
     ## Before Reporting Back: Self-Review

@@ -7,14 +7,17 @@ Use this template when dispatching a code quality reviewer subagent.
 **Only dispatch after spec compliance review passes.**
 
 ```
-Task tool (superpowers:code-reviewer):
-  Use template at requesting-code-review/code-reviewer.md
+Codex subagent packet (preferred v2):
+  task_name: "<stable_code_review_name>"
+  agent_type: "reviewer"
+  message: |
+    Use the filled template at requesting-code-review/code-reviewer.md.
 
-  WHAT_WAS_IMPLEMENTED: [from implementer's report]
-  PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-  BASE_SHA: [commit before task]
-  HEAD_SHA: [current commit]
-  DESCRIPTION: [task summary]
+    WHAT_WAS_IMPLEMENTED: [from implementer's report]
+    PLAN_OR_REQUIREMENTS: Task N from [plan-file]
+    BASE_SHA: [commit before task]
+    HEAD_SHA: [current commit]
+    DESCRIPTION: [task summary]
 ```
 
 **In addition to standard code quality concerns, the reviewer should check:**
