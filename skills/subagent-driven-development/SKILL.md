@@ -7,7 +7,7 @@ description: Use when executing implementation plans with independent tasks in t
 
 Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
+**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and use `fork_turns="all"` only when a child genuinely needs the same thread history. This also preserves your own context for coordination work.
 
 **Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
 
@@ -84,20 +84,13 @@ digraph process {
 }
 ```
 
-## Model Selection
+## Child Config Inheritance
 
-Use the least powerful model that can handle each role to conserve cost and increase speed.
+Child agents inherit the parent session config by default. Preserve that inheritance unless the user explicitly asks for a role-specific override.
 
-**Mechanical implementation tasks** (isolated functions, clear specs, 1-2 files): use a fast, cheap model. Most implementation tasks are mechanical when the plan is well-specified.
-
-**Integration and judgment tasks** (multi-file coordination, pattern matching, debugging): use a standard model.
-
-**Architecture, design, and review tasks**: use the most capable available model.
-
-**Task complexity signals:**
-- Touches 1-2 files with a complete spec → cheap model
-- Touches multiple files with integration concerns → standard model
-- Requires design judgment or broad codebase understanding → most capable model
+- Do not pass `model` or `reasoning_effort` in `spawn_agent(...)` during normal operation.
+- Use better task decomposition, clearer acceptance criteria, and more focused ownership before considering any config override.
+- Prefer changing the role, scope, or supporting context over trying to tune child-model selection inside the workflow.
 
 ## Handling Implementer Status
 
@@ -110,12 +103,12 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 **NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch.
 
 **BLOCKED:** The implementer cannot complete the task. Assess the blocker:
-1. If it's a context problem, provide more context and re-dispatch with the same model
-2. If the task requires more reasoning, re-dispatch with a more capable model
+1. If it's a context problem, provide more context and re-dispatch with the same inherited config
+2. If the task needs more reasoning, tighten the scope, improve the plan, or route it to a more appropriate role; only override child config if the user explicitly requested that
 3. If the task is too large, break it into smaller pieces
 4. If the plan itself is wrong, escalate to the human
 
-**Never** ignore an escalation or force the same model to retry without changes. If the implementer said it's stuck, something needs to change.
+**Never** ignore an escalation or re-dispatch unchanged. If the implementer said it's stuck, something about context, scope, ownership, or the plan needs to change.
 
 ## Prompt Templates
 

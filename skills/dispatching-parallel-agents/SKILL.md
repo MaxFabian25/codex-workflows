@@ -7,11 +7,13 @@ description: Use when facing 2+ independent tasks that can be worked on without 
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. They should never inherit your session's context or history — you construct exactly what they need. This also preserves your own context for coordination work.
+You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer bounded child context over blindly forking full history, and use `fork_turns="all"` only when the child genuinely needs the same working context. This also preserves your own context for coordination work.
 
 When you have multiple unrelated failures (different test files, different subsystems, different bugs), investigating them sequentially wastes time. Each investigation is independent and can happen in parallel.
 
 **Core principle:** Dispatch one agent per independent problem domain. Let them work concurrently.
+
+**Codex v2 translation:** Use `spawn_agent(task_name=..., agent_type=..., items=[{type:"text", text:"..."}])`, prefer canonical task names or task paths for follow-up targeting, and use one long `wait_agent` only when you are blocked on a child.
 
 ## When to Use
 
@@ -65,18 +67,18 @@ Each agent gets:
 
 ### 3. Dispatch in Parallel
 
-```typescript
-// In Claude Code / AI environment
-Task("Fix agent-tool-abort.test.ts failures")
-Task("Fix batch-completion-behavior.test.ts failures")
-Task("Fix tool-approval-race-conditions.test.ts failures")
-// All three run concurrently
+```text
+spawn_agent(task_name="fix_abort_tests", agent_type="worker", items=[{type:"text", text:"Fix agent-tool-abort.test.ts failures"}])
+spawn_agent(task_name="fix_batch_completion", agent_type="worker", items=[{type:"text", text:"Fix batch-completion-behavior.test.ts failures"}])
+spawn_agent(task_name="fix_tool_approval_race", agent_type="worker", items=[{type:"text", text:"Fix tool-approval-race-conditions.test.ts failures"}])
+# All three run concurrently; keep doing local coordination work until blocked
 ```
 
 ### 4. Review and Integrate
 
 When agents return:
 - Read each summary
+- Use `wait_agent` only when blocked on a specific child, then prefer the canonical `task_name` for any follow-up
 - Verify fixes don't conflict
 - Run full test suite
 - Integrate all changes
