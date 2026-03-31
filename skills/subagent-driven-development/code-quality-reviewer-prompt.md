@@ -6,24 +6,38 @@ Use this template when dispatching a code quality reviewer subagent.
 
 **Only dispatch after spec compliance review passes.**
 
-```
+```yaml
 Codex subagent packet (preferred v2):
   task_name: "<stable_code_review_name>"
   agent_type: "reviewer"
-  message: |
-    Use the filled template at requesting-code-review/code-reviewer.md.
+  items:
+    - type: "text"
+      text: |
+        Your task is to perform the following.
+        Follow the instructions below exactly.
 
-    WHAT_WAS_IMPLEMENTED: [from implementer's report]
-    PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-    BASE_SHA: [commit before task]
-    HEAD_SHA: [current commit]
-    DESCRIPTION: [task summary]
+        <agent-instructions>
+        Use the filled template at requesting-code-review/code-reviewer.md.
+
+        WHAT_WAS_IMPLEMENTED: [from implementer's report]
+        PLAN_OR_REQUIREMENTS: Task N from [plan-file]
+        BASE_SHA: [commit before task]
+        HEAD_SHA: [current commit]
+        DESCRIPTION: [task summary]
+        </agent-instructions>
+
+        Execute this now. Output ONLY the structured
+        response following the format
+        specified in the instructions above.
 ```
 
 **In addition to standard code quality concerns, the reviewer should check:**
+
 - Does each file have one clear responsibility with a well-defined interface?
 - Are units decomposed so they can be understood and tested independently?
 - Is the implementation following the file structure from the plan?
-- Did this implementation create new files that are already large, or significantly grow existing files? (Don't flag pre-existing file sizes — focus on what this change contributed.)
+- Did this implementation create new files that are already large,
+  or significantly grow existing files?
+  (Don't flag pre-existing file sizes. Focus on what this change contributed.)
 
 **Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Assessment
