@@ -24,8 +24,9 @@
 
 ## Metadata Surface
 
-Accepted metadata surfaces are:
+Accepted metadata surfaces are exactly:
 
+- `SKILL.md` frontmatter with `name` and `description`
 - per-skill files such as `agents/openai.yaml` when the runtime expects them
 - repo-level or platform-level manifests when skills are discovered natively from the repository or plugin bundle
 
@@ -33,5 +34,6 @@ Accepted metadata surfaces are:
 
 - Use `references/`, never `reference/`.
 - Put reusable helpers in `_shared/`, never under a sibling skill.
-- User-facing skills must have metadata on an accepted metadata surface.
+- User-facing skills must have `SKILL.md` frontmatter with `name` and `description`.
+- Other accepted metadata surfaces are additive, not substitutes for missing user-facing `SKILL.md` frontmatter.
 - Cache artifacts such as `__pycache__` and `.DS_Store` are forbidden.

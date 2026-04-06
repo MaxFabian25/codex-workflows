@@ -5,7 +5,7 @@
 Codex subagent prompts must use the verified packet shape for this workstation:
 
 ```yaml
-Codex subagent packet (preferred v2):
+Codex subagent packet:
   agent_type: "worker|explorer|default"
   items:
     - type: "text"

@@ -10,8 +10,8 @@
 ## Deck Contract
 
 - Generic `.pptx` work uses `PPTXGenJS`.
-- Remote think-cell lanes are `think-cell-json-automation-windows`, `think-cell-remote-automation-windows`, and `think-cell-com-automation-windows`.
-- Use the JSON-first order: `think-cell-json-automation-windows`, then `think-cell-remote-automation-windows`, then `think-cell-com-automation-windows`.
+- Local mac think-cell work uses `think-cell-json-automation`.
+- Think-cell routing order is `think-cell-json-automation`, then `think-cell-json-automation-windows`, then `think-cell-remote-automation-windows`, then `think-cell-com-automation-windows`.
 - `think-cell-com-automation-windows` or VBA is the final escalation lane.
 
 ## Remote Office Contract
