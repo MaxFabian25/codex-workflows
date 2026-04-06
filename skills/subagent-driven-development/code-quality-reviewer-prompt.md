@@ -7,9 +7,8 @@ Use this template when dispatching a code quality reviewer subagent.
 **Only dispatch after spec compliance review passes.**
 
 ```yaml
-Codex subagent packet (preferred v2):
-  task_name: "<stable_code_review_name>"
-  agent_type: "reviewer"
+Codex subagent packet:
+  agent_type: "explorer"
   items:
     - type: "text"
       text: |

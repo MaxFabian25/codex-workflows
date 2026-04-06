@@ -6,44 +6,46 @@ Use this template when dispatching a plan document reviewer subagent.
 
 **Dispatch after:** The complete plan is written.
 
-```
-Task tool (general-purpose):
-  description: "Review plan document"
-  prompt: |
-    You are a plan document reviewer. Verify this plan is complete and ready for implementation.
+```yaml
+Codex subagent packet:
+  agent_type: "explorer"
+  items:
+    - type: "text"
+      text: |
+        Your task is to perform the following.
+        Follow the instructions below exactly.
 
-    **Plan to review:** [PLAN_FILE_PATH]
-    **Spec for reference:** [SPEC_FILE_PATH]
+        <agent-instructions>
+        Review the plan at [PLAN_FILE_PATH] against the spec at [SPEC_FILE_PATH].
 
-    ## What to Check
+        Verify that the plan is complete, matches the spec, and is actionable for implementation.
 
-    | Category | What to Look For |
-    |----------|------------------|
-    | Completeness | TODOs, placeholders, incomplete tasks, missing steps |
-    | Spec Alignment | Plan covers spec requirements, no major scope creep |
-    | Task Decomposition | Tasks have clear boundaries, steps are actionable |
-    | Buildability | Could an engineer follow this plan without getting stuck? |
+        Check:
+        - Completeness: TODOs, placeholders, incomplete tasks, or missing steps
+        - Spec alignment: plan covers the approved spec and does not drift into major scope creep
+        - Task decomposition: tasks have clear boundaries and actionable steps
+        - Buildability: an implementer could execute the plan without getting stuck
 
-    ## Calibration
+        Calibration:
+        - Only flag issues that would cause real implementation errors or blockers.
+        - Do not block on minor wording, stylistic preferences, or "nice to have" suggestions.
+        - Approve unless there are serious gaps such as missing spec requirements, contradictory steps, placeholder content, or tasks too vague to act on.
 
-    **Only flag issues that would cause real problems during implementation.**
-    An implementer building the wrong thing or getting stuck is an issue.
-    Minor wording, stylistic preferences, and "nice to have" suggestions are not.
+        Output format:
+        ## Plan Review
 
-    Approve unless there are serious gaps — missing requirements from the spec,
-    contradictory steps, placeholder content, or tasks so vague they can't be acted on.
+        **Status:** Approved | Issues Found
 
-    ## Output Format
+        **Issues (if any):**
+        - [Task X, Step Y]: [specific issue] - [why it matters for implementation]
 
-    ## Plan Review
+        **Recommendations (advisory, do not block approval):**
+        - [suggestions for improvement]
+        </agent-instructions>
 
-    **Status:** Approved | Issues Found
-
-    **Issues (if any):**
-    - [Task X, Step Y]: [specific issue] - [why it matters for implementation]
-
-    **Recommendations (advisory, do not block approval):**
-    - [suggestions for improvement]
+        Execute this now. Output ONLY the structured
+        response following the format
+        specified in the instructions above.
 ```
 
 **Reviewer returns:** Status, Issues (if any), Recommendations

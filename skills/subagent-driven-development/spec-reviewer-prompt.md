@@ -6,9 +6,8 @@ Use this template when dispatching a spec compliance reviewer subagent.
 (nothing more, nothing less)
 
 ```yaml
-Codex subagent packet (preferred v2):
-  task_name: "<stable_spec_review_name>"
-  agent_type: "reviewer"
+Codex subagent packet:
+  agent_type: "explorer"
   items:
     - type: "text"
       text: |

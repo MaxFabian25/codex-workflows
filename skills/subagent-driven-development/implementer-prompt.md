@@ -3,8 +3,7 @@
 Use this template when dispatching an implementer subagent.
 
 ```yaml
-Codex subagent packet (preferred v2):
-  task_name: "<stable_task_name>"
+Codex subagent packet:
   agent_type: "worker"
   items:
     - type: "text"

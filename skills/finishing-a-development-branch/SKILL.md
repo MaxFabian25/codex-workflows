@@ -13,6 +13,10 @@ Guide completion of development work by presenting clear options and handling ch
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
+**Contract alignment:** This skill starts after review and verification have already passed. It owns closeout and branch-finish decisions, not earlier quality gates.
+
+**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
+
 ## The Process
 
 ### Step 1: Verify Tests

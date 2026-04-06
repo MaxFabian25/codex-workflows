@@ -6,44 +6,47 @@ Use this template when dispatching a spec document reviewer subagent.
 
 **Dispatch after:** Spec document is written to docs/superpowers/specs/
 
-```
-Task tool (general-purpose):
-  description: "Review spec document"
-  prompt: |
-    You are a spec document reviewer. Verify this spec is complete and ready for planning.
+```yaml
+Codex subagent packet:
+  agent_type: "explorer"
+  items:
+    - type: "text"
+      text: |
+        Your task is to perform the following.
+        Follow the instructions below exactly.
 
-    **Spec to review:** [SPEC_FILE_PATH]
+        <agent-instructions>
+        Review the spec document at [SPEC_FILE_PATH].
 
-    ## What to Check
+        Verify that it is complete, internally consistent, and ready for implementation planning.
 
-    | Category | What to Look For |
-    |----------|------------------|
-    | Completeness | TODOs, placeholders, "TBD", incomplete sections |
-    | Consistency | Internal contradictions, conflicting requirements |
-    | Clarity | Requirements ambiguous enough to cause someone to build the wrong thing |
-    | Scope | Focused enough for a single plan — not covering multiple independent subsystems |
-    | YAGNI | Unrequested features, over-engineering |
+        Check:
+        - Completeness: TODOs, placeholders, "TBD" markers, or missing sections
+        - Consistency: contradictions or conflicting requirements
+        - Clarity: ambiguity likely to make the planner build the wrong thing
+        - Scope: more than one independent subsystem bundled into one spec
+        - YAGNI: unrequested features or over-engineered additions
 
-    ## Calibration
+        Calibration:
+        - Only flag issues that would cause real problems during implementation planning.
+        - Do not block on minor wording improvements, stylistic preferences, or uneven detail.
+        - Approve unless there are serious gaps that would lead to a flawed plan.
 
-    **Only flag issues that would cause real problems during implementation planning.**
-    A missing section, a contradiction, or a requirement so ambiguous it could be
-    interpreted two different ways — those are issues. Minor wording improvements,
-    stylistic preferences, and "sections less detailed than others" are not.
+        Output format:
+        ## Spec Review
 
-    Approve unless there are serious gaps that would lead to a flawed plan.
+        **Status:** Approved | Issues Found
 
-    ## Output Format
+        **Issues (if any):**
+        - [Section X]: [specific issue] - [why it matters for planning]
 
-    ## Spec Review
+        **Recommendations (advisory, do not block approval):**
+        - [suggestions for improvement]
+        </agent-instructions>
 
-    **Status:** Approved | Issues Found
-
-    **Issues (if any):**
-    - [Section X]: [specific issue] - [why it matters for planning]
-
-    **Recommendations (advisory, do not block approval):**
-    - [suggestions for improvement]
+        Execute this now. Output ONLY the structured
+        response following the format
+        specified in the instructions above.
 ```
 
 **Reviewer returns:** Status, Issues (if any), Recommendations

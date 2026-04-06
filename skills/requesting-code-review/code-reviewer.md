@@ -2,6 +2,8 @@
 
 You are reviewing code changes for production readiness.
 
+**Hard-cut review rule:** Unrequested compatibility shims, fallback surfaces, and dual-path behavior are regressions by default. Only preserve them when the request explicitly calls for that support contract.
+
 **Your task:**
 1. Review {WHAT_WAS_IMPLEMENTED}
 2. Compare against {PLAN_OR_REQUIREMENTS}
@@ -56,7 +58,7 @@ git diff {BASE_SHA}..{HEAD_SHA}
 
 **Production Readiness:**
 - Migration strategy (if schema changes)?
-- Backward compatibility considered?
+- Unrequested compatibility shims, fallback paths, or dual-path behavior introduced?
 - Documentation complete?
 - No obvious bugs?
 
