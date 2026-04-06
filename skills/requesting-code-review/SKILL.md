@@ -36,22 +36,30 @@ The shared `code-reviewer.md` template serves both scopes:
 
 **1. Get git SHAs:**
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
+# Task-level or one-commit review scope
+BASE_SHA=$(git rev-parse HEAD~1)
+
+# Whole-change or final_reviewer scope against main
+BASE_SHA=$(git merge-base HEAD origin/main)
+
+# Whole-change review against another target branch
+# BASE_SHA=$(git merge-base HEAD origin/<target-branch>)
+
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-Use `HEAD~1` only when the requested review scope is one commit or one bounded task change. For `final_reviewer`, choose `BASE_SHA` at the start of the full change being reviewed, not just the most recent task commit.
+Use `HEAD~1` only when the requested review scope is one commit or one bounded task change. For `final_reviewer`, set `BASE_SHA` to the merge-base against the target branch so the child reviews the whole change, not just the most recent task commit.
 
 **2. Dispatch the review child:**
 
 Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="code_quality_reviewer" or "final_reviewer", message="...")`.
 
 **Placeholders:**
-- `{WHAT_WAS_IMPLEMENTED}` - What you just built
+- `{WHAT_WAS_IMPLEMENTED}` - Short review-scope label
 - `{PLAN_OR_REQUIREMENTS}` - What it should do
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
-- `{DESCRIPTION}` - Brief summary
+- `{DESCRIPTION}` - Fuller implementation summary
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
@@ -67,6 +75,8 @@ You: Let me request code review before proceeding.
 
 BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
+
+In the example below, the message string is the filled packet shown below.
 
 spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", message="[filled code-reviewer.md packet for Task 2]")
 

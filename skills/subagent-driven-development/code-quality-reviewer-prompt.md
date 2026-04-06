@@ -6,6 +6,8 @@ Use this template when dispatching a code quality reviewer subagent.
 
 **Only dispatch after spec compliance review passes.**
 
+Before dispatching, fill `requesting-code-review/code-reviewer.md` completely and paste the filled template into this packet. Do not ask the child to read the shared template from disk.
+
 ```yaml
 Codex subagent packet (preferred v2):
   task_name: "<stable_code_review_name>"
@@ -17,7 +19,11 @@ Codex subagent packet (preferred v2):
     <agent-instructions>
     Stay read-only. Do not edit files, stage changes, or commit.
 
-    Use the filled template at requesting-code-review/code-reviewer.md.
+    The filled shared review template is included below. Treat it as the primary review contract.
+
+    <filled-shared-review-template>
+    [paste fully filled requesting-code-review/code-reviewer.md here]
+    </filled-shared-review-template>
 
     In addition to standard code quality concerns, also check:
     - Does each file have one clear responsibility with a well-defined interface?
@@ -26,12 +32,6 @@ Codex subagent packet (preferred v2):
     - Did this implementation create new files that are already large,
       or significantly grow existing files?
       (Don't flag pre-existing file sizes. Focus on what this change contributed.)
-
-    WHAT_WAS_IMPLEMENTED: [from implementer's report]
-    PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-    BASE_SHA: [commit before task]
-    HEAD_SHA: [current commit]
-    DESCRIPTION: [task summary]
     </agent-instructions>
 
     Execute this now. Output ONLY the structured

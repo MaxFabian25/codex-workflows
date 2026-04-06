@@ -12,6 +12,10 @@ Use the same template for both review scopes:
 - `code_quality_reviewer`: assess whether the task or implementation batch is ready to proceed.
 - `final_reviewer`: assess whether the whole change is ready to merge or hand off.
 
+**Shared packet fields:**
+- `{WHAT_WAS_IMPLEMENTED}`: short review-scope label
+- `{DESCRIPTION}`: fuller implementation summary
+
 **Your task:**
 1. Review {WHAT_WAS_IMPLEMENTED}
 2. Compare against {PLAN_OR_REQUIREMENTS}
