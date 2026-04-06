@@ -238,7 +238,7 @@ Code reviewer:
 ...
 
 [After all tasks]
-[Dispatch final_reviewer using the filled ../requesting-code-review/code-reviewer.md packet for the whole-change review, with BASE_SHA set to $(git merge-base HEAD origin/main) or $(git merge-base HEAD origin/<target-branch>)]
+[Dispatch final_reviewer using the filled ../requesting-code-review/code-reviewer.md template directly for the whole-change review, with BASE_SHA set to $(git merge-base HEAD origin/main) or $(git merge-base HEAD origin/<target-branch>)]
 Final reviewer:
   ### Strengths
   - The full change matches the plan and keeps the implementation boundaries clean.
