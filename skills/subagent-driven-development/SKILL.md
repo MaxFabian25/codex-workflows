@@ -60,7 +60,7 @@ digraph process {
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
-    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Dispatch final_reviewer subagent (requesting-code-review/code-reviewer.md) for whole-change review" [shape=box];
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
@@ -79,8 +79,8 @@ digraph process {
     "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+    "More tasks remain?" -> "Dispatch final_reviewer subagent (requesting-code-review/code-reviewer.md) for whole-change review" [label="no"];
+    "Dispatch final_reviewer subagent (requesting-code-review/code-reviewer.md) for whole-change review" -> "Use superpowers:finishing-a-development-branch";
 }
 ```
 
@@ -120,6 +120,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 - `./implementer-prompt.md` - Dispatch implementer subagent
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
+- `requesting-code-review/code-reviewer.md` - Shared read-only review template used by `code_quality_reviewer` and the final whole-change `final_reviewer` pass
 
 ## Example Workflow
 
@@ -191,7 +192,7 @@ Code reviewer: ✅ Approved
 ...
 
 [After all tasks]
-[Dispatch final code-reviewer]
+[Dispatch final_reviewer using requesting-code-review/code-reviewer.md for the whole-change review]
 Final reviewer: All requirements met, ready to merge
 
 Done!
@@ -265,7 +266,7 @@ Done!
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
 - **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:requesting-code-review** - Code review template for reviewer subagents
+- **superpowers:requesting-code-review** - shared read-only review workflow for `code_quality_reviewer` and `final_reviewer`; use `requesting-code-review/code-reviewer.md`
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
 
 **Subagents should use:**
