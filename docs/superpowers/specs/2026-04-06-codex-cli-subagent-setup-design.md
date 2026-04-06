@@ -160,8 +160,8 @@ If the runtime requires those logical roles to resolve onto built-in roles such 
 Treat `~/.codex/config.macos-source.toml` as the editable source for this workstation. After changes:
 
 1. apply or sync the live mirror to `~/.codex/config.toml`
-2. verify with `which -a codex`
-3. verify with `codex --version`
+2. verify with `zsh -lic 'which -a codex'`
+3. verify with `zsh -lic 'codex --version'`
 4. verify with `codex features list`
 
 Do not treat stale docs or an unverified source checkout as the source of truth for live config behavior.
@@ -448,8 +448,8 @@ Implementation is complete only when all of the following are true.
 Run:
 
 ```bash
-which -a codex
-codex --version
+zsh -lic 'which -a codex'
+zsh -lic 'codex --version'
 codex -p workflow_fidelity features list
 codex -p parallel_readonly features list
 rg -n '^\[agents\]|max_threads|max_depth|job_max_runtime_seconds' \
@@ -458,7 +458,7 @@ rg -n '^\[agents\]|max_threads|max_depth|job_max_runtime_seconds' \
 
 Expected:
 
-- active binary still resolves to the intended npm-global Codex install
+- the active login-shell binary still resolves to the intended npm-global Codex install
 - both profiles expose `multi_agent_v2 = true`
 - v2-capable mapping is the expected operational contract for both profiles
 - `enable_fanout` is disabled in `workflow_fidelity` and enabled only in `parallel_readonly`
@@ -498,13 +498,21 @@ Expected:
 Check the Codex-facing superpowers files for v2-first Codex claims and for stale legacy wording:
 
 ```bash
-rg -n 'multi_agent_v2|task_name|assign_task|send_message' \
+rg -n 'multi_agent_v2|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' \
   ~/.codex/superpowers/docs/README.codex.md \
   ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
+  ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
   ~/.codex/superpowers/skills/subagent-driven-development \
-  ~/.codex/superpowers/skills/requesting-code-review/SKILL.md
+  ~/.codex/superpowers/skills/requesting-code-review
 
-rg -n 'multi_agent = true is sufficient|legacy mapping is primary|v1 mapping is primary' \
+! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient' \
+  ~/.codex/superpowers/docs/README.codex.md \
+  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
+  ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
+  ~/.codex/superpowers/skills/subagent-driven-development \
+  ~/.codex/superpowers/skills/requesting-code-review
+
+! rg -n 'legacy mapping is primary|v1 mapping is primary' \
   ~/.codex/superpowers/docs/README.codex.md \
   ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
 ```
@@ -512,8 +520,8 @@ rg -n 'multi_agent = true is sufficient|legacy mapping is primary|v1 mapping is 
 Expected after implementation:
 
 - Codex-facing docs encode the v2-first contract the user requested
-- stale legacy-primary claims are removed or rewritten
-- legitimate workflow file names such as `spec-reviewer-prompt.md` are not treated as failures by the check
+- stale dispatch wording and legacy-primary claims are removed or rewritten
+- the absence checks fail immediately if legacy packet or dispatch wording is reintroduced
 
 ### Workflow Smoke Verification
 
