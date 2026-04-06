@@ -25,34 +25,44 @@ Dispatch a focused read-only review child to catch issues before they cascade. T
 
 - Use `code_quality_reviewer` after a completed task or implementation batch to review code quality, testing, architecture, and maintainability.
 - Use `final_reviewer` for the final whole-change review before handing work off or merging.
+- Both roles are read-only. Do not use write-capable child roles for review.
 
-Both roles are read-only. Do not use write-capable child roles for review.
-
-The shared `code-reviewer.md` template serves both scopes:
-- `code_quality_reviewer` uses it for task-level readiness to proceed.
-- `final_reviewer` uses the same template for readiness to merge or hand off.
+Dispatch them differently:
+- `code_quality_reviewer`: fill `code-reviewer.md`, then paste that entire filled template into `subagent-driven-development/code-quality-reviewer-prompt.md` and dispatch the filled wrapper packet. Use the wrapper because it adds the extra task-quality checks that apply only to this role.
+- `final_reviewer`: fill `code-reviewer.md` and dispatch that filled shared template directly with `spawn_agent(..., agent_type="final_reviewer", message="...")`.
 
 ## How to Request
 
 **1. Get git SHAs:**
 ```bash
-# Task-level or one-commit review scope
-BASE_SHA=$(git rev-parse HEAD~1)
+# Save this before the task starts if you expect a multi-commit task-level review
+TASK_START_SHA=$(git rev-parse HEAD)
+
+# After the task is implemented and committed, review exactly that task scope
+BASE_SHA=$TASK_START_SHA
+HEAD_SHA=$(git rev-parse HEAD)
 
 # Whole-change or final_reviewer scope against main
 BASE_SHA=$(git merge-base HEAD origin/main)
+HEAD_SHA=$(git rev-parse HEAD)
 
 # Whole-change review against another target branch
 # BASE_SHA=$(git merge-base HEAD origin/<target-branch>)
-
-HEAD_SHA=$(git rev-parse HEAD)
+# HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-Use `HEAD~1` only when the requested review scope is one commit or one bounded task change. For `final_reviewer`, set `BASE_SHA` to the merge-base against the target branch so the child reviews the whole change, not just the most recent task commit.
+Use a saved pre-task SHA or another explicit task-start commit for task-level review scopes. `HEAD~1` is only correct when the requested scope is exactly one commit. For `final_reviewer`, set `BASE_SHA` to the merge-base against the target branch so the child reviews the whole change, not just the most recent task commit.
 
-**2. Dispatch the review child:**
+**2. Dispatch the review child by role:**
 
-Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="code_quality_reviewer" or "final_reviewer", message="...")`.
+**Task-level `code_quality_reviewer`:**
+- Fill the shared template at `code-reviewer.md`.
+- Paste the entire filled shared template into `subagent-driven-development/code-quality-reviewer-prompt.md`.
+- Dispatch the full filled wrapper packet with `spawn_agent(task_name=..., agent_type="code_quality_reviewer", message="...")`.
+
+**Whole-change `final_reviewer`:**
+- Fill the shared template at `code-reviewer.md`.
+- Dispatch that filled shared template directly with `spawn_agent(task_name=..., agent_type="final_reviewer", message="...")`.
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - Short review-scope label
@@ -66,19 +76,28 @@ Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task
 - Fix Important issues before proceeding, or record why the reviewer is wrong
 - Note Minor issues for later if they are not worth blocking on
 
-## Example
+## Examples
+
+### Task-Level `code_quality_reviewer`
 
 ```
 [Just completed Task 2: Add verification function]
 
+[Earlier, before Task 2 started, you saved its boundary]
+TASK_2_START_SHA=$(git rev-parse HEAD)
+
 You: Let me request code review before proceeding.
 
-BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
+BASE_SHA=$TASK_2_START_SHA
 HEAD_SHA=$(git rev-parse HEAD)
 
-In the example below, the message string is the filled packet shown below.
+The actual `message=` payload must be the entire filled `subagent-driven-development/code-quality-reviewer-prompt.md` wrapper packet. The block below is an excerpt showing the dispatch shape only. Do not send only this excerpt.
 
-spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", message="[filled code-reviewer.md packet for Task 2]")
+spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", message="[full filled code-quality-reviewer-prompt.md wrapper packet for Task 2]")
+
+  Excerpt from the actual wrapper payload:
+  <filled-shared-review-template>
+  # Code Review Agent
 
   You are performing a read-only review of code changes for the requested review scope.
 
@@ -101,6 +120,13 @@ spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", 
 
   **Base:** a7981ec
   **Head:** 3df7661
+  </filled-shared-review-template>
+
+  In addition to standard code quality concerns, also check:
+  - Does each file have one clear responsibility with a well-defined interface?
+  - Are units decomposed so they can be understood and tested independently?
+  - Is the implementation following the file structure from the plan?
+  - Did this implementation create new files that are already large, or significantly grow existing files?
 
 [Review child returns]
 ### Strengths
@@ -137,6 +163,17 @@ None.
 You: [Fix progress indicators]
 [Continue to Task 3]
 ```
+
+### Whole-Change `final_reviewer`
+
+```text
+BASE_SHA=$(git merge-base HEAD origin/main)
+HEAD_SHA=$(git rev-parse HEAD)
+
+spawn_agent(task_name="final_code_review", agent_type="final_reviewer", message="[full filled code-reviewer.md packet for the whole change]")
+```
+
+For `final_reviewer`, the actual `message=` payload is the entire filled shared `code-reviewer.md` template directly. Do not wrap it in `subagent-driven-development/code-quality-reviewer-prompt.md`.
 
 ## Parent Arbitrates Disagreements
 

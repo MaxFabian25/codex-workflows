@@ -120,7 +120,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 - `./implementer-prompt.md` - Dispatch implementer subagent
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
-- `requesting-code-review/code-reviewer.md` - Shared read-only review template used by `code_quality_reviewer` and the final whole-change `final_reviewer` pass
+- `requesting-code-review/code-reviewer.md` - Shared read-only review template; `code_quality_reviewer` embeds the filled template inside `./code-quality-reviewer-prompt.md`, while `final_reviewer` can consume the filled shared template directly
 
 ## Example Workflow
 
@@ -150,7 +150,7 @@ Implementer: "Got it. Implementing now..."
 [Dispatch spec compliance reviewer]
 Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
 
-[Get git SHAs, dispatch code quality reviewer]
+[Get git SHAs from the saved task-start boundary, dispatch code quality reviewer with the filled ./code-quality-reviewer-prompt.md wrapper]
 Code reviewer:
   ### Strengths
   - Good test coverage and clean separation of concerns.
@@ -192,7 +192,7 @@ Implementer: Removed --json flag, added progress reporting
 [Spec reviewer reviews again]
 Spec reviewer: ✅ Spec compliant now
 
-[Dispatch code quality reviewer]
+[Dispatch code quality reviewer with the filled ./code-quality-reviewer-prompt.md wrapper]
 Code reviewer:
   ### Strengths
   - Solid repair flow with clear test coverage.
@@ -238,7 +238,7 @@ Code reviewer:
 ...
 
 [After all tasks]
-[Dispatch final_reviewer using requesting-code-review/code-reviewer.md for the whole-change review, with BASE_SHA set to the commit where the full change started]
+[Dispatch final_reviewer using the filled requesting-code-review/code-reviewer.md packet for the whole-change review, with BASE_SHA set to $(git merge-base HEAD origin/main) or $(git merge-base HEAD origin/<target-branch>)]
 Final reviewer:
   ### Strengths
   - The full change matches the plan and keeps the implementation boundaries clean.
