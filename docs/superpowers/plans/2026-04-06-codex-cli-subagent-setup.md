@@ -1551,6 +1551,34 @@ zsh -lic 'codex --version'
 codex -p workflow_fidelity features list | rg -n 'multi_agent|multi_agent_v2|enable_fanout'
 codex -p parallel_readonly features list | rg -n 'multi_agent|multi_agent_v2|enable_fanout'
 rg -n '^\[agents\.(implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer)\]$' /Users/maxibon/.codex/config.macos-source.toml /Users/maxibon/.codex/config.toml
+python3 - <<'PY'
+from pathlib import Path
+import tomllib
+
+expected = {
+    'implementer': 'danger-full-access',
+    'spec_reviewer': 'read-only',
+    'code_quality_reviewer': 'read-only',
+    'parallel_explorer': 'read-only',
+    'final_reviewer': 'read-only',
+}
+
+for name, sandbox_mode in expected.items():
+    path = Path(f'/Users/maxibon/.codex/agents/{name}.toml')
+    if not path.exists():
+        raise SystemExit(f'missing agent file: {path}')
+    data = tomllib.loads(path.read_text())
+    if data.get('name') != name:
+        raise SystemExit(f'{path} has unexpected name field: {data.get("name")!r}')
+    if data.get('sandbox_mode') != sandbox_mode:
+        raise SystemExit(
+            f'{path} has unexpected sandbox_mode: {data.get("sandbox_mode")!r}'
+        )
+    if not data.get('developer_instructions'):
+        raise SystemExit(f'{path} is missing developer_instructions')
+
+print('all five agent TOMLs are present with expected names, sandbox modes, and developer instructions.')
+PY
 ```
 
 Expected:
@@ -1561,6 +1589,7 @@ Expected:
 - `workflow_fidelity` shows `enable_fanout = false`.
 - `parallel_readonly` shows `enable_fanout = true`.
 - Both config files show all five role mappings.
+- The agent-file `python3` check exits 0 only when all five `/Users/maxibon/.codex/agents/*.toml` files exist and each file has the expected `name`, `sandbox_mode`, and `developer_instructions` fields.
 
 - [ ] **Step 2: Re-run the docs and prompt contract verification**
 
@@ -1570,6 +1599,7 @@ Run:
 rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 ! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient|profile = "parallel_readonly"' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 ! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+! rg -n 'legacy mapping is primary|v1 mapping is primary' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md
 python3 - <<'PY'
 from pathlib import Path
 
@@ -1610,6 +1640,7 @@ Expected:
 - The first `rg` finds the new v2-first contract and role mapping.
 - The second check exits 0 via `! rg ...` only when the stale branch-local doc and prompt patterns are absent.
 - The multiline check exits 0 via `! rg -U ...` only when no stale root-scoped parallel `[features]` example is present in the verified files.
+- The legacy-primary check exits 0 via `! rg ...` only when no stale `legacy mapping is primary` or `v1 mapping is primary` wording remains in the verified docs.
 - The `python3` parity check prints exact-match confirmations and exits 0 only when the embedded Task 4 Step 1 `README.codex.md` block and the embedded Task 8 Step 2 `code-reviewer.md` block both match their source files exactly.
 
 - [ ] **Step 3: Verify repo cleanliness and commit integrity**

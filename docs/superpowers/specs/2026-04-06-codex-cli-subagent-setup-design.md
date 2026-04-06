@@ -472,6 +472,35 @@ Inspect the source and live config for tailored superpowers child mappings:
 ```bash
 rg -n 'implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' \
   ~/.codex/config.macos-source.toml ~/.codex/config.toml
+
+python3 - <<'PY'
+from pathlib import Path
+import tomllib
+
+expected = {
+    'implementer': 'danger-full-access',
+    'spec_reviewer': 'read-only',
+    'code_quality_reviewer': 'read-only',
+    'parallel_explorer': 'read-only',
+    'final_reviewer': 'read-only',
+}
+
+for name, sandbox_mode in expected.items():
+    path = Path(f'/Users/maxibon/.codex/agents/{name}.toml')
+    if not path.exists():
+        raise SystemExit(f'missing agent file: {path}')
+    data = tomllib.loads(path.read_text())
+    if data.get('name') != name:
+        raise SystemExit(f'{path} has unexpected name field: {data.get("name")!r}')
+    if data.get('sandbox_mode') != sandbox_mode:
+        raise SystemExit(
+            f'{path} has unexpected sandbox_mode: {data.get("sandbox_mode")!r}'
+        )
+    if not data.get('developer_instructions'):
+        raise SystemExit(f'{path} is missing developer_instructions')
+
+print('all five agent TOMLs are present with expected names, sandbox modes, and developer instructions.')
+PY
 ```
 
 Expected:
@@ -479,6 +508,7 @@ Expected:
 - the tailored superpowers child mappings are present in both source and live config
 - review roles are visibly distinct from implementer roles
 - the mapping is stable enough that local superpowers docs can reference it directly
+- all five `/Users/maxibon/.codex/agents/*.toml` files exist with the expected `name`, `sandbox_mode`, and `developer_instructions` fields
 
 ### Skill Discovery Verification
 
