@@ -326,7 +326,7 @@ Done!
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
 - **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:requesting-code-review** - shared read-only review workflow for `code_quality_reviewer` and `final_reviewer`; use `requesting-code-review/code-reviewer.md`
+- **superpowers:requesting-code-review** - shared read-only review workflow; `code_quality_reviewer` must receive `requesting-code-review/code-reviewer.md` through `subagent-driven-development/code-quality-reviewer-prompt.md`, while `final_reviewer` may consume the filled shared template directly
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
 
 **Subagents should use:**

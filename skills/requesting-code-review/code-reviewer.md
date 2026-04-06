@@ -8,9 +8,9 @@ You are performing a read-only review of code changes for the requested review s
 - Report concrete findings with severity and file references.
 - If something is unclear, say so instead of guessing.
 
-Use the same template for both review scopes:
-- `code_quality_reviewer`: assess whether the task or implementation batch is ready to proceed.
-- `final_reviewer`: assess whether the whole change is ready to merge or hand off.
+Use this as the shared inner template for both review scopes:
+- `code_quality_reviewer`: receive this content embedded inside `subagent-driven-development/code-quality-reviewer-prompt.md`; assess whether the task or implementation batch is ready to proceed.
+- `final_reviewer`: may receive the filled template directly; assess whether the whole change is ready to merge or hand off.
 
 **Shared packet fields:**
 - `{WHAT_WAS_IMPLEMENTED}`: short review-scope label
