@@ -629,8 +629,7 @@ Treat these role names as the configured local contract. If actual dispatch beha
 The top-level `message` field is user-level input. Structure it like this:
 
 ```text
-Your task is to perform the following.
-Follow the instructions below exactly.
+Your task is to perform the following. Follow the instructions below exactly.
 
 <agent-instructions>
 [filled prompt content]
