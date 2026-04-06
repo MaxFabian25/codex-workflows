@@ -546,11 +546,13 @@ Run:
 ```bash
 rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|max_depth = 3|job_max_runtime_seconds = 3600|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' /Users/maxibon/.codex/superpowers/docs/README.codex.md
 ! rg -n 'multi_agent = true is sufficient|subagent skills.*optional|profile = "parallel_readonly"' /Users/maxibon/.codex/superpowers/docs/README.codex.md
+! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' /Users/maxibon/.codex/superpowers/docs/README.codex.md
 ```
 
 Expected:
 - The first `rg` hits the new workstation contract.
 - The second check exits 0 via `! rg ...` only when the stale README claims are absent.
+- The multiline check exits 0 via `! rg -U ...` only when the stale root-scoped parallel `[features]` example is absent.
 
 - [ ] **Step 3: Commit**
 
@@ -1567,6 +1569,7 @@ Run:
 ```bash
 rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 ! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient|profile = "parallel_readonly"' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 python3 - <<'PY'
 from pathlib import Path
 import re
@@ -1603,6 +1606,7 @@ PY
 Expected:
 - The first `rg` finds the new v2-first contract and role mapping.
 - The second check exits 0 via `! rg ...` only when the stale branch-local doc and prompt patterns are absent.
+- The multiline check exits 0 via `! rg -U ...` only when no stale root-scoped parallel `[features]` example is present in the verified files.
 - The `python3` parity check prints exact-match confirmations and exits 0 only when the embedded Task 4 Step 1 `README.codex.md` block and the embedded Task 8 Step 2 `code-reviewer.md` block both match their source files exactly.
 
 - [ ] **Step 3: Verify repo cleanliness and commit integrity**

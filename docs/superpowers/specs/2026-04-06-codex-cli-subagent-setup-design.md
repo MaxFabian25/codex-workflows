@@ -513,6 +513,13 @@ rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelit
   ~/.codex/superpowers/skills/subagent-driven-development \
   ~/.codex/superpowers/skills/requesting-code-review
 
+! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' \
+  ~/.codex/superpowers/docs/README.codex.md \
+  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
+  ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
+  ~/.codex/superpowers/skills/subagent-driven-development \
+  ~/.codex/superpowers/skills/requesting-code-review
+
 ! rg -n 'legacy mapping is primary|v1 mapping is primary' \
   ~/.codex/superpowers/docs/README.codex.md \
   ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
@@ -523,7 +530,7 @@ Expected after implementation:
 - Codex-facing docs encode the v2-first contract the user requested
 - the README and replacement blocks preserve the profile-scoped `parallel_readonly` feature override
 - stale dispatch wording and legacy-primary claims are removed or rewritten
-- the absence checks fail immediately if legacy packet or dispatch wording is reintroduced
+- the absence checks fail immediately if legacy packet, dispatch wording, or a stale root-scoped parallel `[features]` example is reintroduced
 
 ### Workflow Smoke Verification
 
