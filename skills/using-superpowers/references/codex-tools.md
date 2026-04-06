@@ -92,11 +92,3 @@ BRANCH=$(git branch --show-current)
 ## Codex App Finishing
 
 When the sandbox blocks branch or push operations in an externally managed worktree, the agent should still commit locally, report the current commit SHA, and hand off branch creation or PR creation to the host environment.
-
-Then verify by running:
-- rg -n 'multi_agent_v2|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|spawn_agent|wait_agent|close_agent|configured local contract|verify it separately' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md
-- rg -n 'send_message|assign_task|list_agents|agent_type="worker"|agent_type="reviewer"|guess between generic built-in roles when these mapped roles are configured' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md
-
-Expected:
-- the first rg shows the v2-first runtime contract, custom role names, and proof-boundary language
-- the second rg returns no results
