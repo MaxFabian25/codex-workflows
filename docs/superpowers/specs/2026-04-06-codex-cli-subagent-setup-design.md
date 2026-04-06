@@ -47,14 +47,35 @@ Observed on 2026-04-06:
   - `features.multi_agent = true`
   - `features.enable_fanout = true`
   - `agents.max_threads = 32`
-- The live config also contains likely non-authoritative or drift-prone keys under `[agents]`:
+- The live config also contains these currently active `[agents]` settings:
   - `max_depth = 3`
   - `job_max_runtime_seconds = 3600`
 - The local superpowers Codex docs and prompt templates drift from the observed runtime:
   - `docs/README.codex.md` says `multi_agent = true` is sufficient for subagent skills.
-  - `skills/using-superpowers/references/codex-tools.md` still references `multi_agent_v2 = true`, `task_name`, and agent roles such as `planner`, `reviewer`, and `verifier`.
+  - `skills/using-superpowers/references/codex-tools.md` already encodes a more v2-oriented mapping than the live runtime verification supported during the first draft of this design.
   - `subagent-driven-development` prompt templates still assume reviewer-style child contracts that are not safe to document unless verified against the live runtime.
   - `implementer-prompt.md` says "follow TDD if task says to," which is weaker than the README workflow claim that TDD activates during implementation.
+
+## User-Directed Target Contract
+
+The user has explicitly changed the target contract for this design:
+
+- `multi_agent_v2` must be enabled for both profiles
+- the v2 tool mapping must take precedence over the regular `multi_agent` mapping
+- `agents.max_depth = 3` is authoritative
+- `agents.job_max_runtime_seconds = 3600` is authoritative
+- child mapping is customizable in `config.toml` and must be tailored to the superpowers workflow and skills
+
+This creates an explicit conflict with the live runtime snapshot observed on April 6, 2026, where `codex features list` reported `multi_agent_v2 = false`.
+
+For this design, the user-directed target contract takes precedence over the initial runtime-first recommendation. The implementation phase must therefore:
+
+1. configure both profiles for `multi_agent_v2 = true`
+2. rewrite the local superpowers Codex docs in v2-first form
+3. preserve `agents.max_depth = 3` and `agents.job_max_runtime_seconds = 3600` as authoritative limits
+4. tailor config-level child mappings to the superpowers workflow rather than relying on generic built-in defaults
+5. verify whether the installed Codex binary actually activates that contract
+6. treat any inability to activate v2 or the tailored child mapping as an explicit implementation blocker or upgrade requirement, not as a reason to silently fall back to legacy mapping
 
 ## Design Principles
 
@@ -64,6 +85,7 @@ Observed on 2026-04-06:
 4. Reserve fanout for independent read-only work. Do not turn `subagent-driven-development` into parallel implementation by default.
 5. Hard-cut drift. If a Codex-facing superpowers contract is stale, rewrite it to match the verified runtime instead of documenting compatibility aliases.
 6. Verify the runtime, not just the repo. Local source snapshots and upstream docs are advisory; the live runtime on this machine is authoritative.
+7. When the user explicitly sets a stronger target contract than the currently observed runtime, design to that target and turn any runtime mismatch into blocker evidence rather than silently weakening the contract.
 
 ## Approaches Considered
 
@@ -115,16 +137,21 @@ Rejected for now because:
 
 ### Child Role Mapping
 
-For the verified live Codex runtime, the local superpowers checkout should document only the roles and tool shapes that can be confirmed on this workstation. The target mapping is:
+Child-role mapping is a config-owned contract in this design, not just a documentation convention and not just a fixed set of built-ins. The local `config.toml` child-mapping surface must be tailored to the superpowers workflow.
 
-- Implementer child: `worker`
-- Spec-compliance reviewer: read-only reviewer packet sent to a supported read-only role
-- Code-quality reviewer: read-only reviewer packet sent to a supported read-only role
-- Final synthesis and decision: parent controller
+The target logical mappings are:
 
-If the runtime exposes `explorer` and `worker` but not a dedicated `reviewer`, the local superpowers Codex docs should map both reviewer packets to a read-only `explorer` lane and keep final arbitration in the parent session.
+| Logical child | Workflow use | Required behavior |
+|---|---|---|
+| `implementer` | `subagent-driven-development` code-changing task | write-capable child, bounded ownership, TDD required |
+| `spec_reviewer` | post-implementer spec compliance review | read-only child, distrust implementer report, verify against task text |
+| `code_quality_reviewer` | post-spec code quality review | read-only child, severity-based findings |
+| `parallel_explorer` | `dispatching-parallel-agents` and bounded read-only scouting | read-only child, independent-domain exploration |
+| `final_reviewer` | end-of-plan review pass | read-only child, whole-change review |
 
-If a dedicated `reviewer` role is later verified in the live runtime, the docs may be updated then. Until that verification exists, do not document it as a supported Codex role.
+The parent session remains the orchestrator. The config-level child mapping should support these logical roles explicitly rather than forcing the skills to guess between generic built-ins.
+
+If the runtime requires those logical roles to resolve onto built-in roles such as `worker` or `explorer`, that resolution should live in `config.toml` and be documented there. The local superpowers Codex docs should reference the configured mapping, not pretend the built-in names are the workflow contract.
 
 ## Recommended Config Shape
 
@@ -154,27 +181,16 @@ Set a moderate root-level agent cap:
 ```toml
 [agents]
 max_threads = 12
+max_depth = 3
+job_max_runtime_seconds = 3600
 ```
 
 Rationale:
 
 - Profiles cannot override `agents.max_threads`, so this must work for both normal controller sessions and explicit parallel read-only sessions.
+- `max_depth = 3` and `job_max_runtime_seconds = 3600` are authoritative in this workstation design.
 - `12` is enough headroom for bounded parallel exploration and review without normalizing 32-way fanout.
 - The default workflow remains disciplined because concurrency policy is enforced by skills and prompts, not by a very low hard cap.
-
-Remove these root-level keys unless the live runtime is re-verified to use them:
-
-```toml
-[agents]
-# remove these stale keys
-# max_depth = 3
-# job_max_runtime_seconds = 3600
-```
-
-Rationale:
-
-- They are present today, but they were not confirmed as supported config knobs by the runtime verification path used in this design.
-- Hard-cut drift is preferable to carrying inert or speculative knobs.
 
 ### Profiles
 
@@ -194,6 +210,8 @@ enable_fanout = false
 
 [agents]
 max_threads = 12
+max_depth = 3
+job_max_runtime_seconds = 3600
 
 [profiles.workflow_fidelity]
 model = "gpt-5.4"
@@ -203,6 +221,10 @@ model_reasoning_effort = "xhigh"
 model_reasoning_summary = "detailed"
 model_verbosity = "high"
 personality = "pragmatic"
+
+[profiles.workflow_fidelity.features]
+multi_agent_v2 = true
+enable_fanout = false
 
 [profiles.parallel_readonly]
 model = "gpt-5.4"
@@ -214,6 +236,7 @@ model_verbosity = "medium"
 personality = "pragmatic"
 
 [profiles.parallel_readonly.features]
+multi_agent_v2 = true
 enable_fanout = true
 ```
 
@@ -230,6 +253,28 @@ Profile intent:
 
 Do not use `parallel_readonly` as the default implementation profile.
 
+### Config-Level Child Mapping
+
+In addition to feature flags and numeric limits, the implementation must use the authoritative `config.toml` child-mapping surface to tailor child behavior to superpowers.
+
+This design requires config-level mappings for at least:
+
+- `implementer`
+- `spec_reviewer`
+- `code_quality_reviewer`
+- `parallel_explorer`
+- `final_reviewer`
+
+Requirements:
+
+- the mapping must be v2-first
+- the mapping must preserve the parent as controller
+- review roles must remain read-only
+- `parallel_explorer` must be the preferred mapping for independent read-only fanout
+- config-level mapping must take precedence over ad hoc role guessing in skill docs
+
+The exact TOML serialization should use the real child-mapping surface already supported by this workstation. Implementation must not invent a parallel undocumented schema and must not fall back to generic built-in names if the configurable mapping can be activated.
+
 ## Local Superpowers Hard-Cut Changes
 
 ### 1. `docs/README.codex.md`
@@ -238,20 +283,25 @@ Update the Codex installation and usage docs to reflect the real local contract:
 
 - Codex integration is native skill discovery via symlink, not a Codex plugin manifest.
 - `multi_agent = true` is required.
+- `multi_agent_v2 = true` is required for both profiles in this workstation design.
+- `agents.max_depth = 3` and `agents.job_max_runtime_seconds = 3600` are part of the authoritative agent contract.
 - `enable_fanout` is optional and intended only for explicit parallel lanes.
-- Remove any requirement that says `multi_agent_v2 = true` unless verified in the live runtime.
+- Document that v2 mapping takes precedence over legacy `multi_agent` mapping.
+- Document that config-level child mapping is authoritative and tailored to the superpowers workflow.
+- Document that failure to activate `multi_agent_v2` during implementation is a blocker to surface explicitly.
 - Document the two-profile operating model and when to choose each profile.
 
 ### 2. `skills/using-superpowers/references/codex-tools.md`
 
-Hard-cut this file to the verified live Codex contract:
+Hard-cut this file to the user-directed v2 Codex contract and verify live activation against it:
 
-- Document only verified subagent tools and argument shapes.
-- Document only verified supported child roles.
-- Remove or rewrite references to unverified Codex-only roles such as `planner`, `reviewer`, and `verifier`.
-- Remove or rewrite `task_name` requirements unless that field is verified in the live runtime used by this workstation.
+- Document the v2 mapping first and treat it as authoritative for this workstation design.
+- Keep legacy `multi_agent` mapping only as clearly labeled fallback or historical context if it must remain at all.
+- Document the tailored config-level child mappings as the workflow contract.
+- Document only the child roles and argument shapes that are supported under the chosen v2 contract and mapped in config.
+- If a v2-only field or mapped role is not actually supported by the installed binary during implementation, record that as a blocker and update the runtime before weakening the docs.
 - Keep the guidance that the parent session remains responsible for user clarification and synthesis.
-- State explicitly that runtime probes beat source snapshots.
+- State explicitly that runtime probes beat source snapshots, but the user-directed target contract defines what implementation is trying to activate.
 
 ### 3. `skills/subagent-driven-development/SKILL.md`
 
@@ -260,7 +310,7 @@ Keep the workflow, but tighten the Codex mapping:
 - Preserve one implementer child at a time.
 - Preserve spec-compliance review before code-quality review.
 - Preserve parent-owned escalation handling.
-- Add an explicit Codex note that reviewer packets must target verified supported roles only.
+- Add an explicit Codex note that role selection must follow the tailored config-level child mapping.
 - Keep final integration and arbitration with the parent.
 
 ### 4. `skills/subagent-driven-development/implementer-prompt.md`
@@ -278,7 +328,7 @@ Preserve the distrustful review posture, but make the Codex role mapping explici
 
 - Reviewer packet is read-only.
 - Reviewer verifies code, not the implementer report.
-- Reviewer uses a supported read-only Codex role.
+- Reviewer uses the tailored config-level `spec_reviewer` mapping.
 - Reviewer returns specific missing/extra items with file references.
 
 ### 6. `skills/subagent-driven-development/code-quality-reviewer-prompt.md`
@@ -287,7 +337,7 @@ Preserve the two-stage review ladder:
 
 - This review runs only after spec compliance passes.
 - Reviewer packet is read-only.
-- Reviewer uses a supported read-only Codex role.
+- Reviewer uses the tailored config-level `code_quality_reviewer` mapping.
 - Findings stay severity-based and actionable.
 
 ### 7. `skills/requesting-code-review/SKILL.md`
@@ -295,7 +345,7 @@ Preserve the two-stage review ladder:
 Bring the standalone review skill in line with the same mapping:
 
 - A review child is read-only.
-- Review uses a verified supported role.
+- Review uses the tailored config-level review mapping.
 - Parent arbitrates disagreements.
 - Review remains mandatory after each task in `subagent-driven-development`.
 
@@ -322,8 +372,8 @@ Bring the standalone review skill in line with the same mapping:
 ### `subagent-driven-development`
 
 - Parent is the controller.
-- Implementer child is `worker`.
-- Review children are read-only and use only verified supported roles.
+- Implementer child follows the tailored config-level `implementer` mapping.
+- Review children are read-only and follow the tailored config-level review mappings.
 - No parallel overlapping implementation by default.
 - This stage should use `workflow_fidelity`.
 
@@ -345,7 +395,7 @@ Bring the standalone review skill in line with the same mapping:
 
 ### `requesting-code-review`
 
-- Use a read-only reviewer child or the parent review surface, depending on the verified runtime.
+- Use the tailored config-level review mapping or the parent review surface, depending on the activated runtime contract.
 - Review remains mandatory after each task in `subagent-driven-development`.
 - This stage should usually stay in `workflow_fidelity`, unless the entire session is a bounded parallel review wave.
 
@@ -361,8 +411,9 @@ Bring the standalone review skill in line with the same mapping:
 
 If the live runtime does not support a documented role or argument shape:
 
-- stop using it in the local superpowers Codex docs immediately
-- replace it with the verified supported contract
+- stop and record blocker evidence immediately
+- identify whether the failure is in v2 activation, child-mapping activation, or both
+- update the runtime or config before weakening any local superpowers docs
 - do not keep "temporary" compatibility wording
 
 ### Blocked Child
@@ -399,14 +450,34 @@ Run:
 ```bash
 which -a codex
 codex --version
-codex features list
+codex -p workflow_fidelity features list
+codex -p parallel_readonly features list
+rg -n '^\[agents\]|max_threads|max_depth|job_max_runtime_seconds' \
+  ~/.codex/config.macos-source.toml ~/.codex/config.toml
 ```
 
 Expected:
 
 - active binary still resolves to the intended npm-global Codex install
-- the runtime still exposes `multi_agent`
-- `enable_fanout` is disabled by default and enabled only under the parallel profile
+- both profiles expose `multi_agent_v2 = true`
+- v2-capable mapping is the expected operational contract for both profiles
+- `enable_fanout` is disabled in `workflow_fidelity` and enabled only in `parallel_readonly`
+- both config surfaces preserve `max_depth = 3` and `job_max_runtime_seconds = 3600`
+
+### Config-Level Child Mapping Verification
+
+Inspect the source and live config for tailored superpowers child mappings:
+
+```bash
+rg -n 'implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' \
+  ~/.codex/config.macos-source.toml ~/.codex/config.toml
+```
+
+Expected:
+
+- the tailored superpowers child mappings are present in both source and live config
+- review roles are visibly distinct from implementer roles
+- the mapping is stable enough that local superpowers docs can reference it directly
 
 ### Skill Discovery Verification
 
@@ -424,20 +495,24 @@ Expected:
 
 ### Prompt/Doc Contract Verification
 
-Check the Codex-facing superpowers files for stale Codex claims:
+Check the Codex-facing superpowers files for v2-first Codex claims and for stale legacy wording:
 
 ```bash
-rg -n 'multi_agent_v2|task_name|agent_type[ =:]+".*(planner|reviewer|verifier)"' \
+rg -n 'multi_agent_v2|task_name|assign_task|send_message' \
   ~/.codex/superpowers/docs/README.codex.md \
   ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
   ~/.codex/superpowers/skills/subagent-driven-development \
   ~/.codex/superpowers/skills/requesting-code-review/SKILL.md
+
+rg -n 'multi_agent = true is sufficient|legacy mapping is primary|v1 mapping is primary' \
+  ~/.codex/superpowers/docs/README.codex.md \
+  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
 ```
 
 Expected after implementation:
 
-- Codex-facing docs only contain runtime-verified claims
-- stale Codex role assumptions are removed or rewritten
+- Codex-facing docs encode the v2-first contract the user requested
+- stale legacy-primary claims are removed or rewritten
 - legitimate workflow file names such as `spec-reviewer-prompt.md` are not treated as failures by the check
 
 ### Workflow Smoke Verification
@@ -449,6 +524,7 @@ Run targeted prompts and inspect transcripts or notifications for:
 3. `subagent-driven-development` uses one implementer child at a time
 4. spec review happens before code-quality review
 5. implementer packets for code changes explicitly require TDD
+6. child selection follows the tailored config-level mapping rather than generic built-in guessing
 
 ## Implementation Surface
 
@@ -470,7 +546,11 @@ This design is successful when:
 
 - the default Codex profile supports the full superpowers workflow without encouraging broad fanout
 - an explicit parallel profile exists for independent read-only subagent waves
+- `multi_agent_v2` is enabled for both profiles
+- the v2 tool mapping is the documented primary Codex mapping
+- `max_depth = 3` and `job_max_runtime_seconds = 3600` remain part of the live authoritative agent contract
+- config-level child mappings are tailored to superpowers and reflected in local docs
 - the local superpowers Codex docs no longer drift from the verified runtime
 - TDD is explicit in the Codex implementer lane
 - review remains mandatory and read-only
-- unsupported or unverified Codex contracts are removed instead of documented as if they were real
+- unsupported or unverified Codex contracts are either activated successfully or surfaced as explicit blockers instead of being silently weakened
