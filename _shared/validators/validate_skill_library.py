@@ -16,6 +16,7 @@ REQUIRED_MANIFEST_TARGETS = {
         "contract/prompt-packet.md",
         "contract/runtime-surfaces.md",
         "skills/using-superpowers/SKILL.md",
+        "skills/using-superpowers/references/codex-tools.md",
         "skills/brainstorming/SKILL.md",
         "skills/brainstorming/spec-document-reviewer-prompt.md",
         "skills/writing-plans/SKILL.md",
@@ -55,11 +56,44 @@ PROMPT_TARGETS = [
     "skills/subagent-driven-development/code-quality-reviewer-prompt.md",
 ]
 
+PROMPT_REQUIRED_SUBSTRINGS = [
+    "Codex subagent packet:",
+    "items:",
+    '- type: "text"',
+    "text: |",
+    "Your task is to perform the following.",
+    "Follow the instructions below exactly.",
+    "<agent-instructions>",
+    "</agent-instructions>",
+    "Execute this now. Output ONLY the structured",
+]
+
+PROMPT_AGENT_TYPE_REQUIREMENTS = {
+    "skills/brainstorming/spec-document-reviewer-prompt.md": 'agent_type: "explorer"',
+    "skills/writing-plans/plan-document-reviewer-prompt.md": 'agent_type: "explorer"',
+    "skills/subagent-driven-development/implementer-prompt.md": 'agent_type: "worker"',
+    "skills/subagent-driven-development/spec-reviewer-prompt.md": 'agent_type: "explorer"',
+    "skills/subagent-driven-development/code-quality-reviewer-prompt.md": 'agent_type: "explorer"',
+}
+
 PROMPT_FORBIDDEN_STRINGS = [
     "Codex subagent packet (preferred v2):",
     "Task tool (general-purpose):",
     "task_name:",
     'agent_type: "reviewer"',
+]
+
+PROCESS_FAMILY_SKILL_CROSS_REFERENCES = [
+    "../../contract/process-family.md",
+    "../../contract/package-standards.md",
+]
+
+PROMPT_PACKET_SKILL_TARGETS = [
+    "skills/brainstorming/SKILL.md",
+    "skills/writing-plans/SKILL.md",
+    "skills/dispatching-parallel-agents/SKILL.md",
+    "skills/subagent-driven-development/SKILL.md",
+    "skills/requesting-code-review/SKILL.md",
 ]
 
 BOUNDARY_REQUIREMENTS = {
@@ -72,6 +106,25 @@ NO_BACKWARD_COMPAT_TARGETS = [
     "skills/requesting-code-review/code-reviewer.md",
     "skills/receiving-code-review/SKILL.md",
 ]
+
+STALE_DISPATCH_GUIDANCE = {
+    "skills/dispatching-parallel-agents/SKILL.md": [
+        "task_name",
+    ],
+    "skills/requesting-code-review/SKILL.md": [
+        "task_name",
+        'agent_type="reviewer"',
+        '"reviewer" or "worker"',
+    ],
+    "skills/using-superpowers/references/codex-tools.md": [
+        "task_name",
+        "`reviewer`",
+        "`send_message`",
+        "`assign_task`",
+        "`list_agents`",
+        "named agent",
+    ],
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -163,8 +216,12 @@ def validate_family(root: Path, family: str) -> list[str]:
         if not target.exists():
             continue
         text = read_text(target)
-        if "Codex subagent packet:" not in text:
-            issues.append(f"{rel_path} is missing required packet caption `Codex subagent packet:`")
+        for required in PROMPT_REQUIRED_SUBSTRINGS:
+            if required not in text:
+                issues.append(f"{rel_path} is missing required prompt text `{required}`")
+        agent_type = PROMPT_AGENT_TYPE_REQUIREMENTS[rel_path]
+        if agent_type not in text:
+            issues.append(f"{rel_path} is missing required prompt text `{agent_type}`")
         for forbidden in PROMPT_FORBIDDEN_STRINGS:
             if forbidden in text:
                 issues.append(f"{rel_path} contains forbidden prompt text `{forbidden}`")
@@ -178,12 +235,39 @@ def validate_family(root: Path, family: str) -> list[str]:
             if phrase not in text:
                 issues.append(f"{rel_path} must mention `{phrase}`")
 
+    for rel_path in [entry for entry in entries if entry.endswith("/SKILL.md")]:
+        target = root / rel_path
+        if not target.exists():
+            continue
+        text = read_text(target)
+        for required_reference in PROCESS_FAMILY_SKILL_CROSS_REFERENCES:
+            if required_reference not in text:
+                issues.append(f"{rel_path} must mention `{required_reference}`")
+
+    for rel_path in PROMPT_PACKET_SKILL_TARGETS:
+        if rel_path not in entry_set:
+            continue
+        target = root / rel_path
+        if not target.exists():
+            continue
+        if "../../contract/prompt-packet.md" not in read_text(target):
+            issues.append(f"{rel_path} must mention `../../contract/prompt-packet.md`")
+
     for rel_path in NO_BACKWARD_COMPAT_TARGETS:
         target = root / rel_path
         if not target.exists():
             continue
-        if "backward compatibility" in read_text(target):
+        if "backward compatibility" in read_text(target).lower():
             issues.append(f"{rel_path} contains forbidden phrase `backward compatibility`")
+
+    for rel_path, forbidden_substrings in STALE_DISPATCH_GUIDANCE.items():
+        target = root / rel_path
+        if not target.exists():
+            continue
+        text = read_text(target)
+        for forbidden in forbidden_substrings:
+            if forbidden in text:
+                issues.append(f"{rel_path} contains stale dispatch guidance `{forbidden}`")
 
     for path in root.rglob(".DS_Store"):
         issues.append(f"Forbidden artifact present: {path.relative_to(root)}")
@@ -200,8 +284,9 @@ def main() -> int:
     if not root.exists():
         raise SystemExit(f"Root does not exist: {root}")
 
+    manifest_path = root / MANIFEST_BY_FAMILY[args.family]
     issues = validate_family(root, args.family)
-    manifest_entries = read_manifest(root / MANIFEST_BY_FAMILY[args.family])
+    manifest_entries = read_manifest(manifest_path) if manifest_path.exists() else []
 
     if issues:
         print("FAIL")

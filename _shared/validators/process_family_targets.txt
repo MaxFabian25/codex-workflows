@@ -3,6 +3,7 @@ contract/process-family.md
 contract/prompt-packet.md
 contract/runtime-surfaces.md
 skills/using-superpowers/SKILL.md
+skills/using-superpowers/references/codex-tools.md
 skills/brainstorming/SKILL.md
 skills/brainstorming/spec-document-reviewer-prompt.md
 skills/writing-plans/SKILL.md
