@@ -94,6 +94,8 @@ git diff {BASE_SHA}..{HEAD_SHA}
 - Why it matters
 - How to fix (if not obvious)
 
+Write `None.` for any severity bucket with no issues.
+
 ### Recommendations
 [Improvements for code quality, architecture, or process]
 
@@ -129,22 +131,28 @@ git diff {BASE_SHA}..{HEAD_SHA}
 
 ### Issues
 
-#### Important
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
 1. **Missing help text in CLI wrapper**
-   - File: index-conversations:1-31
-   - Issue: No --help flag, users won't discover --concurrency
-   - Fix: Add --help case with usage examples
+   - File: `index-conversations:1-31`
+   - What's wrong: No `--help` flag is exposed, so users cannot discover `--concurrency`.
+   - Why it matters: Operators may miss required usage details and invoke the command incorrectly.
+   - How to fix: Add a `--help` case with usage examples.
 
 2. **Date validation missing**
-   - File: search.ts:25-27
-   - Issue: Invalid dates silently return no results
-   - Fix: Validate ISO format, throw error with example
+   - File: `search.ts:25-27`
+   - What's wrong: Invalid dates silently return no results.
+   - Why it matters: Users receive misleading empty results instead of actionable feedback.
+   - How to fix: Validate ISO format and throw an error with an example.
 
-#### Minor
+#### Minor (Nice to Have)
 1. **Progress indicators**
-   - File: indexer.ts:130
-   - Issue: No "X of Y" counter for long operations
-   - Impact: Users don't know how long to wait
+   - File: `indexer.ts:130`
+   - What's wrong: No "X of Y" counter is shown for long operations.
+   - Why it matters: Users do not know how long to wait during large indexing runs.
+   - How to fix: Add a periodic progress counter tied to processed item counts.
 
 ### Recommendations
 - Add progress reporting for user experience

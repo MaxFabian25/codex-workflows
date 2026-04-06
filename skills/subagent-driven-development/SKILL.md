@@ -151,7 +151,21 @@ Implementer: "Got it. Implementing now..."
 Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
 
 [Get git SHAs, dispatch code quality reviewer]
-Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
+Code reviewer:
+  ### Strengths
+  - Good test coverage and clean separation of concerns.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  None.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - No additional recommendations for this task.
+  ### Assessment
+  **Ready for requested review scope?** Yes
+  **Reasoning:** The implementation is clean, well-tested, and ready to proceed to Task 2.
 
 [Mark Task 1 complete]
 
@@ -179,21 +193,67 @@ Implementer: Removed --json flag, added progress reporting
 Spec reviewer: ✅ Spec compliant now
 
 [Dispatch code quality reviewer]
-Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
+Code reviewer:
+  ### Strengths
+  - Solid repair flow with clear test coverage.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  1. **Magic reporting interval**
+     - File: `src/indexer.ts:130`
+     - What's wrong: `100` is hard-coded in the progress reporting path.
+     - Why it matters: The reporting contract is harder to maintain and test.
+     - How to fix: Extract a named constant such as `PROGRESS_INTERVAL`.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - Extract the reporting interval before marking Task 2 complete.
+  ### Assessment
+  **Ready for requested review scope?** With fixes
+  **Reasoning:** The task is close, but the interval constant should be extracted before proceeding.
 
 [Implementer fixes]
 Implementer: Extracted PROGRESS_INTERVAL constant
 
 [Code reviewer reviews again]
-Code reviewer: ✅ Approved
+Code reviewer:
+  ### Strengths
+  - Clear reporting constant and focused repair flow.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  None.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - No additional recommendations for this task.
+  ### Assessment
+  **Ready for requested review scope?** Yes
+  **Reasoning:** The task-level review scope is satisfied, and the implementation is ready to proceed.
 
 [Mark Task 2 complete]
 
 ...
 
 [After all tasks]
-[Dispatch final_reviewer using requesting-code-review/code-reviewer.md for the whole-change review]
-Final reviewer: All requirements met, ready to merge
+[Dispatch final_reviewer using requesting-code-review/code-reviewer.md for the whole-change review, with BASE_SHA set to the commit where the full change started]
+Final reviewer:
+  ### Strengths
+  - The full change matches the plan and keeps the implementation boundaries clean.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  None.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - No additional recommendations before merge or handoff.
+  ### Assessment
+  **Ready for requested review scope?** Yes
+  **Reasoning:** The whole change is well-structured, verified, and ready to merge or hand off.
 
 Done!
 ```

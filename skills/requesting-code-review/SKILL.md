@@ -40,6 +40,8 @@ BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
+Use `HEAD~1` only when the requested review scope is one commit or one bounded task change. For `final_reviewer`, choose `BASE_SHA` at the start of the full change being reviewed, not just the most recent task commit.
+
 **2. Dispatch the review child:**
 
 Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="code_quality_reviewer" or "final_reviewer", message="...")`.
@@ -92,24 +94,35 @@ spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", 
 
 [Review child returns]
 ### Strengths
-- Clean architecture, real tests
+- Clean architecture with real tests around the repair flow
 
 ### Issues
 
+#### Critical (Must Fix)
+None.
+
 #### Important (Should Fix)
-- Missing progress indicators
+1. **Missing progress indicators**
+   - File: `src/indexer.ts:130`
+   - What's wrong: Long-running verification and repair paths do not report progress.
+   - Why it matters: Task 2 requires progress reporting every 100 items, and operators cannot tell whether the job is still advancing.
+   - How to fix: Add a progress log or callback that emits every 100 processed items.
 
 #### Minor (Nice to Have)
-- Magic number (100) for reporting interval
+1. **Magic reporting interval**
+   - File: `src/indexer.ts:130`
+   - What's wrong: The value `100` is inlined in the reporting path.
+   - Why it matters: Future changes to the reporting cadence will require hunting through implementation details.
+   - How to fix: Extract a named constant such as `PROGRESS_INTERVAL`.
 
 ### Recommendations
-- Add progress reporting before moving to Task 3
+- Add progress reporting first, then extract the reporting interval constant in the same pass.
 
 ### Assessment
 
 **Ready for requested review scope?** With fixes
 
-**Reasoning:** The core design is sound, but the missing progress indicator should be fixed before proceeding.
+**Reasoning:** The core design is sound, but the missing progress indicator should be fixed before proceeding to Task 3.
 
 You: [Fix progress indicators]
 [Continue to Task 3]

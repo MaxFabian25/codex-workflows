@@ -48,4 +48,4 @@ Codex subagent packet (preferred v2):
   or significantly grow existing files?
   (Don't flag pre-existing file sizes. Focus on what this change contributed.)
 
-**Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Assessment
+**Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Recommendations, Assessment
