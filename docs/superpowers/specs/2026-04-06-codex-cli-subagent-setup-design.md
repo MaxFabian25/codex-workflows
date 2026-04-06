@@ -176,11 +176,11 @@ Keep shared runtime invariants at the root:
 - `features.multi_agent = true`
 - `features.enable_fanout = false`
 
-Set a moderate root-level agent cap:
+Keep the authoritative root-level agent cap aligned with the live config and branch docs:
 
 ```toml
 [agents]
-max_threads = 12
+max_threads = 32
 max_depth = 3
 job_max_runtime_seconds = 3600
 ```
@@ -189,8 +189,8 @@ Rationale:
 
 - Profiles cannot override `agents.max_threads`, so this must work for both normal controller sessions and explicit parallel read-only sessions.
 - `max_depth = 3` and `job_max_runtime_seconds = 3600` are authoritative in this workstation design.
-- `12` is enough headroom for bounded parallel exploration and review without normalizing 32-way fanout.
-- The default workflow remains disciplined because concurrency policy is enforced by skills and prompts, not by a very low hard cap.
+- `32` is the final authoritative workstation cap already reflected in the live config and branch docs.
+- The default workflow remains disciplined because concurrency policy is enforced by skills, prompts, and profile feature-state rather than by reducing the shared hard cap below the documented runtime contract.
 
 ### Profiles
 
@@ -209,7 +209,7 @@ multi_agent = true
 enable_fanout = false
 
 [agents]
-max_threads = 12
+max_threads = 32
 max_depth = 3
 job_max_runtime_seconds = 3600
 

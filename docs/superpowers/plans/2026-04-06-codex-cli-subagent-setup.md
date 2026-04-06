@@ -547,12 +547,12 @@ Run:
 
 ```bash
 rg -n 'multi_agent_v2|max_depth = 3|job_max_runtime_seconds = 3600|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' /Users/maxibon/.codex/superpowers/docs/README.codex.md
-rg -n 'multi_agent = true is sufficient|subagent skills.*optional' /Users/maxibon/.codex/superpowers/docs/README.codex.md
+! rg -n 'multi_agent = true is sufficient|subagent skills.*optional' /Users/maxibon/.codex/superpowers/docs/README.codex.md
 ```
 
 Expected:
 - The first `rg` hits the new workstation contract.
-- The second `rg` returns no results.
+- The second check exits 0 via `! rg ...` only when the stale README claims are absent.
 
 - [ ] **Step 3: Commit**
 
@@ -673,12 +673,12 @@ Run:
 
 ```bash
 rg -n 'multi_agent_v2|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|spawn_agent|wait_agent|close_agent' /Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
-rg -n 'send_message|assign_task|list_agents|agent_type="worker"|agent_type="reviewer"' /Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
+! rg -n 'send_message|assign_task|list_agents|agent_type="worker"|agent_type="reviewer"' /Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
 ```
 
 Expected:
 - The first `rg` shows the v2-first runtime contract and custom role names.
-- The second `rg` returns no results.
+- The second check exits 0 via `! rg ...` only when the stale tool-mapping patterns are absent.
 
 - [ ] **Step 3: Commit**
 
@@ -727,12 +727,12 @@ Run:
 
 ```bash
 rg -n 'parallel_explorer|read-only|overlapping implementation' /Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md
-rg -n 'agent_type="worker"' /Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md
+! rg -n 'agent_type="worker"' /Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md
 ```
 
 Expected:
 - The first `rg` shows the read-only `parallel_explorer` lane.
-- The second `rg` returns no results.
+- The second check exits 0 via `! rg ...` only when the stale worker-lane example is absent.
 
 - [ ] **Step 5: Commit**
 
@@ -1063,12 +1063,12 @@ Run:
 
 ```bash
 rg -n 'implementer|spec_reviewer|code_quality_reviewer|final_reviewer|test-driven-development|Stay read-only' /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/SKILL.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/implementer-prompt.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
-rg -n 'agent_type: "worker"|agent_type: "reviewer"|following TDD if task says to' /Users/maxibon/.codex/superpowers/skills/subagent-driven-development
+! rg -n 'agent_type: "worker"|agent_type: "reviewer"|following TDD if task says to' /Users/maxibon/.codex/superpowers/skills/subagent-driven-development
 ```
 
 Expected:
 - The first `rg` shows the config-owned role names, read-only reviewer language, and explicit TDD requirement.
-- The second `rg` returns no results.
+- The second check exits 0 via `! rg ...` only when the stale generic role examples and weak TDD wording are absent.
 
 - [ ] **Step 6: Commit**
 
@@ -1466,12 +1466,12 @@ Run:
 
 ```bash
 rg -n 'code_quality_reviewer|final_reviewer|read-only|PLAN_OR_REQUIREMENTS|TDD evidence present' /Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md /Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md
-rg -n 'agent_type="reviewer"|PLAN_REFERENCE|Backward compatibility considered' /Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md /Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md
+! rg -n 'agent_type="reviewer"|PLAN_REFERENCE|Backward compatibility considered' /Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md /Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md
 ```
 
 Expected:
 - The first `rg` shows the custom review roles, read-only review contract, and placeholder alignment.
-- The second `rg` returns no results.
+- The second check exits 0 via `! rg ...` only when the stale reviewer-role and placeholder patterns are absent.
 
 - [ ] **Step 4: Commit**
 
@@ -1488,11 +1488,11 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(review): align review w
 - Verify only: `/Users/maxibon/.codex/config.macos-source.toml`
 - Verify only: `/Users/maxibon/.codex/config.toml`
 - Verify only: `/Users/maxibon/.codex/agents/*.toml`
-- Verify only: `/Users/maxibon/.codex/superpowers/docs/README.codex.md`
-- Verify only: `/Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md`
-- Verify only: `/Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md`
-- Verify only: `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/*`
-- Verify only: `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/*`
+- Verify only: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md`
+- Verify only: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md`
+- Verify only: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md`
+- Verify only: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/*`
+- Verify only: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/*`
 
 - [ ] **Step 1: Re-run the global runtime verification**
 
@@ -1568,7 +1568,7 @@ Run:
 
 ```bash
 rg -n 'multi_agent_v2|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
-rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 python3 - <<'PY'
 from pathlib import Path
 import re
@@ -1604,7 +1604,7 @@ PY
 
 Expected:
 - The first `rg` finds the new v2-first contract and role mapping.
-- The second `rg` returns no results.
+- The second check exits 0 via `! rg ...` only when the stale branch-local doc and prompt patterns are absent.
 - The `python3` parity check prints exact-match confirmations and exits 0 only when the embedded Task 4 Step 1 `README.codex.md` block and the embedded Task 8 Step 2 `code-reviewer.md` block both match their source files exactly.
 
 - [ ] **Step 3: Verify repo cleanliness and commit integrity**
