@@ -92,10 +92,10 @@ The review child reports findings. The parent decides what to do next.
 ## Red Flags
 
 **Never:**
-- Skip review because "it's simple"
-- Use a write-capable child role for review
-- Ignore Critical issues
-- Proceed without resolving or explicitly arbitrating Important issues
-- Treat reviewer output as self-executing instead of parent-owned feedback
+- Skip review because a change seems simple
+- Use a write-capable child to review
+- Proceed with unfixed Critical issues
+- Ignore Important issues without explicit parent justification
+- Let review replace verification
 
 See template at: requesting-code-review/code-reviewer.md
