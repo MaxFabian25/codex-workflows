@@ -551,13 +551,20 @@ Planned file changes for the implementation phase:
 
 - `/Users/maxibon/.codex/config.macos-source.toml`
 - `/Users/maxibon/.codex/config.toml`
-- `/Users/maxibon/.codex/superpowers/docs/README.codex.md`
-- `/Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/SKILL.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/implementer-prompt.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md`
-- `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md`
+- `/Users/maxibon/.codex/agents/implementer.toml`
+- `/Users/maxibon/.codex/agents/spec_reviewer.toml`
+- `/Users/maxibon/.codex/agents/code_quality_reviewer.toml`
+- `/Users/maxibon/.codex/agents/parallel_explorer.toml`
+- `/Users/maxibon/.codex/agents/final_reviewer.toml`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/SKILL.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/implementer-prompt.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/spec-reviewer-prompt.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/code-quality-reviewer-prompt.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/SKILL.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md`
 
 ## Done Criteria
 
