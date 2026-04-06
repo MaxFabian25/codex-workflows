@@ -42,7 +42,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 **2. Dispatch the review child:**
 
-Fill the template at `code-reviewer.md`, then dispatch it by putting the filled review packet inside the top-level `message`.
+Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="code_quality_reviewer" or "final_reviewer", message="...")`.
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What you just built
@@ -66,10 +66,8 @@ You: Let me request code review before proceeding.
 BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Dispatch review child]
-task_name: task_2_code_review
-agent_type: code_quality_reviewer
-message: |
+spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", message="[filled code-reviewer.md packet for Task 2]")
+
   You are performing a read-only review of code changes for the requested review scope.
 
   **Your task:**
