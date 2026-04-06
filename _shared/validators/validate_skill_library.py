@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -110,6 +111,10 @@ NO_BACKWARD_COMPAT_TARGETS = [
 STALE_DISPATCH_GUIDANCE = {
     "skills/dispatching-parallel-agents/SKILL.md": [
         "task_name",
+        'fork_turns="all"',
+    ],
+    "skills/subagent-driven-development/SKILL.md": [
+        'fork_turns="all"',
     ],
     "skills/requesting-code-review/SKILL.md": [
         "task_name",
@@ -123,6 +128,15 @@ STALE_DISPATCH_GUIDANCE = {
         "`assign_task`",
         "`list_agents`",
         "named agent",
+    ],
+}
+
+TARGETED_CONTENT_GUARDS = {
+    "skills/dispatching-parallel-agents/SKILL.md": [
+        (
+            re.compile(r'spawn_agent\([\s\S]{0,200}?agent_type="worker"'),
+            'contains write-owning `spawn_agent(... agent_type="worker" ...)` example guidance',
+        ),
     ],
 }
 
@@ -234,6 +248,15 @@ def validate_family(root: Path, family: str) -> list[str]:
         for phrase in required_phrases:
             if phrase not in text:
                 issues.append(f"{rel_path} must mention `{phrase}`")
+
+    for rel_path, guards in TARGETED_CONTENT_GUARDS.items():
+        target = root / rel_path
+        if not target.exists():
+            continue
+        text = read_text(target)
+        for pattern, message in guards:
+            if pattern.search(text):
+                issues.append(f"{rel_path} {message}")
 
     for rel_path in [entry for entry in entries if entry.endswith("/SKILL.md")]:
         target = root / rel_path
