@@ -36,7 +36,7 @@ digraph when_to_use {
 ```
 
 **Use when:**
-- 3+ test files failing with different root causes
+- 2+ test files failing with different root causes
 - Multiple subsystems broken independently
 - Each problem can be understood without context from others
 - No shared state between investigations
@@ -97,7 +97,7 @@ Investigate the 3 failing tests in src/agents/agent-tool-abort.test.ts:
 2. "should handle mixed completed and aborted tools" - fast tool aborted instead of completed
 3. "should properly track pendingToolCount" - expects 3 results but gets 0
 
-These are timing/race condition issues. Your task:
+These failures need investigation. Your task:
 
 1. Read the test file and understand what each test verifies
 2. Identify the root cause - timing issue, production bug, or expectation mismatch?
