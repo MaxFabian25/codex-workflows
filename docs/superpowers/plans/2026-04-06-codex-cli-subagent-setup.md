@@ -363,15 +363,15 @@ Expected:
 Run:
 
 ```bash
-which -a codex
-codex --version
+zsh -lic 'which -a codex'
+zsh -lic 'codex --version'
 codex -p workflow_fidelity features list | rg -n 'multi_agent|multi_agent_v2|enable_fanout'
 codex -p parallel_readonly features list | rg -n 'multi_agent|multi_agent_v2|enable_fanout'
 ```
 
 Expected:
-- `which -a codex` still includes `/Users/maxibon/.npm-global/bin/codex`.
-- `codex --version` returns the installed alpha CLI version.
+- `zsh -lic 'which -a codex'` still includes `/Users/maxibon/.npm-global/bin/codex`.
+- `zsh -lic 'codex --version'` returns the installed alpha CLI version.
 - `workflow_fidelity` shows `multi_agent = true`, `multi_agent_v2 = true`, `enable_fanout = false`.
 - `parallel_readonly` shows `multi_agent = true`, `multi_agent_v2 = true`, `enable_fanout = true`.
 
@@ -413,11 +413,7 @@ Guide for using Superpowers with OpenAI Codex via native skill discovery on this
 
 ## Quick Install
 
-Tell Codex:
-
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
-```
+Use the `Manual Installation` steps in this README. They are authoritative for this workstation because they include the config source edit, live mirror sync, profile split, and child-role contract instead of sending maintainers through the generic upstream install path.
 
 ## Manual Installation
 
@@ -460,7 +456,7 @@ The `using-superpowers` skill is discovered from that symlink and remains the wo
 
 ## Required Agent Contract
 
-For this workstation, the authoritative child-agent contract is:
+For this workstation, the configured local contract is:
 
 ```toml
 profile = "workflow_fidelity"
@@ -476,12 +472,25 @@ max_depth = 3
 job_max_runtime_seconds = 3600
 ```
 
+Parallel override for bounded read-only fanout:
+
+```toml
+profile = "parallel_readonly"
+
+[features]
+multi_agent = true
+multi_agent_v2 = true
+enable_fanout = true
+```
+
 Rules:
 
 - `multi_agent_v2 = true` is required for both `workflow_fidelity` and `parallel_readonly`.
-- The v2 child-role mapping takes precedence over generic legacy `multi_agent` role guessing.
 - `max_depth = 3` and `job_max_runtime_seconds = 3600` are authoritative.
-- `enable_fanout` stays off in the default controller profile and is enabled only for the explicit parallel lane.
+- `enable_fanout` stays off in the default controller profile and is enabled only for the explicit `parallel_readonly` lane.
+- Current proof on this workstation covers login-shell binary/version verification, profile feature-state verification, and matching role mappings present in both config surfaces.
+- Disposable `codex exec` smoke currently resolves the live root checkout at `~/.codex/superpowers/skills`, not this branch worktree, so branch-local verification does not by itself prove active end-to-end custom-role dispatch.
+- Custom child-role dispatch behavior should be verified after integrating this branch into the live checkout if runtime behavior is in doubt.
 - If either `codex -p workflow_fidelity features list` or `codex -p parallel_readonly features list` does not show `multi_agent_v2 = true`, stop and treat that as a runtime blocker instead of weakening the docs.
 
 ## Profiles
@@ -493,7 +502,7 @@ Do not use `parallel_readonly` as the default implementation profile.
 
 ## Child Role Mapping
 
-Superpowers relies on config-owned child roles declared in `~/.codex/config.macos-source.toml` and backed by `~/.codex/agents/*.toml`:
+This workstation is configured for a v2-first child-role mapping. The configured local contract is declared in `~/.codex/config.macos-source.toml`, mirrored into `~/.codex/config.toml`, and backed by `~/.codex/agents/*.toml`:
 
 | Role | Workflow use | Access mode |
 |---|---|---|
@@ -503,7 +512,7 @@ Superpowers relies on config-owned child roles declared in `~/.codex/config.maco
 | `parallel_explorer` | Independent parallel exploration and audit work | Read-only |
 | `final_reviewer` | Final whole-change review pass | Read-only |
 
-Skills should dispatch these mapped role names directly. The parent session remains responsible for user clarification, arbitration, and final synthesis.
+Superpowers workflow docs refer to these configured local role names. Profile feature-state verification proves the profile flags; if role-dispatch behavior is in doubt, it should be verified separately. The parent session remains responsible for user clarification, arbitration, and final synthesis.
 
 ## Updating
 
@@ -1493,31 +1502,61 @@ Run:
 diff -u /Users/maxibon/.codex/config.macos-source.toml /Users/maxibon/.codex/config.toml || true
 python3 - <<'PY'
 from pathlib import Path
-import re
+import tomllib
 
-source = Path('/Users/maxibon/.codex/config.macos-source.toml').read_text()
-live = Path('/Users/maxibon/.codex/config.toml').read_text()
-project_pattern = re.compile(r'(?ms)^\[projects\.".*?"\]\ntrust_level = ".*?"\n?(?:\n)?')
+source_path = Path('/Users/maxibon/.codex/config.macos-source.toml')
+live_path = Path('/Users/maxibon/.codex/config.toml')
+source = tomllib.loads(source_path.read_text())
+live = tomllib.loads(live_path.read_text())
 
-def normalize(text: str) -> str:
-    text = project_pattern.sub('', text)
-    text = re.sub(r'\n{3,}', '\n\n', text).rstrip() + '\n'
-    return text
+source_core = {key: value for key, value in source.items() if key != 'projects'}
+live_core = {key: value for key, value in live.items() if key != 'projects'}
+if source_core != live_core:
+    raise SystemExit('config drift outside [projects] entries')
 
-if normalize(source) != normalize(live):
-    raise SystemExit('config drift beyond runtime-added [projects] trust entries')
-print('config source/live match after ignoring runtime-added [projects] trust entries.')
+source_projects = source.get('projects', {})
+live_projects = live.get('projects', {})
+missing_projects = sorted(set(source_projects) - set(live_projects))
+mismatched_projects = sorted(
+    name for name in source_projects
+    if name in live_projects and source_projects[name] != live_projects[name]
+)
+
+if missing_projects or mismatched_projects:
+    problems = []
+    if missing_projects:
+        problems.append(
+            'missing source-owned [projects] entries in live config: '
+            + ', '.join(missing_projects)
+        )
+    if mismatched_projects:
+        problems.append(
+            'drift in source-owned [projects] entries: '
+            + ', '.join(mismatched_projects)
+        )
+    raise SystemExit('; '.join(problems))
+
+extra_live_projects = sorted(set(live_projects) - set(source_projects))
+if extra_live_projects:
+    print(
+        'config source/live match for all source-owned content; '
+        'allowed live-only [projects] entries: '
+        + ', '.join(extra_live_projects)
+    )
+else:
+    print('config source/live match for all source-owned content; no live-only [projects] entries.')
 PY
-which -a codex
-codex --version
+zsh -lic 'which -a codex'
+zsh -lic 'codex --version'
 codex -p workflow_fidelity features list | rg -n 'multi_agent|multi_agent_v2|enable_fanout'
 codex -p parallel_readonly features list | rg -n 'multi_agent|multi_agent_v2|enable_fanout'
 rg -n '^\[agents\.(implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer)\]$' /Users/maxibon/.codex/config.macos-source.toml /Users/maxibon/.codex/config.toml
 ```
 
 Expected:
-- The raw `diff -u` may show only extra runtime-added `[projects]` trust entries in `/Users/maxibon/.codex/config.toml`.
-- The `python3` check exits 0 only when the remaining config content matches after ignoring runtime-added `[projects]` trust entries.
+- The raw `diff -u` may show only live-only runtime-added `[projects]` trust entries in `/Users/maxibon/.codex/config.toml`.
+- The `python3` check exits 0 only when all non-`[projects]` content matches exactly, every source-owned `[projects]` block matches exactly, and any extra `[projects]` blocks are live-only additions.
+- `zsh -lic 'which -a codex'` and `zsh -lic 'codex --version'` confirm the active login-shell binary and version.
 - Both profiles show `multi_agent_v2 = true`.
 - `workflow_fidelity` shows `enable_fanout = false`.
 - `parallel_readonly` shows `enable_fanout = true`.
@@ -1536,24 +1575,37 @@ import re
 
 repo = Path('/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup')
 plan_rel = Path('docs/superpowers/plans/2026-04-06-codex-cli-subagent-setup.md')
-source_rel = Path('skills/requesting-code-review/code-reviewer.md')
 plan = (repo / plan_rel).read_text()
-source = (repo / source_rel).read_text()
-pattern = re.compile(r"- \\[ \\] \\*\\*Step 2: Replace `/Users/maxibon/\\.codex/superpowers/skills/requesting-code-review/code-reviewer\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 3: Verify the review workflow alignment\\*\\*", re.S)
-match = pattern.search(plan)
-if not match:
-    raise SystemExit('Task 8 Step 2 block not found')
-embedded = match.group(1) + '\n'
-if embedded != source:
-    raise SystemExit(f'Task 8 Step 2 embedded {source_rel} block drifted from source')
-print(f'Task 8 Step 2 embedded block matches {source_rel} exactly.')
+
+checks = [
+    (
+        'Task 4 Step 1',
+        Path('docs/README.codex.md'),
+        re.compile(r"- \\[ \\] \\*\\*Step 1: Replace `/Users/maxibon/\\.codex/superpowers/docs/README\\.codex\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 2: Verify the README contract text\\*\\*", re.S),
+    ),
+    (
+        'Task 8 Step 2',
+        Path('skills/requesting-code-review/code-reviewer.md'),
+        re.compile(r"- \\[ \\] \\*\\*Step 2: Replace `/Users/maxibon/\\.codex/superpowers/skills/requesting-code-review/code-reviewer\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 3: Verify the review workflow alignment\\*\\*", re.S),
+    ),
+]
+
+for label, source_rel, pattern in checks:
+    source = (repo / source_rel).read_text()
+    match = pattern.search(plan)
+    if not match:
+        raise SystemExit(f'{label} block not found')
+    embedded = match.group(1) + '\n'
+    if embedded != source:
+        raise SystemExit(f'{label} embedded {source_rel} block drifted from source')
+    print(f'{label} embedded block matches {source_rel} exactly.')
 PY
 ```
 
 Expected:
 - The first `rg` finds the new v2-first contract and role mapping.
 - The second `rg` returns no results.
-- The `python3` parity check prints the exact-match confirmation and exits 0 only when the embedded Task 8 Step 2 `code-reviewer.md` block matches the source file exactly.
+- The `python3` parity check prints exact-match confirmations and exits 0 only when the embedded Task 4 Step 1 `README.codex.md` block and the embedded Task 8 Step 2 `code-reviewer.md` block both match their source files exactly.
 
 - [ ] **Step 3: Verify repo cleanliness and commit integrity**
 
