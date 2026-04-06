@@ -110,24 +110,21 @@ NO_BACKWARD_COMPAT_TARGETS = [
 
 STALE_DISPATCH_GUIDANCE = {
     "skills/dispatching-parallel-agents/SKILL.md": [
-        "task_name",
-        'fork_turns="all"',
+        (re.compile(r'fork_turns="all"'), 'fork_turns="all"'),
     ],
     "skills/subagent-driven-development/SKILL.md": [
-        'fork_turns="all"',
+        (re.compile(r'fork_turns="all"'), 'fork_turns="all"'),
     ],
     "skills/requesting-code-review/SKILL.md": [
-        "task_name",
-        'agent_type="reviewer"',
-        '"reviewer" or "worker"',
+        (re.compile(r'`assign_task`'), "assign_task"),
+        (re.compile(r'agent_type="reviewer"'), 'agent_type="reviewer"'),
+        (re.compile(r'"reviewer"\s+or\s+"worker"'), '"reviewer" or "worker"'),
     ],
     "skills/using-superpowers/references/codex-tools.md": [
-        "task_name",
-        "`reviewer`",
-        "`send_message`",
-        "`assign_task`",
-        "`list_agents`",
-        "named agent",
+        (re.compile(r'`assign_task`'), "assign_task"),
+        (re.compile(r'`reviewer`'), "reviewer"),
+        (re.compile(r'`planner`'), "planner"),
+        (re.compile(r'`verifier`'), "verifier"),
     ],
 }
 
@@ -283,14 +280,14 @@ def validate_family(root: Path, family: str) -> list[str]:
         if "backward compatibility" in read_text(target).lower():
             issues.append(f"{rel_path} contains forbidden phrase `backward compatibility`")
 
-    for rel_path, forbidden_substrings in STALE_DISPATCH_GUIDANCE.items():
+    for rel_path, stale_rules in STALE_DISPATCH_GUIDANCE.items():
         target = root / rel_path
         if not target.exists():
             continue
         text = read_text(target)
-        for forbidden in forbidden_substrings:
-            if forbidden in text:
-                issues.append(f"{rel_path} contains stale dispatch guidance `{forbidden}`")
+        for pattern, label in stale_rules:
+            if pattern.search(text):
+                issues.append(f"{rel_path} contains stale dispatch guidance `{label}`")
 
     for path in root.rglob(".DS_Store"):
         issues.append(f"Forbidden artifact present: {path.relative_to(root)}")
