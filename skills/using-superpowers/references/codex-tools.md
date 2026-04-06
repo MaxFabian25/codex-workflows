@@ -17,9 +17,10 @@ Skills use Claude Code tool names. When you encounter these in a skill, use your
 ## Dispatch Rules
 
 - Always pass `task_name` to `spawn_agent(...)`.
-- Prefer a stable task name for `followup_task`, `send_message`, `list_agents`, `wait_agent`, and `close_agent`.
+- Prefer a stable task name for `followup_task`, `send_message`, `list_agents`, and `close_agent`.
+- Use `wait_agent` only as a general synchronization point when blocked on child progress. It does not target a specific `task_name`.
 - Preserve inherited child config by default. Do not pass `model` or `reasoning_effort` unless the user explicitly asks.
-- Put the filled child instructions in the `message` field.
+- Put the rendered packet text in the `message` field.
 
 ## Process-Family Routing
 
@@ -34,6 +35,8 @@ When a skill points to a local prompt template:
 
 1. Read the prompt file.
 2. Fill its placeholders (`{BASE_SHA}`, `[PLAN_FILE_PATH]`, and similar).
-3. Pass the filled prompt text to `spawn_agent(..., message=...)`.
+3. If the file already contains `Codex subagent packet:`, render that packet text directly.
+4. If the file is only the inner reviewer content, wrap the filled content in the packet format from `../../../contract/prompt-packet.md`.
+5. Pass the fully rendered packet text to `spawn_agent(..., message=...)`.
 
 Use `agent_type="explorer"` for read-only investigation or review packets and `agent_type="worker"` for write-owning implementation packets unless the skill says otherwise.

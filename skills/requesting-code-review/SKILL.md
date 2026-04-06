@@ -35,7 +35,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 **2. Dispatch the review subagent:**
 
-Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name="code_review_task_2", agent_type="explorer", message="...")`. Prefer a stable lowercase `task_name`, keep the review prompt aligned with `../../contract/prompt-packet.md`, and reuse that task name for `followup_task`, `send_message`, `wait_agent`, or `close_agent`.
+Fill the review content in `code-reviewer.md`, wrap that filled content in the packet format from `../../contract/prompt-packet.md`, then dispatch the rendered packet text with `spawn_agent(task_name="code_review_task_2", agent_type="explorer", message="...")`. Prefer a stable lowercase `task_name`, reuse that task name for `followup_task`, `send_message`, `list_agents`, or `close_agent`, and use `wait_agent(...)` only as a general mailbox wait when you are blocked on any reviewer result.
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What you just built
