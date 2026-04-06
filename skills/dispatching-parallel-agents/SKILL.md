@@ -7,7 +7,7 @@ description: Use when you have multiple independent investigation tasks that can
 
 ## Overview
 
-You delegate read-only or non-owning investigation tasks to specialized agents with isolated context. Prefer bounded child packets over blindly forking full history, and use `fork_context: true` only when the child genuinely needs the same thread history. Keep write ownership in the parent or the later implementation skill.
+You delegate read-only or non-owning investigation tasks to specialized agents with isolated context. Prefer bounded child packets over blindly forking full history, and only fork recent relevant history when a child genuinely needs the same thread context. Keep write ownership in the parent or the later implementation skill.
 
 **Contract alignment:** Use this skill for read-only or non-owning parallel investigation. Do not use it for write-owning implementation of a plan; that belongs to `subagent-driven-development` or `executing-plans`.
 

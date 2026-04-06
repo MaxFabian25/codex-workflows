@@ -137,9 +137,13 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Execution Handoff
 
+After the plan is approved, the next required step is isolation. Use `superpowers:using-git-worktrees` to create the isolated workspace before either execution mode.
+
 After saving the plan, offer execution choice:
 
 **"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+
+**Required next step before execution:** Use `superpowers:using-git-worktrees` to create the isolated workspace for this plan.
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
@@ -148,9 +152,11 @@ After saving the plan, offer execution choice:
 **Which approach?"**
 
 **If Subagent-Driven chosen:**
+- First use `superpowers:using-git-worktrees` to create the isolated workspace
 - **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
 - Fresh subagent per task + two-stage review
 
 **If Inline Execution chosen:**
+- First use `superpowers:using-git-worktrees` to create the isolated workspace
 - **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
 - Batch execution with checkpoints for review
