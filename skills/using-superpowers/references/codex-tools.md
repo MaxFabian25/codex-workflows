@@ -9,9 +9,9 @@ Skills may still mention Claude Code tool names. On this workstation, translate 
 | Task returns result | `wait_agent` to synchronize, then read the child completion reply |
 | Task completes automatically | `close_agent` after harvesting the child result |
 | `TodoWrite` | `update_plan` |
-| `Skill` tool | Skills load natively; follow the referenced skill instructions |
-| `Read`, `Write`, `Edit` | Native file tools |
-| `Bash` | Native shell tools |
+| `Skill` tool | Use the available skills list, open the relevant `SKILL.md`, and follow it |
+| `Read`, `Write`, `Edit` | Use native file tools such as `exec_command` for reads and `apply_patch` for edits |
+| `Bash` | Use native shell tools such as `exec_command` |
 
 ## Required Runtime Flags
 
