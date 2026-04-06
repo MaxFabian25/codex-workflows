@@ -1115,7 +1115,6 @@ Dispatch them differently:
 ## How to Request
 
 **1. Get git SHAs:**
-
 ```bash
 # Save this before the task starts if you expect a multi-commit task-level review
 TASK_START_SHA=$(git rev-parse HEAD)
@@ -1162,7 +1161,7 @@ Use a saved pre-task SHA or another explicit task-start commit for task-level re
 
 ### Task-Level `code_quality_reviewer`
 
-```text
+```
 [Just completed Task 2: Add verification function]
 
 [Earlier, before Task 2 started, you saved its boundary]
@@ -1264,20 +1263,6 @@ The review child reports findings. The parent decides what to do next.
 - If the reviewer is right, fix the issue and re-run review if needed.
 - If the reviewer is wrong, push back with technical reasoning and evidence from the code, tests, or plan.
 - Do not ask the reviewer to arbitrate its own disputed finding. The parent owns that decision.
-
-## Integration with Workflows
-
-**Subagent-Driven Development:**
-- Review after each task
-- Use `code_quality_reviewer`
-- Fix Important and Critical issues before moving on
-
-**Executing Plans:**
-- Review after each batch
-- Use `code_quality_reviewer` or `final_reviewer` depending on scope
-
-**Before Finish or Merge:**
-- Use `final_reviewer`
 
 ## Red Flags
 
