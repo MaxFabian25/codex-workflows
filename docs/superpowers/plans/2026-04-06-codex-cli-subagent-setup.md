@@ -1036,7 +1036,7 @@ Codex subagent packet (preferred v2):
     specified in the instructions above.
 ```
 
-**In addition to standard code quality concerns, the reviewer should check:**
+**In addition to standard code quality concerns, also check:**
 
 - Does each file have one clear responsibility with a well-defined interface?
 - Are units decomposed so they can be understood and tested independently?
