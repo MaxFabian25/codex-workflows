@@ -13,7 +13,7 @@ When you have multiple unrelated failures (different test files, different subsy
 
 **Core principle:** Dispatch one agent per independent problem domain. Let them work concurrently.
 
-**Codex v2 translation:** Use `spawn_agent(task_name=..., agent_type=..., items=[{type:"text", text:"..."}])`, prefer canonical task names or task paths for follow-up targeting, and use one long `wait_agent` only when you are blocked on a child.
+**Codex v2 translation:** Use `spawn_agent(task_name=..., agent_type="parallel_explorer", message="...")` for the default read-only fanout lane. Keep follow-up coordination in the parent, use one long `wait_agent` only when blocked on a child, and reserve write-capable child roles for explicitly approved non-overlapping implementation slices.
 
 ## When to Use
 
@@ -68,10 +68,10 @@ Each agent gets:
 ### 3. Dispatch in Parallel
 
 ```text
-spawn_agent(task_name="fix_abort_tests", agent_type="worker", items=[{type:"text", text:"Fix agent-tool-abort.test.ts failures"}])
-spawn_agent(task_name="fix_batch_completion", agent_type="worker", items=[{type:"text", text:"Fix batch-completion-behavior.test.ts failures"}])
-spawn_agent(task_name="fix_tool_approval_race", agent_type="worker", items=[{type:"text", text:"Fix tool-approval-race-conditions.test.ts failures"}])
-# All three run concurrently; keep doing local coordination work until blocked
+spawn_agent(task_name="map_abort_failures", agent_type="parallel_explorer", message="Read src/agents/agent-tool-abort.test.ts and explain the root cause of the failing cases. Stay read-only and return file references.")
+spawn_agent(task_name="map_batch_completion", agent_type="parallel_explorer", message="Read batch-completion-behavior.test.ts and summarize the failing-path root cause with evidence. Stay read-only.")
+spawn_agent(task_name="map_tool_approval_race", agent_type="parallel_explorer", message="Investigate tool-approval-race-conditions.test.ts, identify the root cause, and return evidence. Stay read-only.")
+# All three run concurrently; the parent keeps synthesis and decides whether implementation is needed later
 ```
 
 ### 4. Review and Integrate
@@ -131,6 +131,7 @@ Return: Summary of what you found and what you fixed.
 **Need full context:** Understanding requires seeing entire system
 **Exploratory debugging:** You don't know what's broken yet
 **Shared state:** Agents would interfere (editing same files, using same resources)
+**Overlapping implementation:** If two children would edit the same files or shared state, do not use this skill as the execution lane. Go back to the controller-first plan flow instead.
 
 ## Real Example from Session
 
