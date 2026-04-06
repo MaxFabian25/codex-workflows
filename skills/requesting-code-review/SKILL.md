@@ -28,6 +28,10 @@ Dispatch a focused read-only review child to catch issues before they cascade. T
 
 Both roles are read-only. Do not use write-capable child roles for review.
 
+The shared `code-reviewer.md` template serves both scopes:
+- `code_quality_reviewer` uses it for task-level readiness to proceed.
+- `final_reviewer` uses the same template for readiness to merge or hand off.
+
 ## How to Request
 
 **1. Get git SHAs:**
@@ -38,7 +42,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 **2. Dispatch the review child:**
 
-Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="code_quality_reviewer" or "final_reviewer", message="...")`.
+Fill the template at `code-reviewer.md`, then dispatch it by putting the filled review packet inside the top-level `message`.
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What you just built
@@ -63,19 +67,51 @@ BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
 
 [Dispatch review child]
-  agent_type: code_quality_reviewer
-  WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
-  PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
-  BASE_SHA: a7981ec
-  HEAD_SHA: 3df7661
-  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
+task_name: task_2_code_review
+agent_type: code_quality_reviewer
+message: |
+  You are performing a read-only review of code changes for the requested review scope.
+
+  **Your task:**
+  1. Review Verification and repair functions for conversation index
+  2. Compare against Task 2 from docs/superpowers/plans/deployment-plan.md
+  3. Check code quality, architecture, and testing
+  4. Categorize issues by severity
+  5. Assess readiness for the requested review scope
+
+  ## What Was Implemented
+
+  Added verifyIndex() and repairIndex() with 4 issue types
+
+  ## Requirements/Plan
+
+  Task 2 from docs/superpowers/plans/deployment-plan.md
+
+  ## Git Range to Review
+
+  **Base:** a7981ec
+  **Head:** 3df7661
 
 [Review child returns]
-  Strengths: Clean architecture, real tests
-  Issues:
-    Important: Missing progress indicators
-    Minor: Magic number (100) for reporting interval
-  Assessment: Ready to proceed with fixes
+### Strengths
+- Clean architecture, real tests
+
+### Issues
+
+#### Important (Should Fix)
+- Missing progress indicators
+
+#### Minor (Nice to Have)
+- Magic number (100) for reporting interval
+
+### Recommendations
+- Add progress reporting before moving to Task 3
+
+### Assessment
+
+**Ready for requested review scope?** With fixes
+
+**Reasoning:** The core design is sound, but the missing progress indicator should be fixed before proceeding.
 
 You: [Fix progress indicators]
 [Continue to Task 3]
