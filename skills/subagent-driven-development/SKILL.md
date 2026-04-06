@@ -84,13 +84,18 @@ digraph process {
 }
 ```
 
-## Child Config Inheritance
+## Child Config Inheritance and Role Mapping
 
 Child agents inherit the parent session config by default. Preserve that inheritance unless the user explicitly asks for a role-specific override.
 
 - Do not pass `model` or `reasoning_effort` in `spawn_agent(...)` during normal operation.
-- Use better task decomposition, clearer acceptance criteria, and more focused ownership before considering any config override.
-- Prefer changing the role, scope, or supporting context over trying to tune child-model selection inside the workflow.
+- Use the config-owned superpowers role mapping instead of generic built-in role guessing:
+  - `implementer` for the single active code-changing child
+  - `spec_reviewer` for the read-only spec compliance pass
+  - `code_quality_reviewer` for the read-only code quality pass
+  - `final_reviewer` for the whole-change review at the end
+- Reviewers stay read-only.
+- The parent remains responsible for user clarification, packet refinement, arbitration, and final synthesis.
 
 ## Handling Implementer Status
 

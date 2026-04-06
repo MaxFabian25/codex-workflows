@@ -2,33 +2,33 @@
 
 Use this template when dispatching a code quality reviewer subagent.
 
-**Purpose:** Verify implementation is well-built (clean, tested, maintainable)
+**Purpose:** Verify implementation is well-built, well-tested, and maintainable.
 
 **Only dispatch after spec compliance review passes.**
 
 ```yaml
 Codex subagent packet (preferred v2):
   task_name: "<stable_code_review_name>"
-  agent_type: "reviewer"
-  items:
-    - type: "text"
-      text: |
-        Your task is to perform the following.
-        Follow the instructions below exactly.
+  agent_type: "code_quality_reviewer"
+  message: |
+    Your task is to perform the following.
+    Follow the instructions below exactly.
 
-        <agent-instructions>
-        Use the filled template at requesting-code-review/code-reviewer.md.
+    <agent-instructions>
+    Stay read-only. Do not edit files, stage changes, or commit.
 
-        WHAT_WAS_IMPLEMENTED: [from implementer's report]
-        PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-        BASE_SHA: [commit before task]
-        HEAD_SHA: [current commit]
-        DESCRIPTION: [task summary]
-        </agent-instructions>
+    Use the filled template at requesting-code-review/code-reviewer.md.
 
-        Execute this now. Output ONLY the structured
-        response following the format
-        specified in the instructions above.
+    WHAT_WAS_IMPLEMENTED: [from implementer's report]
+    PLAN_OR_REQUIREMENTS: Task N from [plan-file]
+    BASE_SHA: [commit before task]
+    HEAD_SHA: [current commit]
+    DESCRIPTION: [task summary]
+    </agent-instructions>
+
+    Execute this now. Output ONLY the structured
+    response following the format
+    specified in the instructions above.
 ```
 
 **In addition to standard code quality concerns, the reviewer should check:**
