@@ -1572,7 +1572,6 @@ rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelit
 ! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 python3 - <<'PY'
 from pathlib import Path
-import re
 
 repo = Path('/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup')
 plan_rel = Path('docs/superpowers/plans/2026-04-06-codex-cli-subagent-setup.md')
@@ -1582,21 +1581,25 @@ checks = [
     (
         'Task 4 Step 1',
         Path('docs/README.codex.md'),
-        re.compile(r"- \\[ \\] \\*\\*Step 1: Replace `/Users/maxibon/\\.codex/superpowers/\\.worktrees/codex-cli-subagent-setup/docs/README\\.codex\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 2: Verify the README contract text\\*\\*", re.S),
+        "- [ ] **Step 1: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md` with the following content**\n\n````markdown\n",
+        "\n````\n\n- [ ] **Step 2: Verify the README contract text**",
     ),
     (
         'Task 8 Step 2',
         Path('skills/requesting-code-review/code-reviewer.md'),
-        re.compile(r"- \\[ \\] \\*\\*Step 2: Replace `/Users/maxibon/\\.codex/superpowers/\\.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 3: Verify the review workflow alignment\\*\\*", re.S),
+        "- [ ] **Step 2: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md` with the following content**\n\n````markdown\n",
+        "\n````\n\n- [ ] **Step 3: Verify the review workflow alignment**",
     ),
 ]
 
-for label, source_rel, pattern in checks:
+for label, source_rel, start_marker, end_marker in checks:
     source = (repo / source_rel).read_text()
-    match = pattern.search(plan)
-    if not match:
-        raise SystemExit(f'{label} block not found')
-    embedded = match.group(1) + '\n'
+    if start_marker not in plan:
+        raise SystemExit(f'{label} start marker not found')
+    remainder = plan.split(start_marker, 1)[1]
+    if end_marker not in remainder:
+        raise SystemExit(f'{label} end marker not found')
+    embedded = remainder.split(end_marker, 1)[0] + '\n'
     if embedded != source:
         raise SystemExit(f'{label} embedded {source_rel} block drifted from source')
     print(f'{label} embedded block matches {source_rel} exactly.')
