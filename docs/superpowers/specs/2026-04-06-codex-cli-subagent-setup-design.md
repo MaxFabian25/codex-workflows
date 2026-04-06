@@ -496,41 +496,43 @@ Expected:
 
 ### Prompt/Doc Contract Verification
 
+For branch-local implementation proof, check the Codex-facing superpowers files in the checkout under review. For this branch, that checkout is `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup`. After integration, replay the same checks against `~/.codex/superpowers` if you need live-root proof.
+
 Check the Codex-facing superpowers files for v2-first Codex claims and for stale legacy wording:
 
 ```bash
 rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' \
-  ~/.codex/superpowers/docs/README.codex.md \
-  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
-  ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
-  ~/.codex/superpowers/skills/subagent-driven-development \
-  ~/.codex/superpowers/skills/requesting-code-review
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 
 ! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient|profile = "parallel_readonly"' \
-  ~/.codex/superpowers/docs/README.codex.md \
-  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
-  ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
-  ~/.codex/superpowers/skills/subagent-driven-development \
-  ~/.codex/superpowers/skills/requesting-code-review
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 
 ! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' \
-  ~/.codex/superpowers/docs/README.codex.md \
-  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
-  ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
-  ~/.codex/superpowers/skills/subagent-driven-development \
-  ~/.codex/superpowers/skills/requesting-code-review
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 
 ! rg -n 'legacy mapping is primary|v1 mapping is primary' \
-  ~/.codex/superpowers/docs/README.codex.md \
-  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md
 ```
 
 Expected after implementation:
 
-- Codex-facing docs encode the v2-first contract the user requested
+- Codex-facing docs in the checkout under review encode the v2-first contract the user requested
 - the README and replacement blocks preserve the profile-scoped `parallel_readonly` feature override
 - stale dispatch wording and legacy-primary claims are removed or rewritten
-- the absence checks fail immediately if legacy packet, dispatch wording, or a stale root-scoped parallel `[features]` example is reintroduced
+- the branch-local absence checks fail immediately if legacy packet, dispatch wording, or a stale root-scoped parallel `[features]` example is reintroduced
 
 ### Workflow Smoke Verification
 

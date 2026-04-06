@@ -8,7 +8,7 @@
 
 **Tech Stack:** TOML, Markdown, Codex CLI, git, `rg`, `cp`, `diff`
 
-**Spec:** `/Users/maxibon/.codex/superpowers/docs/superpowers/specs/2026-04-06-codex-cli-subagent-setup-design.md`
+**Spec:** `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/superpowers/specs/2026-04-06-codex-cli-subagent-setup-design.md`
 
 ---
 
@@ -23,15 +23,15 @@
 | `/Users/maxibon/.codex/agents/code_quality_reviewer.toml` | Read-only quality reviewer | Create |
 | `/Users/maxibon/.codex/agents/parallel_explorer.toml` | Read-only explorer for explicit fanout lanes | Create |
 | `/Users/maxibon/.codex/agents/final_reviewer.toml` | Read-only whole-change reviewer | Create |
-| `/Users/maxibon/.codex/superpowers/docs/README.codex.md` | Codex install and runtime contract for this workstation | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md` | Codex tool and role mapping reference | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md` | Explicit parallel lane guidance | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/SKILL.md` | Controller-led per-task workflow | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/implementer-prompt.md` | Implementer packet template | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md` | Spec reviewer packet template | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md` | Code-quality reviewer packet template | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md` | Standalone review workflow | Modify |
-| `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md` | Shared reviewer template | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md` | Codex install and runtime contract for this workstation | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md` | Codex tool and role mapping reference | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md` | Explicit parallel lane guidance | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/SKILL.md` | Controller-led per-task workflow | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/implementer-prompt.md` | Implementer packet template | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/spec-reviewer-prompt.md` | Spec reviewer packet template | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/code-quality-reviewer-prompt.md` | Code-quality reviewer packet template | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/SKILL.md` | Standalone review workflow | Modify |
+| `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md` | Shared reviewer template | Modify |
 
 ## Global Config Note
 
@@ -402,9 +402,9 @@ If all runtime checks pass, continue.
 ### Task 4: Rewrite `README.codex.md` to the v2-First Workstation Contract
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/superpowers/docs/README.codex.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md`
 
-- [ ] **Step 1: Replace `/Users/maxibon/.codex/superpowers/docs/README.codex.md` with the following content**
+- [ ] **Step 1: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md` with the following content**
 
 ````markdown
 # Superpowers for Codex
@@ -544,9 +544,9 @@ If either profile reports `multi_agent_v2 = false`, stop and fix the runtime or 
 Run:
 
 ```bash
-rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|max_depth = 3|job_max_runtime_seconds = 3600|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' /Users/maxibon/.codex/superpowers/docs/README.codex.md
-! rg -n 'multi_agent = true is sufficient|subagent skills.*optional|profile = "parallel_readonly"' /Users/maxibon/.codex/superpowers/docs/README.codex.md
-! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' /Users/maxibon/.codex/superpowers/docs/README.codex.md
+rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|max_depth = 3|job_max_runtime_seconds = 3600|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md
+! rg -n 'multi_agent = true is sufficient|subagent skills.*optional|profile = "parallel_readonly"' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md
+! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md
 ```
 
 Expected:
@@ -557,8 +557,8 @@ Expected:
 - [ ] **Step 3: Commit**
 
 ```bash
-git -C /Users/maxibon/.codex/superpowers add docs/README.codex.md
-git -C /Users/maxibon/.codex/superpowers commit -m "docs(codex): hard-cut v2 workstation contract"
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup add docs/README.codex.md
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup commit -m "docs(codex): hard-cut v2 workstation contract"
 ```
 
 ---
@@ -566,9 +566,9 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(codex): hard-cut v2 wor
 ### Task 5: Rewrite the Codex Tool Mapping Reference
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md`
 
-- [ ] **Step 1: Replace `/Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md` with the following content**
+- [ ] **Step 1: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md` with the following content**
 
 ````markdown
 # Codex Tool Mapping
@@ -672,8 +672,8 @@ When the sandbox blocks branch or push operations in an externally managed workt
 Run:
 
 ```bash
-rg -n 'multi_agent_v2|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|spawn_agent|wait_agent|close_agent' /Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
-! rg -n 'send_message|assign_task|list_agents|agent_type="worker"|agent_type="reviewer"' /Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
+rg -n 'multi_agent_v2|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|spawn_agent|wait_agent|close_agent' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md
+! rg -n 'send_message|assign_task|list_agents|agent_type="worker"|agent_type="reviewer"' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md
 ```
 
 Expected:
@@ -683,8 +683,8 @@ Expected:
 - [ ] **Step 3: Commit**
 
 ```bash
-git -C /Users/maxibon/.codex/superpowers add skills/using-superpowers/references/codex-tools.md
-git -C /Users/maxibon/.codex/superpowers commit -m "docs(codex-tools): map v2 roles to custom superpowers agents"
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup add skills/using-superpowers/references/codex-tools.md
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup commit -m "docs(codex-tools): map v2 roles to custom superpowers agents"
 ```
 
 ---
@@ -692,7 +692,7 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(codex-tools): map v2 ro
 ### Task 6: Tighten the Explicit Parallel Lane
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md`
 
 - [ ] **Step 1: Replace the `Codex v2 translation` paragraph**
 
@@ -726,8 +726,8 @@ Insert this bullet at the end of the `When NOT to Use` section:
 Run:
 
 ```bash
-rg -n 'parallel_explorer|read-only|overlapping implementation' /Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md
-! rg -n 'agent_type="worker"' /Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md
+rg -n 'parallel_explorer|read-only|overlapping implementation' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md
+! rg -n 'agent_type="worker"' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md
 ```
 
 Expected:
@@ -737,8 +737,8 @@ Expected:
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/maxibon/.codex/superpowers add skills/dispatching-parallel-agents/SKILL.md
-git -C /Users/maxibon/.codex/superpowers commit -m "docs(parallel): default fanout to read-only parallel_explorer"
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup add skills/dispatching-parallel-agents/SKILL.md
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup commit -m "docs(parallel): default fanout to read-only parallel_explorer"
 ```
 
 ---
@@ -746,10 +746,10 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(parallel): default fano
 ### Task 7: Hard-Cut the Subagent-Driven Development Workflow
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/SKILL.md`
-- Modify: `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/implementer-prompt.md`
-- Modify: `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md`
-- Modify: `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/SKILL.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/implementer-prompt.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/spec-reviewer-prompt.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/code-quality-reviewer-prompt.md`
 
 - [ ] **Step 1: Replace the `## Child Config Inheritance` section in `SKILL.md`**
 
@@ -770,7 +770,7 @@ Child agents inherit the parent session config by default. Preserve that inherit
 - The parent remains responsible for user clarification, packet refinement, arbitration, and final synthesis.
 ```
 
-- [ ] **Step 2: Replace `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/implementer-prompt.md` with the following content**
+- [ ] **Step 2: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/implementer-prompt.md` with the following content**
 
 ````markdown
 # Implementer Subagent Prompt Template
@@ -922,7 +922,7 @@ Codex subagent packet (preferred v2):
 ```
 ````
 
-- [ ] **Step 3: Replace `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md` with the following content**
+- [ ] **Step 3: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/spec-reviewer-prompt.md` with the following content**
 
 ````markdown
 # Spec Compliance Reviewer Prompt Template
@@ -1001,7 +1001,7 @@ Codex subagent packet (preferred v2):
 ```
 ````
 
-- [ ] **Step 4: Replace `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md` with the following content**
+- [ ] **Step 4: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/code-quality-reviewer-prompt.md` with the following content**
 
 ````markdown
 # Code Quality Reviewer Prompt Template
@@ -1062,8 +1062,8 @@ Codex subagent packet (preferred v2):
 Run:
 
 ```bash
-rg -n 'implementer|spec_reviewer|code_quality_reviewer|final_reviewer|test-driven-development|Stay read-only' /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/SKILL.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/implementer-prompt.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md
-! rg -n 'agent_type: "worker"|agent_type: "reviewer"|following TDD if task says to' /Users/maxibon/.codex/superpowers/skills/subagent-driven-development
+rg -n 'implementer|spec_reviewer|code_quality_reviewer|final_reviewer|test-driven-development|Stay read-only' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/implementer-prompt.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/spec-reviewer-prompt.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/code-quality-reviewer-prompt.md
+! rg -n 'agent_type: "worker"|agent_type: "reviewer"|following TDD if task says to' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development
 ```
 
 Expected:
@@ -1073,8 +1073,8 @@ Expected:
 - [ ] **Step 6: Commit**
 
 ```bash
-git -C /Users/maxibon/.codex/superpowers add skills/subagent-driven-development/SKILL.md skills/subagent-driven-development/implementer-prompt.md skills/subagent-driven-development/spec-reviewer-prompt.md skills/subagent-driven-development/code-quality-reviewer-prompt.md
-git -C /Users/maxibon/.codex/superpowers commit -m "docs(subagents): align superpowers workflow to config-owned v2 roles"
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup add skills/subagent-driven-development/SKILL.md skills/subagent-driven-development/implementer-prompt.md skills/subagent-driven-development/spec-reviewer-prompt.md skills/subagent-driven-development/code-quality-reviewer-prompt.md
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup commit -m "docs(subagents): align superpowers workflow to config-owned v2 roles"
 ```
 
 ---
@@ -1082,10 +1082,10 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(subagents): align super
 ### Task 8: Align the Standalone Review Workflow
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md`
-- Modify: `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/SKILL.md`
+- Modify: `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md`
 
-- [ ] **Step 1: Replace `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md` with the following content**
+- [ ] **Step 1: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/SKILL.md` with the following content**
 
 ````markdown
 ---
@@ -1285,7 +1285,7 @@ The review child reports findings. The parent decides what to do next.
 See template at: code-reviewer.md
 ````
 
-- [ ] **Step 2: Replace `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md` with the following content**
+- [ ] **Step 2: Replace `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md` with the following content**
 
 ````markdown
 # Code Review Agent
@@ -1465,8 +1465,8 @@ None.
 Run:
 
 ```bash
-rg -n 'code_quality_reviewer|final_reviewer|read-only|PLAN_OR_REQUIREMENTS|TDD evidence present' /Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md /Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md
-! rg -n 'agent_type="reviewer"|PLAN_REFERENCE|Backward compatibility considered' /Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md /Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md
+rg -n 'code_quality_reviewer|final_reviewer|read-only|PLAN_OR_REQUIREMENTS|TDD evidence present' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md
+! rg -n 'agent_type="reviewer"|PLAN_REFERENCE|Backward compatibility considered' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md
 ```
 
 Expected:
@@ -1476,8 +1476,8 @@ Expected:
 - [ ] **Step 4: Commit**
 
 ```bash
-git -C /Users/maxibon/.codex/superpowers add skills/requesting-code-review/SKILL.md skills/requesting-code-review/code-reviewer.md
-git -C /Users/maxibon/.codex/superpowers commit -m "docs(review): align review workflow to read-only custom roles"
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup add skills/requesting-code-review/SKILL.md skills/requesting-code-review/code-reviewer.md
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup commit -m "docs(review): align review workflow to read-only custom roles"
 ```
 
 ---
@@ -1582,12 +1582,12 @@ checks = [
     (
         'Task 4 Step 1',
         Path('docs/README.codex.md'),
-        re.compile(r"- \\[ \\] \\*\\*Step 1: Replace `/Users/maxibon/\\.codex/superpowers/docs/README\\.codex\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 2: Verify the README contract text\\*\\*", re.S),
+        re.compile(r"- \\[ \\] \\*\\*Step 1: Replace `/Users/maxibon/\\.codex/superpowers/\\.worktrees/codex-cli-subagent-setup/docs/README\\.codex\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 2: Verify the README contract text\\*\\*", re.S),
     ),
     (
         'Task 8 Step 2',
         Path('skills/requesting-code-review/code-reviewer.md'),
-        re.compile(r"- \\[ \\] \\*\\*Step 2: Replace `/Users/maxibon/\\.codex/superpowers/skills/requesting-code-review/code-reviewer\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 3: Verify the review workflow alignment\\*\\*", re.S),
+        re.compile(r"- \\[ \\] \\*\\*Step 2: Replace `/Users/maxibon/\\.codex/superpowers/\\.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer\\.md` with the following content\\*\\*\\n\\n````markdown\\n(.*?)\\n````\\n\\n- \\[ \\] \\*\\*Step 3: Verify the review workflow alignment\\*\\*", re.S),
     ),
 ]
 
