@@ -5,21 +5,28 @@ description: Use when completing tasks, implementing major features, or before m
 
 # Requesting Code Review
 
-Dispatch a focused review subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation instead of your full working history unless the exact same context is genuinely required. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
+Dispatch a focused read-only review child to catch issues before they cascade. The reviewer inspects the work product, returns findings, and stops; the parent owns packet quality, arbitration, and final decisions.
 
 **Core principle:** Review early, review often.
 
 ## When to Request Review
 
 **Mandatory:**
-- After each task in subagent-driven development
-- After completing major feature
+- After each task in `subagent-driven-development`
+- After completing a major feature or implementation batch
 - Before merge to main
 
 **Optional but valuable:**
-- When stuck (fresh perspective)
-- Before refactoring (baseline check)
-- After fixing complex bug
+- When stuck and a fresh read-only pass could surface the issue
+- Before a risky refactor
+- After fixing a complex bug
+
+## Role Selection
+
+- Use `code_quality_reviewer` after a completed task or implementation batch to review code quality, testing, architecture, and maintainability.
+- Use `final_reviewer` for the final whole-change review before handing work off or merging.
+
+Both roles are read-only. Do not use write-capable child roles for review.
 
 ## How to Request
 
@@ -29,9 +36,9 @@ BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-**2. Dispatch the review subagent:**
+**2. Dispatch the review child:**
 
-Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="reviewer" or "worker", items=[{type:"text", text:...}])`. Prefer a stable lowercase `task_name` like `code_review_task_2`, and use that task name for follow-up `wait_agent` or `assign_task` calls.
+Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="code_quality_reviewer" or "final_reviewer", message="...")`.
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What you just built
@@ -42,9 +49,8 @@ Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
-- Fix Important issues before proceeding
-- Note Minor issues for later
-- Push back if reviewer is wrong (with reasoning)
+- Fix Important issues before proceeding, or record why the reviewer is wrong
+- Note Minor issues for later if they are not worth blocking on
 
 ## Example
 
@@ -56,50 +62,40 @@ You: Let me request code review before proceeding.
 BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Dispatch review subagent]
+[Dispatch review child]
+  agent_type: code_quality_reviewer
   WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
   PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
   DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
 
-[Subagent returns]:
+[Review child returns]
   Strengths: Clean architecture, real tests
   Issues:
     Important: Missing progress indicators
     Minor: Magic number (100) for reporting interval
-  Assessment: Ready to proceed
+  Assessment: Ready to proceed with fixes
 
 You: [Fix progress indicators]
 [Continue to Task 3]
 ```
 
-## Integration with Workflows
+## Parent Arbitrates Disagreements
 
-**Subagent-Driven Development:**
-- Review after EACH task
-- Catch issues before they compound
-- Fix before moving to next task
+The review child reports findings. The parent decides what to do next.
 
-**Executing Plans:**
-- Review after each batch (3 tasks)
-- Get feedback, apply, continue
-
-**Ad-Hoc Development:**
-- Review before merge
-- Review when stuck
+- If the reviewer is right, fix the issue and re-run review if needed.
+- If the reviewer is wrong, push back with technical reasoning and evidence from the code, tests, or plan.
+- Do not ask the reviewer to arbitrate its own disputed finding. The parent owns that decision.
 
 ## Red Flags
 
 **Never:**
 - Skip review because "it's simple"
+- Use a write-capable child role for review
 - Ignore Critical issues
-- Proceed with unfixed Important issues
-- Argue with valid technical feedback
-
-**If reviewer wrong:**
-- Push back with technical reasoning
-- Show code/tests that prove it works
-- Request clarification
+- Proceed without resolving or explicitly arbitrating Important issues
+- Treat reviewer output as self-executing instead of parent-owned feedback
 
 See template at: requesting-code-review/code-reviewer.md
