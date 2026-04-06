@@ -4,7 +4,7 @@ Skills may still mention Claude Code tool names. On this workstation, translate 
 
 | Skill references | Codex equivalent |
 |---|---|
-| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="<configured_role>", items=[{type:"text", text: ...}])` |
+| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="<configured_role>", message="...")` |
 | Multiple `Task` calls (parallel) | Multiple `spawn_agent(...)` calls using `agent_type="parallel_explorer"` for bounded read-only fanout |
 | Task returns result | `wait_agent` to synchronize, then read the child completion reply |
 | Task completes automatically | `close_agent` after harvesting the child result |
@@ -62,7 +62,7 @@ Treat these role names as the configured local contract. If actual dispatch beha
 
 ## Dispatch Payload Framing
 
-The text item inside `items` is user-level input. Structure it like this:
+The top-level `message` field is user-level input. Structure it like this:
 
 ```text
 Your task is to perform the following. Follow the instructions below exactly.
