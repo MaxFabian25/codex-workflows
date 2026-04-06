@@ -1528,13 +1528,13 @@ Expected:
 Run:
 
 ```bash
-rg -n 'multi_agent_v2|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' /Users/maxibon/.codex/superpowers/docs/README.codex.md /Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/skills/requesting-code-review
-rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient' /Users/maxibon/.codex/superpowers/docs/README.codex.md /Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/skills/requesting-code-review
+rg -n 'multi_agent_v2|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 python3 - <<'PY'
 from pathlib import Path
 import re
 
-repo = Path('/Users/maxibon/.codex/superpowers')
+repo = Path('/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup')
 plan_rel = Path('docs/superpowers/plans/2026-04-06-codex-cli-subagent-setup.md')
 source_rel = Path('skills/requesting-code-review/code-reviewer.md')
 plan = (repo / plan_rel).read_text()
@@ -1560,15 +1560,15 @@ Expected:
 Run:
 
 ```bash
-git -C /Users/maxibon/.codex/superpowers diff --check
-git -C /Users/maxibon/.codex/superpowers status --short
-git -C /Users/maxibon/.codex/superpowers log --oneline d45ec2d9b45a076c4b3a204713666867501a5e8b..HEAD
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup diff --check
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup status --short
+git -C /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup log --oneline d45ec2d9b45a076c4b3a204713666867501a5e8b..HEAD
 ```
 
 Expected:
 - `git diff --check` returns no output.
 - `git status --short` returns no output.
-- `git log --oneline d45ec2d9b45a076c4b3a204713666867501a5e8b..HEAD` shows the documentation/config-contract closure follow-up commits after `d45ec2d` through the current branch head.
+- `git log --oneline d45ec2d9b45a076c4b3a204713666867501a5e8b..HEAD` shows the documentation/config-contract closure follow-up commits in the worktree after `d45ec2d` through the current branch head.
 
 - [ ] **Step 4: Workflow smoke check**
 
