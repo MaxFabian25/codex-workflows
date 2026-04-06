@@ -5,9 +5,9 @@ Skills may still mention Claude Code tool names. On this workstation, translate 
 | Skill references | Codex equivalent |
 |---|---|
 | `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="<configured_role>", message="...")` |
-| Multiple `Task` calls (parallel) | Multiple `spawn_agent(...)` calls using `agent_type="parallel_explorer"` for bounded read-only fanout |
+| Multiple `Task` calls (parallel) | Multiple `spawn_agent(...)` calls; use `agent_type="parallel_explorer"` as the default bounded read-only fanout lane |
 | Task returns result | `wait_agent` to synchronize, then read the child completion reply |
-| Task completes automatically | `close_agent` after harvesting the child result |
+| Task completes automatically | `close_agent` when no further follow-up is needed after harvesting the child result |
 | `TodoWrite` | `update_plan` |
 | `Skill` tool | Use the available skills list, open the relevant `SKILL.md`, and follow it |
 | `Read`, `Write`, `Edit` | Use native file tools such as `exec_command` for reads and `apply_patch` for edits |
