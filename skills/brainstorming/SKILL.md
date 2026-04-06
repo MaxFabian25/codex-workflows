@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+description: "Use when a request needs design exploration and explicit user approval before implementation planning."
 ---
 
 # Brainstorming Ideas Into Designs
@@ -8,6 +8,10 @@ description: "You MUST use this before any creative work - creating features, bu
 Help turn ideas into fully formed designs and specs through natural collaborative dialogue.
 
 Start by understanding the current project context, then ask questions one at a time to refine the idea. Once you understand what you're building, present the design and get user approval.
+
+**Contract alignment:** This skill owns the `design` phase only. After the written spec is approved, hand off to `writing-plans`. Workspace isolation starts later via `using-git-worktrees` during implementation, not during brainstorming.
+
+**Contract references:** Follow `../../contract/process-family.md`, `../../contract/prompt-packet.md`, and `../../contract/package-standards.md` when updating this skill and its supporting packets.
 
 <HARD-GATE>
 Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY project regardless of perceived simplicity.
@@ -64,6 +68,8 @@ digraph brainstorming {
 ```
 
 **The terminal state is invoking writing-plans.** Do NOT invoke frontend-design, mcp-builder, or any other implementation skill. The ONLY skill you invoke after brainstorming is writing-plans.
+
+This skill stops after spec approval. Isolation is the next phase and is handled by `using-git-worktrees` during execution.
 
 ## The Process
 

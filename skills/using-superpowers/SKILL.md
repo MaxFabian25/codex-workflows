@@ -1,6 +1,6 @@
 ---
 name: using-superpowers
-description: Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
+description: Use when starting a session so the agent routes through the skill system before responding
 ---
 
 <SUBAGENT-STOP>
@@ -36,6 +36,8 @@ If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "alw
 ## Platform Adaptation
 
 Skills use Claude Code tool names. Non-CC platforms: see `references/codex-tools.md` (Codex) for tool equivalents. Gemini CLI users get the tool mapping loaded automatically via GEMINI.md.
+
+**Contract references:** Follow `../../contract/process-family.md` for lifecycle routing and `../../contract/package-standards.md` for package structure.
 
 # Using Skills
 
@@ -95,6 +97,8 @@ These thoughts mean STOP—you're rationalizing:
 ## Skill Priority
 
 When multiple skills could apply, use this order:
+
+When multiple process skills seem relevant, follow `../../contract/process-family.md` first and choose the skill that owns the current lifecycle phase.
 
 1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
 2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution

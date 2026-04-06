@@ -1,6 +1,6 @@
 ---
 name: writing-skills
-description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
+description: Use when creating or editing skills and validating that they satisfy the library contract before deployment
 ---
 
 # Writing Skills
@@ -8,6 +8,8 @@ description: Use when creating new skills, editing existing skills, or verifying
 ## Overview
 
 **Writing skills IS Test-Driven Development applied to process documentation.**
+
+**Contract references:** Process-family skill edits must align with `../../contract/process-family.md`, and every skill package must satisfy `../../contract/package-standards.md`.
 
 **Personal skills live in agent-specific directories (`~/.claude/skills` for Claude Code, `~/.agents/skills/` for Codex)** 
 
@@ -596,6 +598,8 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 ## Skill Creation Checklist (TDD Adapted)
 
 **IMPORTANT: Use TodoWrite to create todos for EACH checklist item below.**
+
+**Contract note:** Process-family skill edits must align with `../../contract/process-family.md`. Library-facing skill edits must also satisfy `../../contract/package-standards.md`, `../../contract/prompt-packet.md`, and the local validator at `../../_shared/validators/validate_skill_library.py`.
 
 **RED Phase - Write Failing Test:**
 - [ ] Create pressure scenarios (3+ combined pressures for discipline skills)

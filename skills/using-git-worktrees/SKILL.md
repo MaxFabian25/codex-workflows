@@ -1,6 +1,6 @@
 ---
 name: using-git-worktrees
-description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - creates isolated git worktrees with smart directory selection and safety verification
+description: Use when implementation is about to start and the work needs an isolated workspace
 ---
 
 # Using Git Worktrees
@@ -8,6 +8,10 @@ description: Use when starting feature work that needs isolation from current wo
 ## Overview
 
 Git worktrees create isolated workspaces sharing the same repository, allowing work on multiple branches simultaneously without switching.
+
+**Contract alignment:** This skill owns the `isolate` phase only. Use it after planning is complete and before `subagent-driven-development` or `executing-plans` begin write-owning work.
+
+**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for phase ownership and package structure.
 
 **Core principle:** Systematic directory selection + safety verification = reliable isolation.
 
@@ -209,7 +213,7 @@ Ready to implement auth feature
 ## Integration
 
 **Called by:**
-- **brainstorming** (Phase 4) - REQUIRED when design is approved and implementation follows
+- **writing-plans** - Use after the plan is approved and implementation is about to start
 - **subagent-driven-development** - REQUIRED before executing any tasks
 - **executing-plans** - REQUIRED before executing any tasks
 - Any skill needing isolated workspace
