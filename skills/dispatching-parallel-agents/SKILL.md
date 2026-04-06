@@ -55,15 +55,15 @@ Group failures by what's broken:
 - File B tests: Batch completion behavior
 - File C tests: Abort functionality
 
-Each domain is independent - fixing tool approval doesn't affect abort tests.
+Each domain is independent - investigating tool approval doesn't require the abort lane.
 
 ### 2. Create Focused Agent Tasks
 
 Each agent gets:
 - **Specific scope:** One test file or subsystem
-- **Clear goal:** Make these tests pass
-- **Constraints:** Don't change other code
-- **Expected output:** Summary of what you found and fixed
+- **Clear goal:** Map one root cause precisely
+- **Constraints:** Stay read-only unless the parent later approves a non-overlapping write slice
+- **Expected output:** Summary of the root cause, evidence, and file references
 
 ### 3. Dispatch in Parallel
 
@@ -79,9 +79,9 @@ spawn_agent(task_name="map_tool_approval_race", agent_type="parallel_explorer", 
 When agents return:
 - Read each summary
 - Use `wait_agent` only when blocked on a specific child, then prefer the canonical `task_name` for any follow-up
-- Verify fixes don't conflict
-- Run full test suite
-- Integrate all changes
+- Synthesize the root-cause map in the parent
+- Decide whether implementation is needed later
+- If implementation is later approved, keep write-capable work on explicitly non-overlapping slices
 
 ## Agent Prompt Structure
 
@@ -91,7 +91,7 @@ Good agent prompts are:
 3. **Specific about output** - What should the agent return?
 
 ```markdown
-Fix the 3 failing tests in src/agents/agent-tool-abort.test.ts:
+Investigate the 3 failing tests in src/agents/agent-tool-abort.test.ts:
 
 1. "should abort tool with partial output capture" - expects 'interrupted at' in message
 2. "should handle mixed completed and aborted tools" - fast tool aborted instead of completed
@@ -100,30 +100,28 @@ Fix the 3 failing tests in src/agents/agent-tool-abort.test.ts:
 These are timing/race condition issues. Your task:
 
 1. Read the test file and understand what each test verifies
-2. Identify root cause - timing issues or actual bugs?
-3. Fix by:
-   - Replacing arbitrary timeouts with event-based waiting
-   - Fixing bugs in abort implementation if found
-   - Adjusting test expectations if testing changed behavior
+2. Identify the root cause - timing issue, production bug, or expectation mismatch?
+3. Trace the most relevant code paths and cite file references as evidence
+4. Note the most likely next implementation target without changing files
 
-Do NOT just increase timeouts - find the real issue.
+Stay read-only. Do NOT just say "race condition" - tie it to concrete evidence.
 
-Return: Summary of what you found and what you fixed.
+Return: Summary of the root cause, evidence, and the file references the parent can use to decide whether implementation is needed later.
 ```
 
 ## Common Mistakes
 
 **❌ Too broad:** "Fix all the tests" - agent gets lost
-**✅ Specific:** "Fix agent-tool-abort.test.ts" - focused scope
+**✅ Specific:** "Investigate agent-tool-abort.test.ts and return the root cause with evidence" - focused scope
 
 **❌ No context:** "Fix the race condition" - agent doesn't know where
-**✅ Context:** Paste the error messages and test names
+**✅ Context:** Paste the error messages and test names so the child can map the root cause
 
 **❌ No constraints:** Agent might refactor everything
-**✅ Constraints:** "Do NOT change production code" or "Fix tests only"
+**✅ Constraints:** "Stay read-only; do not change files unless I later assign a non-overlapping implementation slice"
 
 **❌ Vague output:** "Fix it" - you don't know what changed
-**✅ Specific:** "Return summary of root cause and changes"
+**✅ Specific:** "Return summary of the root cause, evidence, and likely next implementation target"
 
 ## When NOT to Use
 
@@ -146,34 +144,34 @@ Return: Summary of what you found and what you fixed.
 
 **Dispatch:**
 ```
-Agent 1 → Fix agent-tool-abort.test.ts
-Agent 2 → Fix batch-completion-behavior.test.ts
-Agent 3 → Fix tool-approval-race-conditions.test.ts
+Agent 1 → Map root cause in agent-tool-abort.test.ts
+Agent 2 → Map root cause in batch-completion-behavior.test.ts
+Agent 3 → Map root cause in tool-approval-race-conditions.test.ts
 ```
 
 **Results:**
-- Agent 1: Replaced timeouts with event-based waiting
-- Agent 2: Fixed event structure bug (threadId in wrong place)
-- Agent 3: Added wait for async tool execution to complete
+- Agent 1: Identified an event-ordering gap with evidence in the abort path
+- Agent 2: Identified an event structure mismatch with evidence in the batch-completion flow
+- Agent 3: Identified missing async completion coordination with evidence in the race-condition path
 
-**Integration:** All fixes independent, no conflicts, full suite green
+**Integration:** Parent kept synthesis, combined the three read-only investigations, and then decided whether implementation was needed as a separate step
 
-**Time saved:** 3 problems solved in parallel vs sequentially
+**Time saved:** 3 problem domains mapped in parallel vs sequentially
 
 ## Key Benefits
 
 1. **Parallelization** - Multiple investigations happen simultaneously
 2. **Focus** - Each agent has narrow scope, less context to track
 3. **Independence** - Agents don't interfere with each other
-4. **Speed** - 3 problems solved in time of 1
+4. **Speed** - 3 problem domains mapped in time of 1
 
 ## Verification
 
 After agents return:
-1. **Review each summary** - Understand what changed
-2. **Check for conflicts** - Did agents edit same code?
-3. **Run full suite** - Verify all fixes work together
-4. **Spot check** - Agents can make systematic errors
+1. **Review each summary** - Understand the root cause and evidence
+2. **Check for overlap** - If implementation is needed later, confirm any write-capable slices are non-overlapping
+3. **Parent keeps synthesis** - Decide whether implementation is needed later
+4. **Run verification after implementation** - Verify the approved follow-up work actually resolves the issue
 
 ## Real-World Impact
 
@@ -181,5 +179,5 @@ From debugging session (2025-10-03):
 - 6 failures across 3 files
 - 3 agents dispatched in parallel
 - All investigations completed concurrently
-- All fixes integrated successfully
-- Zero conflicts between agent changes
+- Parent kept synthesis and used the root-cause map to choose the next implementation step
+- Zero overlap in the investigation slices
