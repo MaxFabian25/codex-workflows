@@ -15,7 +15,7 @@ You delegate read-only or non-owning investigation tasks to specialized agents w
 
 **Core principle:** Dispatch one explorer per independent problem domain. Let them investigate concurrently and return evidence, root cause, and recommended next steps.
 
-**Dispatch rule:** Use `spawn_agent(...)` with `agent_type: "explorer"` for investigation-only work. While children run, keep doing non-overlapping coordination work. If the next step depends on a child result, use blocked waits with `wait_agent(...)` instead of short polling.
+**Dispatch rule:** Use `spawn_agent(task_name=..., agent_type="explorer", message="...")` for investigation-only work. Render the read-only investigation prompt into the packet format from `../../contract/prompt-packet.md` before dispatch. While children run, keep doing non-overlapping coordination work. If the next step depends on a child result, use blocked waits with `wait_agent(...)` instead of short polling.
 
 ## When to Use
 
@@ -71,9 +71,9 @@ Each agent gets:
 ### 3. Dispatch in Parallel
 
 ```text
-spawn_agent(agent_type="explorer", items=[{type:"text", text:"Investigate agent-tool-abort.test.ts failures in read-only mode. Return: observed failure, likely root cause, files involved, and recommended next step."}])
-spawn_agent(agent_type="explorer", items=[{type:"text", text:"Investigate batch-completion-behavior.test.ts failures in read-only mode. Return: observed failure, likely root cause, files involved, and recommended next step."}])
-spawn_agent(agent_type="explorer", items=[{type:"text", text:"Investigate tool-approval-race-conditions.test.ts failures in read-only mode. Return: observed failure, likely root cause, files involved, and recommended next step."}])
+spawn_agent(task_name="abort_investigation", agent_type="explorer", message="[rendered packet text for the abort investigation]")
+spawn_agent(task_name="batch_completion_investigation", agent_type="explorer", message="[rendered packet text for the batch completion investigation]")
+spawn_agent(task_name="tool_approval_investigation", agent_type="explorer", message="[rendered packet text for the tool approval investigation]")
 # All three run concurrently; keep coordinating locally until blocked on one of them
 ```
 

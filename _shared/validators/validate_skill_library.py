@@ -98,7 +98,7 @@ PROMPT_PACKET_SKILL_TARGETS = [
 ]
 
 BOUNDARY_REQUIREMENTS = {
-    "skills/dispatching-parallel-agents/SKILL.md": ["read-only", "write-owning"],
+    "skills/dispatching-parallel-agents/SKILL.md": ["read-only", "write-owning", "task_name=", 'message="'],
     "skills/subagent-driven-development/SKILL.md": ["write-owning"],
 }
 
@@ -133,6 +133,16 @@ TARGETED_CONTENT_GUARDS = {
         (
             re.compile(r'spawn_agent\([\s\S]{0,200}?agent_type="worker"'),
             'contains write-owning `spawn_agent(... agent_type="worker" ...)` example guidance',
+        ),
+        (
+            re.compile(r'items=\['),
+            'contains stale `items=[...]` dispatch guidance instead of `message=`',
+        ),
+    ],
+    "skills/requesting-code-review/code-reviewer.md": [
+        (
+            re.compile(r"\{PLAN_REFERENCE\}"),
+            'contains stale `{PLAN_REFERENCE}` placeholder; use `{PLAN_OR_REQUIREMENTS}` consistently',
         ),
     ],
 }
