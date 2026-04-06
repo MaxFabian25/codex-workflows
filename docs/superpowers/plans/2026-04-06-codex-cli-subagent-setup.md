@@ -105,7 +105,7 @@ Replace the existing `[agents]` block with the following block, inserted before 
 
 ```toml
 [agents]
-max_threads = 12
+max_threads = 32
 max_depth = 3
 job_max_runtime_seconds = 3600
 
@@ -169,7 +169,7 @@ Run:
 
 ```bash
 diff -u /Users/maxibon/.codex/backups/2026-04-06-codex-cli-subagent-setup/config.macos-source.toml.before /Users/maxibon/.codex/config.macos-source.toml
-rg -n '^(profile = "workflow_fidelity"|multi_agent_v2 = true|enable_fanout = false|max_threads = 12|max_depth = 3|job_max_runtime_seconds = 3600)$' /Users/maxibon/.codex/config.macos-source.toml
+rg -n '^(profile = "workflow_fidelity"|multi_agent_v2 = true|enable_fanout = false|max_threads = 32|max_depth = 3|job_max_runtime_seconds = 3600)$' /Users/maxibon/.codex/config.macos-source.toml
 rg -n '^\[agents\.(implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer)\]$' /Users/maxibon/.codex/config.macos-source.toml
 ```
 
@@ -471,7 +471,7 @@ multi_agent_v2 = true
 enable_fanout = false
 
 [agents]
-max_threads = 12
+max_threads = 32
 max_depth = 3
 job_max_runtime_seconds = 3600
 ```
@@ -564,18 +564,18 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(codex): hard-cut v2 wor
 ````markdown
 # Codex Tool Mapping
 
-Skills may still mention Claude Code tool names. On this workstation, translate them to the v2-first Codex contract below.
+Skills may still mention Claude Code tool names. On this workstation, translate them to the local Codex contract below.
 
 | Skill references | Codex equivalent |
 |---|---|
-| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="<configured_role>", items=[{type:"text", text: ...}])` |
-| Multiple `Task` calls (parallel) | Multiple `spawn_agent(...)` calls using `agent_type="parallel_explorer"` for read-only fanout |
+| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="<configured_role>", message="...")` |
+| Multiple `Task` calls (parallel) | Multiple `spawn_agent(...)` calls; use `agent_type="parallel_explorer"` as the default bounded read-only fanout lane |
 | Task returns result | `wait_agent` to synchronize, then read the child completion reply |
-| Task completes automatically | `close_agent` after harvesting the child result |
+| Task completes automatically | `close_agent` when no further follow-up is needed after harvesting the child result |
 | `TodoWrite` | `update_plan` |
-| `Skill` tool | Skills load natively; follow the referenced skill instructions |
-| `Read`, `Write`, `Edit` | Native file tools |
-| `Bash` | Native shell tools |
+| `Skill` tool | Use the available skills list, open the relevant `SKILL.md`, and follow it |
+| `Read`, `Write`, `Edit` | Use native file tools such as `exec_command` for reads and `apply_patch` for edits |
+| `Bash` | Use native shell tools such as `exec_command` |
 
 ## Required Runtime Flags
 
@@ -597,7 +597,7 @@ multi_agent_v2 = true
 enable_fanout = true
 ```
 
-`multi_agent_v2` is authoritative in this design. If the live runtime does not activate it, stop and fix the runtime before weakening any local docs.
+`multi_agent_v2` is authoritative for the profile feature-state contract on this workstation. If the live runtime does not activate it, stop and fix the runtime before trusting any local docs. These checks verify profile flags; they do not by themselves prove end-to-end custom-role dispatch.
 
 ## Config-Owned Child Roles
 
@@ -611,7 +611,7 @@ Codex custom agents are defined in `~/.codex/config.macos-source.toml` and backe
 | `parallel_explorer` | Read-only independent exploration and audit work |
 | `final_reviewer` | Read-only whole-change review |
 
-Do not guess between generic built-in roles when these mapped roles are configured.
+Treat these role names as the configured local contract. If actual dispatch behavior is in doubt, verify it separately instead of guessing between generic built-in roles.
 
 ## Dispatch Rules
 
@@ -626,10 +626,11 @@ Do not guess between generic built-in roles when these mapped roles are configur
 
 ## Dispatch Payload Framing
 
-The text item inside `items` is user-level input. Structure it like this:
+The top-level `message` field is user-level input. Structure it like this:
 
 ```text
-Your task is to perform the following. Follow the instructions below exactly.
+Your task is to perform the following.
+Follow the instructions below exactly.
 
 <agent-instructions>
 [filled prompt content]
@@ -690,7 +691,7 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(codex-tools): map v2 ro
 Replace the paragraph that begins with `**Codex v2 translation:**` with exactly:
 
 ```markdown
-**Codex v2 translation:** Use `spawn_agent(task_name=..., agent_type="parallel_explorer", items=[{type:"text", text:"..."}])` for the default read-only fanout lane. Keep follow-up coordination in the parent, use one long `wait_agent` only when blocked on a child, and reserve write-capable child roles for explicitly approved non-overlapping implementation slices.
+**Codex v2 translation:** Use `spawn_agent(task_name=..., agent_type="parallel_explorer", message="...")` for the default read-only fanout lane. Keep follow-up coordination in the parent, use one long `wait_agent` only when blocked on a child, and reserve write-capable child roles for explicitly approved non-overlapping implementation slices.
 ```
 
 - [ ] **Step 2: Replace the example parallel dispatch block**
@@ -698,9 +699,9 @@ Replace the paragraph that begins with `**Codex v2 translation:**` with exactly:
 Replace the three example `spawn_agent(...)` lines under `### 3. Dispatch in Parallel` with exactly:
 
 ```text
-spawn_agent(task_name="map_abort_failures", agent_type="parallel_explorer", items=[{type:"text", text:"Read src/agents/agent-tool-abort.test.ts and explain the root cause of the failing cases. Stay read-only and return file references."}])
-spawn_agent(task_name="map_batch_completion", agent_type="parallel_explorer", items=[{type:"text", text:"Read batch-completion-behavior.test.ts and summarize the failing-path root cause with evidence. Stay read-only."}])
-spawn_agent(task_name="map_tool_approval_race", agent_type="parallel_explorer", items=[{type:"text", text:"Investigate tool-approval-race-conditions.test.ts, identify the root cause, and return evidence. Stay read-only."}])
+spawn_agent(task_name="map_abort_failures", agent_type="parallel_explorer", message="Read src/agents/agent-tool-abort.test.ts and explain the root cause of the failing cases. Stay read-only and return file references.")
+spawn_agent(task_name="map_batch_completion", agent_type="parallel_explorer", message="Read batch-completion-behavior.test.ts and summarize the failing-path root cause with evidence. Stay read-only.")
+spawn_agent(task_name="map_tool_approval_race", agent_type="parallel_explorer", message="Investigate tool-approval-race-conditions.test.ts, identify the root cause, and return evidence. Stay read-only.")
 # All three run concurrently; the parent keeps synthesis and decides whether implementation is needed later
 ```
 
@@ -772,147 +773,144 @@ Use this template when dispatching an implementer subagent.
 Codex subagent packet (preferred v2):
   task_name: "<stable_task_name>"
   agent_type: "implementer"
-  items:
-    - type: "text"
-      text: |
-        Your task is to perform the following.
-        Follow the instructions below exactly.
+  message: |
+    Your task is to perform the following.
+    Follow the instructions below exactly.
 
-        <agent-instructions>
-        You are implementing Task N: [task name]
+    <agent-instructions>
+    You are implementing Task N: [task name]
 
-        ## Task Description
+    ## Task Description
 
-        [FULL TEXT of task from plan - paste it here,
-        don't make subagent read file]
+    [FULL TEXT of task from plan - paste it here,
+    don't make subagent read file]
 
-        ## Context
+    ## Context
 
-        [Scene-setting: where this fits, dependencies, architectural context]
+    [Scene-setting: where this fits, dependencies, architectural context]
 
-        ## Before You Begin
+    ## Before You Begin
 
-        If you have questions about:
-        - The requirements or acceptance criteria
-        - The approach or implementation strategy
-        - Dependencies or assumptions
-        - Anything unclear in the task description
+    If you have questions about:
+    - The requirements or acceptance criteria
+    - The approach or implementation strategy
+    - Dependencies or assumptions
+    - Anything unclear in the task description
 
-        **Raise them now.** Return a blocking question
-        before starting work if anything is unclear.
+    **Raise them now.** Return a blocking question
+    before starting work if anything is unclear.
 
-        ## Your Job
+    ## Your Job
 
-        Once you're clear on requirements:
-        1. For any code-changing task, invoke the `superpowers:test-driven-development` skill before writing implementation code
-        2. Write the failing test first and prove it fails
-        3. Write the minimum implementation to make the test pass
-        4. Verify the implementation works
-        5. Commit your work
-        6. Self-review (see below)
-        7. Report back
+    Once you're clear on requirements:
+    1. For any code-changing task, invoke the `superpowers:test-driven-development` skill before writing implementation code
+    2. Follow RED-GREEN-REFACTOR: write the failing test first and prove it fails, then write the minimum implementation to make the test pass and prove it passes
+    3. Verify the implementation works
+    4. Commit your work
+    5. Self-review (see below)
+    6. Report back
 
-        Work from: [directory]
+    Work from: [directory]
 
-        **While you work:** If you encounter something
-        unexpected or unclear, stop and report a
-        blocking question.
-        It's always OK to pause and clarify. Don't guess or make assumptions.
+    **While you work:** If you encounter something
+    unexpected or unclear, stop and report a
+    blocking question.
+    It's always OK to pause and clarify. Don't guess or make assumptions.
 
-        ## Code Organization
+    ## Code Organization
 
-        You reason best about code you can hold in
-        context at once, and your edits are more
-        reliable when files are focused.
-        Keep this in mind:
-        - Follow the file structure defined in the plan
-        - Each file should have one clear responsibility
-          with a well-defined interface
-        - If a file you're creating is growing beyond
-          the plan's intent, stop and report
-          it as DONE_WITH_CONCERNS — don't split files
-          on your own without plan guidance
-        - If an existing file you're modifying is
-          already large or tangled, work carefully
-          and note it as a concern in your report
-        - In existing codebases, follow established
-          patterns. Improve code you're touching
-          the way a good developer would, but don't
-          restructure things outside your task.
+    You reason best about code you can hold in
+    context at once, and your edits are more
+    reliable when files are focused.
+    Keep this in mind:
+    - Follow the file structure defined in the plan
+    - Each file should have one clear responsibility
+      with a well-defined interface
+    - If a file you're creating is growing beyond
+      the plan's intent, stop and report
+      it as DONE_WITH_CONCERNS — don't split files
+      on your own without plan guidance
+    - If an existing file you're modifying is
+      already large or tangled, work carefully
+      and note it as a concern in your report
+    - In existing codebases, follow established
+      patterns. Improve code you're touching
+      the way a good developer would, but don't
+      restructure things outside your task.
 
-        ## When You're in Over Your Head
+    ## When You're in Over Your Head
 
-        It is always OK to stop and say
-        "this is too hard for me."
-        Bad work is worse than no work.
-        You will not be penalized for escalating.
+    It is always OK to stop and say
+    "this is too hard for me."
+    Bad work is worse than no work.
+    You will not be penalized for escalating.
 
-        **STOP and escalate when:**
-        - The task requires architectural decisions with multiple valid approaches
-        - You need to understand code beyond what was provided and can't find clarity
-        - You feel uncertain about whether your approach is correct
-        - The task involves restructuring existing code
-          in ways the plan didn't anticipate
-        - You've been reading file after file trying
-          to understand the system without progress
+    **STOP and escalate when:**
+    - The task requires architectural decisions with multiple valid approaches
+    - You need to understand code beyond what was provided and can't find clarity
+    - You feel uncertain about whether your approach is correct
+    - The task involves restructuring existing code
+      in ways the plan didn't anticipate
+    - You've been reading file after file trying
+      to understand the system without progress
 
-        **How to escalate:** Report back with status
-        BLOCKED or NEEDS_CONTEXT. Describe specifically
-        what you're stuck on, what you've tried, and
-        what kind of help you need. The controller can
-        provide more context, tighten the packet,
-        preserve inherited config,
-        or break the task into smaller pieces.
+    **How to escalate:** Report back with status
+    BLOCKED or NEEDS_CONTEXT. Describe specifically
+    what you're stuck on, what you've tried, and
+    what kind of help you need. The controller can
+    provide more context, tighten the packet,
+    preserve inherited config,
+    or break the task into smaller pieces.
 
-        ## Before Reporting Back: Self-Review
+    ## Before Reporting Back: Self-Review
 
-        Review your work with fresh eyes. Ask yourself:
+    Review your work with fresh eyes. Ask yourself:
 
-        **Completeness:**
-        - Did I fully implement everything in the spec?
-        - Did I miss any requirements?
-        - Are there edge cases I didn't handle?
+    **Completeness:**
+    - Did I fully implement everything in the spec?
+    - Did I miss any requirements?
+    - Are there edge cases I didn't handle?
 
-        **Quality:**
-        - Is this my best work?
-        - Are names clear and accurate (match what
-          things do, not how they work)?
-        - Is the code clean and maintainable?
+    **Quality:**
+    - Is this my best work?
+    - Are names clear and accurate (match what
+      things do, not how they work)?
+    - Is the code clean and maintainable?
 
-        **Discipline:**
-        - Did I avoid overbuilding (YAGNI)?
-        - Did I only build what was requested?
-        - Did I follow existing patterns in the codebase?
+    **Discipline:**
+    - Did I avoid overbuilding (YAGNI)?
+    - Did I only build what was requested?
+    - Did I follow existing patterns in the codebase?
 
-        **Testing:**
-        - Do tests actually verify behavior
-          (not just mock behavior)?
-        - Did I follow TDD?
-        - Are tests comprehensive?
+    **Testing:**
+    - Do tests actually verify behavior
+      (not just mock behavior)?
+    - Did I follow TDD?
+    - Are tests comprehensive?
 
-        If you find issues during self-review, fix them now before reporting.
+    If you find issues during self-review, fix them now before reporting.
 
-        ## Report Format
+    ## Report Format
 
-        When done, report:
-        - **Status:** DONE | DONE_WITH_CONCERNS |
-          BLOCKED | NEEDS_CONTEXT
-        - What you implemented (or what you attempted, if blocked)
-        - What you tested and test results
-        - Files changed
-        - Self-review findings (if any)
-        - Any issues or concerns
+    When done, report:
+    - **Status:** DONE | DONE_WITH_CONCERNS |
+      BLOCKED | NEEDS_CONTEXT
+    - What you implemented (or what you attempted, if blocked)
+    - What you tested and test results
+    - Files changed
+    - Self-review findings (if any)
+    - Any issues or concerns
 
-        Use DONE_WITH_CONCERNS if you completed the
-        work but have doubts about correctness.
-        Use BLOCKED if you cannot complete the task. Use NEEDS_CONTEXT if you need
-        information that wasn't provided. Never
-        silently produce work you're unsure about.
-        </agent-instructions>
+    Use DONE_WITH_CONCERNS if you completed the
+    work but have doubts about correctness.
+    Use BLOCKED if you cannot complete the task. Use NEEDS_CONTEXT if you need
+    information that wasn't provided. Never
+    silently produce work you're unsure about.
+    </agent-instructions>
 
-        Execute this now. Output ONLY the structured
-        response following the format
-        specified in the instructions above.
+    Execute this now. Output ONLY the structured
+    response following the format
+    specified in the instructions above.
 ```
 ````
 
@@ -929,71 +927,69 @@ Use this template when dispatching a spec compliance reviewer subagent.
 Codex subagent packet (preferred v2):
   task_name: "<stable_spec_review_name>"
   agent_type: "spec_reviewer"
-  items:
-    - type: "text"
-      text: |
-        Your task is to perform the following.
-        Follow the instructions below exactly.
+  message: |
+    Your task is to perform the following.
+    Follow the instructions below exactly.
 
-        <agent-instructions>
-        You are reviewing whether an implementation matches its specification.
+    <agent-instructions>
+    You are reviewing whether an implementation matches its specification.
 
-        ## Hard Rules
+    ## Hard Rules
 
-        - Stay read-only. Do not edit files, stage changes, or commit.
-        - Verify the code directly. Do not trust the implementer report.
+    - Stay read-only. Do not edit files, stage changes, or commit.
+    - Verify the code directly. Do not trust the implementer report.
 
-        ## What Was Requested
+    ## What Was Requested
 
-        [FULL TEXT of task requirements]
+    [FULL TEXT of task requirements]
 
-        ## What Implementer Claims They Built
+    ## What Implementer Claims They Built
 
-        [From implementer's report]
+    [From implementer's report]
 
-        ## CRITICAL: Do Not Trust the Report
+    ## CRITICAL: Do Not Trust the Report
 
-        The implementer finished suspiciously quickly. Their report may be incomplete,
-        inaccurate, or optimistic. You MUST verify everything independently.
+    The implementer finished suspiciously quickly. Their report may be incomplete,
+    inaccurate, or optimistic. You MUST verify everything independently.
 
-        **DO NOT:**
-        - Take their word for what they implemented
-        - Trust their claims about completeness
-        - Accept their interpretation of requirements
+    **DO NOT:**
+    - Take their word for what they implemented
+    - Trust their claims about completeness
+    - Accept their interpretation of requirements
 
-        **DO:**
-        - Read the actual code they wrote
-        - Compare actual implementation to requirements line by line
-        - Check for missing pieces they claimed to implement
-        - Look for extra features they didn't mention
+    **DO:**
+    - Read the actual code they wrote
+    - Compare actual implementation to requirements line by line
+    - Check for missing pieces they claimed to implement
+    - Look for extra features they didn't mention
 
-        ## Your Job
+    ## Your Job
 
-        Read the implementation code and verify:
+    Read the implementation code and verify:
 
-        **Missing requirements:**
-        - Did they implement everything that was requested?
-        - Are there requirements they skipped or missed?
-        - Did they claim something works but didn't actually implement it?
+    **Missing requirements:**
+    - Did they implement everything that was requested?
+    - Are there requirements they skipped or missed?
+    - Did they claim something works but didn't actually implement it?
 
-        **Extra/unneeded work:**
-        - Did they build things that weren't requested?
-        - Did they over-engineer or add unnecessary features?
-        - Did they add "nice to haves" that weren't in spec?
+    **Extra/unneeded work:**
+    - Did they build things that weren't requested?
+    - Did they over-engineer or add unnecessary features?
+    - Did they add "nice to haves" that weren't in spec?
 
-        **Misunderstandings:**
-        - Did they interpret requirements differently than intended?
-        - Did they solve the wrong problem?
-        - Did they implement the right feature but the wrong way?
+    **Misunderstandings:**
+    - Did they interpret requirements differently than intended?
+    - Did they solve the wrong problem?
+    - Did they implement the right feature but the wrong way?
 
-        Report:
-        - ✅ Spec compliant
-        - ❌ Issues found: [list specific missing or extra items with file references]
-        </agent-instructions>
+    Report:
+    - ✅ Spec compliant
+    - ❌ Issues found: [list specific missing or extra items with file references]
+    </agent-instructions>
 
-        Execute this now. Output ONLY the structured
-        response following the format
-        specified in the instructions above.
+    Execute this now. Output ONLY the structured
+    response following the format
+    specified in the instructions above.
 ```
 ````
 
@@ -1008,31 +1004,37 @@ Use this template when dispatching a code quality reviewer subagent.
 
 **Only dispatch after spec compliance review passes.**
 
+Before dispatching, fill `../requesting-code-review/code-reviewer.md` completely and paste the filled template into this packet. Do not ask the child to read the shared template from disk.
+
 ```yaml
 Codex subagent packet (preferred v2):
   task_name: "<stable_code_review_name>"
   agent_type: "code_quality_reviewer"
-  items:
-    - type: "text"
-      text: |
-        Your task is to perform the following.
-        Follow the instructions below exactly.
+  message: |
+    Your task is to perform the following.
+    Follow the instructions below exactly.
 
-        <agent-instructions>
-        Stay read-only. Do not edit files, stage changes, or commit.
+    <agent-instructions>
+    Stay read-only. Do not edit files, stage changes, or commit.
 
-        Use the filled template at requesting-code-review/code-reviewer.md.
+    The filled shared review template is included below. Treat it as the primary review contract.
 
-        WHAT_WAS_IMPLEMENTED: [from implementer's report]
-        PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-        BASE_SHA: [commit before task]
-        HEAD_SHA: [current commit]
-        DESCRIPTION: [task summary]
-        </agent-instructions>
+    <filled-shared-review-template>
+    [paste fully filled ../requesting-code-review/code-reviewer.md here]
+    </filled-shared-review-template>
 
-        Execute this now. Output ONLY the structured
-        response following the format
-        specified in the instructions above.
+    In addition to standard code quality concerns, also check:
+    - Does each file have one clear responsibility with a well-defined interface?
+    - Are units decomposed so they can be understood and tested independently?
+    - Is the implementation following the file structure from the plan?
+    - Did this implementation create new files that are already large,
+      or significantly grow existing files?
+      (Don't flag pre-existing file sizes. Focus on what this change contributed.)
+    </agent-instructions>
+
+    Execute this now. Output ONLY the structured
+    response following the format
+    specified in the instructions above.
 ```
 
 **In addition to standard code quality concerns, the reviewer should check:**
@@ -1044,7 +1046,7 @@ Codex subagent packet (preferred v2):
   or significantly grow existing files?
   (Don't flag pre-existing file sizes. Focus on what this change contributed.)
 
-**Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Assessment
+**Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Recommendations, Assessment
 ````
 
 - [ ] **Step 5: Verify the subagent workflow hard cut**
@@ -1085,61 +1087,184 @@ description: Use when completing tasks, implementing major features, or before m
 
 # Requesting Code Review
 
-Dispatch a focused read-only review child to catch issues before they cascade. The parent session stays responsible for arbitration and for deciding what to fix next.
+Dispatch a focused read-only review child to catch issues before they cascade. The reviewer inspects the work product, returns findings, and stops; the parent owns packet quality, arbitration, and final decisions.
 
 **Core principle:** Review early, review often.
 
 ## When to Request Review
 
 **Mandatory:**
-- After each task in subagent-driven development
-- After completing a major feature
+- After each task in `subagent-driven-development`
+- After completing a major feature or implementation batch
 - Before merge to main
 
 **Optional but valuable:**
-- When stuck
-- Before refactoring
+- When stuck and a fresh read-only pass could surface the issue
+- Before a risky refactor
 - After fixing a complex bug
 
 ## Role Selection
 
-Use the config-owned review roles from `~/.codex/config.macos-source.toml`:
+- Use `code_quality_reviewer` after a completed task or implementation batch to review code quality, testing, architecture, and maintainability.
+- Use `final_reviewer` for the final whole-change review before handing work off or merging.
+- Both roles are read-only. Do not use write-capable child roles for review.
 
-- `code_quality_reviewer` for task-level review after spec compliance passes
-- `final_reviewer` for the whole-change review before merge or branch finish
-
-Both roles are read-only. Do not use write-capable child roles for review.
+Dispatch them differently:
+- `code_quality_reviewer`: fill `code-reviewer.md`, then paste that entire filled template into `../subagent-driven-development/code-quality-reviewer-prompt.md` and dispatch the filled wrapper packet. Use the wrapper because it adds the extra task-quality checks that apply only to this role.
+- `final_reviewer`: fill `code-reviewer.md` and dispatch that filled shared template directly with `spawn_agent(..., agent_type="final_reviewer", message="...")`.
 
 ## How to Request
 
 **1. Get git SHAs:**
 
 ```bash
-BASE_SHA=$(git rev-parse HEAD~1)
+# Save this before the task starts if you expect a multi-commit task-level review
+TASK_START_SHA=$(git rev-parse HEAD)
+
+# After the task is implemented and committed, review exactly that task scope
+BASE_SHA=$TASK_START_SHA
 HEAD_SHA=$(git rev-parse HEAD)
+
+# Whole-change or final_reviewer scope against main
+BASE_SHA=$(git merge-base HEAD origin/main)
+HEAD_SHA=$(git rev-parse HEAD)
+
+# Whole-change review against another target branch
+# BASE_SHA=$(git merge-base HEAD origin/<target-branch>)
+# HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-**2. Dispatch the review child:**
+Use a saved pre-task SHA or another explicit task-start commit for task-level review scopes. `HEAD~1` is only correct when the requested scope is exactly one commit. For `final_reviewer`, set `BASE_SHA` to the merge-base against the target branch so the child reviews the whole change, not just the most recent task commit.
 
-Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="code_quality_reviewer" or "final_reviewer", items=[{type:"text", text:...}])`.
+**2. Dispatch the review child by role:**
+
+**Task-level `code_quality_reviewer`:**
+- Fill the shared template at `code-reviewer.md`.
+- Paste the entire filled shared template into `../subagent-driven-development/code-quality-reviewer-prompt.md`.
+- Dispatch the full filled wrapper packet with `spawn_agent(task_name=..., agent_type="code_quality_reviewer", message="...")`.
+
+**Whole-change `final_reviewer`:**
+- Fill the shared template at `code-reviewer.md`.
+- Dispatch that filled shared template directly with `spawn_agent(task_name=..., agent_type="final_reviewer", message="...")`.
 
 **Placeholders:**
-- `{WHAT_WAS_IMPLEMENTED}` - What you just built
+- `{WHAT_WAS_IMPLEMENTED}` - Short review-scope label
 - `{PLAN_OR_REQUIREMENTS}` - What it should do
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
-- `{DESCRIPTION}` - Brief summary
+- `{DESCRIPTION}` - Fuller implementation summary
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
-- Fix Important issues before proceeding
-- Note Minor issues for later
-- Push back if the reviewer is wrong, with technical reasoning and evidence
+- Fix Important issues before proceeding, or record why the reviewer is wrong
+- Note Minor issues for later if they are not worth blocking on
 
-**4. Parent arbitrates disagreements:**
-- The reviewer does not get the last word automatically
-- The parent compares plan, code, and verification evidence
-- If the reviewer is wrong, explain why and proceed deliberately
+## Examples
+
+### Task-Level `code_quality_reviewer`
+
+```text
+[Just completed Task 2: Add verification function]
+
+[Earlier, before Task 2 started, you saved its boundary]
+TASK_2_START_SHA=$(git rev-parse HEAD)
+
+You: Let me request code review before proceeding.
+
+BASE_SHA=$TASK_2_START_SHA
+HEAD_SHA=$(git rev-parse HEAD)
+
+The actual `message=` payload must be the entire filled `../subagent-driven-development/code-quality-reviewer-prompt.md` wrapper packet. The block below is an excerpt showing the dispatch shape only. Do not send only this excerpt.
+
+spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", message="[full filled code-quality-reviewer-prompt.md wrapper packet for Task 2]")
+
+  Excerpt from the actual wrapper payload:
+  <filled-shared-review-template>
+  # Code Review Agent
+
+  You are performing a read-only review of code changes for the requested review scope.
+
+  **Your task:**
+  1. Review Verification and repair functions for conversation index
+  2. Compare against Task 2 from docs/superpowers/plans/deployment-plan.md
+  3. Check code quality, architecture, and testing
+  4. Categorize issues by severity
+  5. Assess readiness for the requested review scope
+
+  ## What Was Implemented
+
+  Added verifyIndex() and repairIndex() with 4 issue types
+
+  ## Requirements/Plan
+
+  Task 2 from docs/superpowers/plans/deployment-plan.md
+
+  ## Git Range to Review
+
+  **Base:** a7981ec
+  **Head:** 3df7661
+  </filled-shared-review-template>
+
+  In addition to standard code quality concerns, also check:
+  - Does each file have one clear responsibility with a well-defined interface?
+  - Are units decomposed so they can be understood and tested independently?
+  - Is the implementation following the file structure from the plan?
+  - Did this implementation create new files that are already large, or significantly grow existing files?
+
+[Review child returns]
+### Strengths
+- Clean architecture with real tests around the repair flow
+
+### Issues
+
+#### Critical (Must Fix)
+None.
+
+#### Important (Should Fix)
+1. **Missing progress indicators**
+   - File: `src/indexer.ts:130`
+   - What's wrong: Long-running verification and repair paths do not report progress.
+   - Why it matters: Task 2 requires progress reporting every 100 items, and operators cannot tell whether the job is still advancing.
+   - How to fix: Add a progress log or callback that emits every 100 processed items.
+
+#### Minor (Nice to Have)
+1. **Magic reporting interval**
+   - File: `src/indexer.ts:130`
+   - What's wrong: The value `100` is inlined in the reporting path.
+   - Why it matters: Future changes to the reporting cadence will require hunting through implementation details.
+   - How to fix: Extract a named constant such as `PROGRESS_INTERVAL`.
+
+### Recommendations
+- Add progress reporting first, then extract the reporting interval constant in the same pass.
+
+### Assessment
+
+**Ready for requested review scope?** With fixes
+
+**Reasoning:** The core design is sound, but the missing progress indicator should be fixed before proceeding to Task 3.
+
+You: [Fix progress indicators]
+[Continue to Task 3]
+```
+
+### Whole-Change `final_reviewer`
+
+```text
+BASE_SHA=$(git merge-base HEAD origin/main)
+HEAD_SHA=$(git rev-parse HEAD)
+
+spawn_agent(task_name="final_code_review", agent_type="final_reviewer", message="[entire filled code-reviewer.md template directly for the whole change]")
+```
+
+For `final_reviewer`, the actual `message=` payload is the entire filled shared `code-reviewer.md` template directly. Do not wrap it in `../subagent-driven-development/code-quality-reviewer-prompt.md`.
+
+## Parent Arbitrates Disagreements
+
+The review child reports findings. The parent decides what to do next.
+
+- If the reviewer is right, fix the issue and re-run review if needed.
+- If the reviewer is wrong, push back with technical reasoning and evidence from the code, tests, or plan.
+- Do not ask the reviewer to arbitrate its own disputed finding. The parent owns that decision.
 
 ## Integration with Workflows
 
@@ -1164,7 +1289,7 @@ Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task
 - Ignore Important issues without explicit parent justification
 - Let review replace verification
 
-See template at: requesting-code-review/code-reviewer.md
+See template at: code-reviewer.md
 ````
 
 - [ ] **Step 2: Replace `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/code-reviewer.md` with the following content**

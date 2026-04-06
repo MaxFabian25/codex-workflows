@@ -58,7 +58,7 @@ multi_agent_v2 = true
 enable_fanout = false
 
 [agents]
-max_threads = 12
+max_threads = 32
 max_depth = 3
 job_max_runtime_seconds = 3600
 ```
