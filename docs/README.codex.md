@@ -66,9 +66,7 @@ job_max_runtime_seconds = 3600
 Parallel override for bounded read-only fanout:
 
 ```toml
-profile = "parallel_readonly"
-
-[features]
+[profiles.parallel_readonly.features]
 multi_agent = true
 multi_agent_v2 = true
 enable_fanout = true

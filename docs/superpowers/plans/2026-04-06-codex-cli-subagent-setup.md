@@ -475,9 +475,7 @@ job_max_runtime_seconds = 3600
 Parallel override for bounded read-only fanout:
 
 ```toml
-profile = "parallel_readonly"
-
-[features]
+[profiles.parallel_readonly.features]
 multi_agent = true
 multi_agent_v2 = true
 enable_fanout = true
@@ -546,8 +544,8 @@ If either profile reports `multi_agent_v2 = false`, stop and fix the runtime or 
 Run:
 
 ```bash
-rg -n 'multi_agent_v2|max_depth = 3|job_max_runtime_seconds = 3600|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' /Users/maxibon/.codex/superpowers/docs/README.codex.md
-! rg -n 'multi_agent = true is sufficient|subagent skills.*optional' /Users/maxibon/.codex/superpowers/docs/README.codex.md
+rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|max_depth = 3|job_max_runtime_seconds = 3600|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' /Users/maxibon/.codex/superpowers/docs/README.codex.md
+! rg -n 'multi_agent = true is sufficient|subagent skills.*optional|profile = "parallel_readonly"' /Users/maxibon/.codex/superpowers/docs/README.codex.md
 ```
 
 Expected:
@@ -1567,8 +1565,8 @@ Expected:
 Run:
 
 ```bash
-rg -n 'multi_agent_v2|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
-! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient|profile = "parallel_readonly"' /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 python3 - <<'PY'
 from pathlib import Path
 import re

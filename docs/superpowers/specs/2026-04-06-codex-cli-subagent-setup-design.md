@@ -499,14 +499,14 @@ Expected:
 Check the Codex-facing superpowers files for v2-first Codex claims and for stale legacy wording:
 
 ```bash
-rg -n 'multi_agent_v2|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' \
+rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' \
   ~/.codex/superpowers/docs/README.codex.md \
   ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
   ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
   ~/.codex/superpowers/skills/subagent-driven-development \
   ~/.codex/superpowers/skills/requesting-code-review
 
-! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient' \
+! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient|profile = "parallel_readonly"' \
   ~/.codex/superpowers/docs/README.codex.md \
   ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
   ~/.codex/superpowers/skills/dispatching-parallel-agents/SKILL.md \
@@ -521,6 +521,7 @@ rg -n 'multi_agent_v2|workflow_fidelity|parallel_readonly|implementer|spec_revie
 Expected after implementation:
 
 - Codex-facing docs encode the v2-first contract the user requested
+- the README and replacement blocks preserve the profile-scoped `parallel_readonly` feature override
 - stale dispatch wording and legacy-primary claims are removed or rewritten
 - the absence checks fail immediately if legacy packet or dispatch wording is reintroduced
 
