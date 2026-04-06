@@ -4,11 +4,7 @@ Guide for using Superpowers with OpenAI Codex via native skill discovery on this
 
 ## Quick Install
 
-Tell Codex:
-
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
-```
+Use the `Manual Installation` steps in this README. They are authoritative for this workstation because they include the config source edit, live mirror sync, profile split, and child-role contract instead of sending maintainers through the generic upstream install path.
 
 ## Manual Installation
 
@@ -51,7 +47,7 @@ The `using-superpowers` skill is discovered from that symlink and remains the wo
 
 ## Required Agent Contract
 
-For this workstation, the authoritative child-agent contract is:
+For this workstation, the configured local contract is:
 
 ```toml
 profile = "workflow_fidelity"
@@ -67,12 +63,24 @@ max_depth = 3
 job_max_runtime_seconds = 3600
 ```
 
+Parallel override for bounded read-only fanout:
+
+```toml
+profile = "parallel_readonly"
+
+[features]
+multi_agent = true
+multi_agent_v2 = true
+enable_fanout = true
+```
+
 Rules:
 
 - `multi_agent_v2 = true` is required for both `workflow_fidelity` and `parallel_readonly`.
-- The v2 child-role mapping takes precedence over generic legacy `multi_agent` role guessing.
 - `max_depth = 3` and `job_max_runtime_seconds = 3600` are authoritative.
-- `enable_fanout` stays off in the default controller profile and is enabled only for the explicit parallel lane.
+- `enable_fanout` stays off in the default controller profile and is enabled only for the explicit `parallel_readonly` lane.
+- Current proof on this workstation covers login-shell binary/version verification, profile feature-state verification, and matching role mappings present in both config surfaces.
+- Custom child-role dispatch behavior is config-defined and should be verified separately if runtime behavior is in doubt.
 - If either `codex -p workflow_fidelity features list` or `codex -p parallel_readonly features list` does not show `multi_agent_v2 = true`, stop and treat that as a runtime blocker instead of weakening the docs.
 
 ## Profiles
@@ -84,7 +92,7 @@ Do not use `parallel_readonly` as the default implementation profile.
 
 ## Child Role Mapping
 
-Superpowers relies on config-owned child roles declared in `~/.codex/config.macos-source.toml` and backed by `~/.codex/agents/*.toml`:
+This workstation is configured for a v2-first child-role mapping. The configured local contract is declared in `~/.codex/config.macos-source.toml`, mirrored into `~/.codex/config.toml`, and backed by `~/.codex/agents/*.toml`:
 
 | Role | Workflow use | Access mode |
 |---|---|---|
@@ -94,7 +102,7 @@ Superpowers relies on config-owned child roles declared in `~/.codex/config.maco
 | `parallel_explorer` | Independent parallel exploration and audit work | Read-only |
 | `final_reviewer` | Final whole-change review pass | Read-only |
 
-Skills should dispatch these mapped role names directly. The parent session remains responsible for user clarification, arbitration, and final synthesis.
+Superpowers workflow docs refer to these configured local role names. Profile feature-state verification proves the profile flags; if role-dispatch behavior is in doubt, it should be verified separately. The parent session remains responsible for user clarification, arbitration, and final synthesis.
 
 ## Updating
 
