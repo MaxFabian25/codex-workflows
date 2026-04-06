@@ -6,7 +6,7 @@ Use this template when dispatching a code quality reviewer subagent.
 
 **Only dispatch after spec compliance review passes.**
 
-Before dispatching, fill `requesting-code-review/code-reviewer.md` completely and paste the filled template into this packet. Do not ask the child to read the shared template from disk.
+Before dispatching, fill `../requesting-code-review/code-reviewer.md` completely and paste the filled template into this packet. Do not ask the child to read the shared template from disk.
 
 ```yaml
 Codex subagent packet (preferred v2):
@@ -22,7 +22,7 @@ Codex subagent packet (preferred v2):
     The filled shared review template is included below. Treat it as the primary review contract.
 
     <filled-shared-review-template>
-    [paste fully filled requesting-code-review/code-reviewer.md here]
+    [paste fully filled ../requesting-code-review/code-reviewer.md here]
     </filled-shared-review-template>
 
     In addition to standard code quality concerns, also check:

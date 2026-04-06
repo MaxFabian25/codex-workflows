@@ -60,7 +60,7 @@ digraph process {
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
-    "Dispatch final_reviewer subagent (requesting-code-review/code-reviewer.md) for whole-change review" [shape=box];
+    "Dispatch final_reviewer subagent (../requesting-code-review/code-reviewer.md) for whole-change review" [shape=box];
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
@@ -79,8 +79,8 @@ digraph process {
     "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final_reviewer subagent (requesting-code-review/code-reviewer.md) for whole-change review" [label="no"];
-    "Dispatch final_reviewer subagent (requesting-code-review/code-reviewer.md) for whole-change review" -> "Use superpowers:finishing-a-development-branch";
+    "More tasks remain?" -> "Dispatch final_reviewer subagent (../requesting-code-review/code-reviewer.md) for whole-change review" [label="no"];
+    "Dispatch final_reviewer subagent (../requesting-code-review/code-reviewer.md) for whole-change review" -> "Use superpowers:finishing-a-development-branch";
 }
 ```
 
@@ -120,7 +120,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 - `./implementer-prompt.md` - Dispatch implementer subagent
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
-- `requesting-code-review/code-reviewer.md` - Shared read-only review template; `code_quality_reviewer` embeds the filled template inside `./code-quality-reviewer-prompt.md`, while `final_reviewer` can consume the filled shared template directly
+- `../requesting-code-review/code-reviewer.md` - Shared read-only review template; `code_quality_reviewer` embeds the filled template inside `./code-quality-reviewer-prompt.md`, while `final_reviewer` receives the filled shared template directly
 
 ## Example Workflow
 
@@ -238,7 +238,7 @@ Code reviewer:
 ...
 
 [After all tasks]
-[Dispatch final_reviewer using the filled requesting-code-review/code-reviewer.md packet for the whole-change review, with BASE_SHA set to $(git merge-base HEAD origin/main) or $(git merge-base HEAD origin/<target-branch>)]
+[Dispatch final_reviewer using the filled ../requesting-code-review/code-reviewer.md packet for the whole-change review, with BASE_SHA set to $(git merge-base HEAD origin/main) or $(git merge-base HEAD origin/<target-branch>)]
 Final reviewer:
   ### Strengths
   - The full change matches the plan and keeps the implementation boundaries clean.
@@ -326,7 +326,7 @@ Done!
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
 - **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:requesting-code-review** - shared read-only review workflow; `code_quality_reviewer` must receive `requesting-code-review/code-reviewer.md` through `subagent-driven-development/code-quality-reviewer-prompt.md`, while `final_reviewer` may consume the filled shared template directly
+- **superpowers:requesting-code-review** - shared read-only review workflow; `code_quality_reviewer` must receive `../requesting-code-review/code-reviewer.md` through `./code-quality-reviewer-prompt.md`, while `final_reviewer` receives the filled shared template directly
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
 
 **Subagents should use:**
