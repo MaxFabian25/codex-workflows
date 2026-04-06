@@ -170,7 +170,7 @@ You: [Fix progress indicators]
 BASE_SHA=$(git merge-base HEAD origin/main)
 HEAD_SHA=$(git rev-parse HEAD)
 
-spawn_agent(task_name="final_code_review", agent_type="final_reviewer", message="[full filled code-reviewer.md packet for the whole change]")
+spawn_agent(task_name="final_code_review", agent_type="final_reviewer", message="[entire filled code-reviewer.md template directly for the whole change]")
 ```
 
 For `final_reviewer`, the actual `message=` payload is the entire filled shared `code-reviewer.md` template directly. Do not wrap it in `../subagent-driven-development/code-quality-reviewer-prompt.md`.
