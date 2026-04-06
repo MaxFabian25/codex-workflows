@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
+description: Use when executing a written implementation plan in a separate or sequential session with review checkpoints
 ---
 
 # Executing Plans
@@ -8,6 +8,10 @@ description: Use when you have a written implementation plan to execute in a sep
 ## Overview
 
 Load plan, review critically, execute all tasks, report when complete.
+
+**Contract alignment:** This skill owns sequential or separate-session implementation when `subagent-driven-development` is not the right fit.
+
+**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 

@@ -11,6 +11,10 @@ Code review requires technical evaluation, not emotional performance.
 
 **Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
 
+**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for review ownership and package structure.
+
+**Hard-cut review rule:** Unrequested compatibility shims, fallback surfaces, and dual-path behavior are regressions by default. Only preserve them when the request explicitly calls for that support contract.
+
 ## The Response Pattern
 
 ```
@@ -117,7 +121,7 @@ Push back when:
 - Reviewer lacks full context
 - Violates YAGNI (unused feature)
 - Technically incorrect for this stack
-- Legacy/compatibility reasons exist
+- Suggestion adds an unrequested shim, fallback path, or dual-path behavior
 - Conflicts with your human partner's architectural decisions
 
 **How to push back:**
@@ -184,7 +188,7 @@ Reviewer: "Remove legacy code"
 **Technical Verification (Good):**
 ```
 Reviewer: "Remove legacy code"
-✅ "Checking... build target is 10.15+, this API needs 13+. Need legacy for backward compat. Current impl has wrong bundle ID - fix it or drop pre-13 support?"
+✅ "Checking... build target is 10.15+, this API needs 13+. Need the documented pre-13 support contract. Current impl has the wrong bundle ID - fix it or drop pre-13 support?"
 ```
 
 **YAGNI (Good):**

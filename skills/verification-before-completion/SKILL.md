@@ -13,6 +13,10 @@ Claiming work is complete without verification is dishonesty, not efficiency.
 
 **Violating the letter of this rule is violating the spirit of this rule.**
 
+**Contract alignment:** This skill ends at verified evidence. It does not decide merge, cleanup, or branch-finish actions; those belong to `finishing-a-development-branch`.
+
+**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
+
 ## The Iron Law
 
 ```

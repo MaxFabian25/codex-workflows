@@ -1,13 +1,17 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: Use when executing an implementation plan with write-owning task work in the current session
 ---
 
 # Subagent-Driven Development
 
 Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and use `fork_turns="all"` only when a child genuinely needs the same thread history. This also preserves your own context for coordination work.
+**Contract alignment:** This skill owns write-owning implementation in the current session. One implementer task is active at a time; reviewer subagents are separate quality gates, not parallel code owners.
+
+**Contract references:** Follow `../../contract/process-family.md`, `../../contract/prompt-packet.md`, and `../../contract/package-standards.md` for lifecycle ownership, dispatch packet format, and package structure.
+
+**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and only fork recent relevant history when a child genuinely needs the same thread context. This also preserves your own context for coordination work.
 
 **Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
 

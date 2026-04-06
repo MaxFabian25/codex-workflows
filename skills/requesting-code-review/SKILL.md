@@ -7,6 +7,10 @@ description: Use when completing tasks, implementing major features, or before m
 
 Dispatch a focused review subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation instead of your full working history unless the exact same context is genuinely required. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
 
+**Contract references:** Follow `../../contract/process-family.md`, `../../contract/prompt-packet.md`, and `../../contract/package-standards.md` for review ownership, dispatch packet shape, and package structure.
+
+**Hard-cut review rule:** Unrequested compatibility shims, fallback surfaces, and dual-path behavior are regressions by default. Only preserve them when the request explicitly calls for that support contract.
+
 **Core principle:** Review early, review often.
 
 ## When to Request Review
@@ -31,7 +35,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 **2. Dispatch the review subagent:**
 
-Fill the template at `code-reviewer.md`, then dispatch it with `spawn_agent(task_name=..., agent_type="reviewer" or "worker", items=[{type:"text", text:...}])`. Prefer a stable lowercase `task_name` like `code_review_task_2`, and use that task name for follow-up `wait_agent` or `assign_task` calls.
+Fill the review content in `code-reviewer.md`, wrap that filled content in the packet format from `../../contract/prompt-packet.md`, then dispatch the rendered packet text with `spawn_agent(task_name="code_review_task_2", agent_type="explorer", message="...")`. Prefer a stable lowercase `task_name`, reuse that task name for `followup_task`, `send_message`, `list_agents`, or `close_agent`, and use `wait_agent(...)` only as a general mailbox wait when you are blocked on any reviewer result.
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What you just built
