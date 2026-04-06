@@ -1648,9 +1648,9 @@ Expected:
 - Runtime contract (`multi_agent_v2`, `max_depth = 3`, `job_max_runtime_seconds = 3600`) is covered by Tasks 1-3 and Task 9.
 - Config-owned child-role mapping is covered by Tasks 1-3 and Task 9.
 - README and Codex tool docs hard-cut is covered by Tasks 4-5.
-- `dispatching-parallel-agents` explicit parallel-lane alignment is covered by Task 6. This is an intentional addition because the approved spec described the workflow stage but did not list the skill in the implementation surface.
+- `dispatching-parallel-agents` explicit parallel-lane alignment is covered by Task 6.
 - `subagent-driven-development` and TDD enforcement are covered by Task 7.
-- `requesting-code-review` alignment is covered by Task 8. Updating `code-reviewer.md` is an intentional addition to remove the placeholder drift between `PLAN_OR_REQUIREMENTS` and `PLAN_REFERENCE`.
+- `requesting-code-review` alignment is covered by Task 8, including the shared `code-reviewer.md` template.
 
 ### Placeholder Scan
 
