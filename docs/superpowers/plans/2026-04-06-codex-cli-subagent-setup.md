@@ -1490,7 +1490,24 @@ git -C /Users/maxibon/.codex/superpowers commit -m "docs(review): align review w
 Run:
 
 ```bash
-diff -u /Users/maxibon/.codex/config.macos-source.toml /Users/maxibon/.codex/config.toml
+diff -u /Users/maxibon/.codex/config.macos-source.toml /Users/maxibon/.codex/config.toml || true
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+source = Path('/Users/maxibon/.codex/config.macos-source.toml').read_text()
+live = Path('/Users/maxibon/.codex/config.toml').read_text()
+project_pattern = re.compile(r'(?ms)^\[projects\.".*?"\]\ntrust_level = ".*?"\n?(?:\n)?')
+
+def normalize(text: str) -> str:
+    text = project_pattern.sub('', text)
+    text = re.sub(r'\n{3,}', '\n\n', text).rstrip() + '\n'
+    return text
+
+if normalize(source) != normalize(live):
+    raise SystemExit('config drift beyond runtime-added [projects] trust entries')
+print('config source/live match after ignoring runtime-added [projects] trust entries.')
+PY
 which -a codex
 codex --version
 codex -p workflow_fidelity features list | rg -n 'multi_agent|multi_agent_v2|enable_fanout'
@@ -1499,7 +1516,8 @@ rg -n '^\[agents\.(implementer|spec_reviewer|code_quality_reviewer|parallel_expl
 ```
 
 Expected:
-- `diff -u` returns no output.
+- The raw `diff -u` may show only extra runtime-added `[projects]` trust entries in `/Users/maxibon/.codex/config.toml`.
+- The `python3` check exits 0 only when the remaining config content matches after ignoring runtime-added `[projects]` trust entries.
 - Both profiles show `multi_agent_v2 = true`.
 - `workflow_fidelity` shows `enable_fanout = false`.
 - `parallel_readonly` shows `enable_fanout = true`.
@@ -1544,13 +1562,13 @@ Run:
 ```bash
 git -C /Users/maxibon/.codex/superpowers diff --check
 git -C /Users/maxibon/.codex/superpowers status --short
-git -C /Users/maxibon/.codex/superpowers log --oneline -n 4
+git -C /Users/maxibon/.codex/superpowers log --oneline d45ec2d9b45a076c4b3a204713666867501a5e8b..HEAD
 ```
 
 Expected:
 - `git diff --check` returns no output.
 - `git status --short` returns no output.
-- `git log --oneline -n 4` shows the four new documentation/config-contract commits on top.
+- `git log --oneline d45ec2d9b45a076c4b3a204713666867501a5e8b..HEAD` shows the documentation/config-contract closure follow-up commits after `d45ec2d` through the current branch head.
 
 - [ ] **Step 4: Workflow smoke check**
 
