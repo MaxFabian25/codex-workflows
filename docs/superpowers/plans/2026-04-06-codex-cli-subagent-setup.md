@@ -1469,6 +1469,8 @@ Run targeted smoke prompts in a disposable session and confirm:
 
 Expected:
 - The workflow follows the configured custom role names instead of generic built-in guessing.
+- `codex exec` currently resolves the live root checkout at `~/.codex/superpowers/skills`, not this branch worktree, so this smoke check becomes authoritative only after the live checkout is updated to the branch contents.
+- Until then, treat branch-local smoke as a merge-time or integration-time proof item rather than as standalone proof that the active installed skill surface matches this worktree.
 
 ---
 
