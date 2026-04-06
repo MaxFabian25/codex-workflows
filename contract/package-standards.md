@@ -22,9 +22,16 @@
 - `scripts/` for executable helpers
 - optional `assets/`, `examples/`, `tests/`
 
+## Metadata Surface
+
+Accepted metadata surfaces are:
+
+- per-skill files such as `agents/openai.yaml` when the runtime expects them
+- repo-level or platform-level manifests when skills are discovered natively from the repository or plugin bundle
+
 ## Global Rules
 
 - Use `references/`, never `reference/`.
 - Put reusable helpers in `_shared/`, never under a sibling skill.
-- User-facing skills must have metadata.
+- User-facing skills must have metadata on an accepted metadata surface.
 - Cache artifacts such as `__pycache__` and `.DS_Store` are forbidden.

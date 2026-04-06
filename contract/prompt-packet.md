@@ -2,12 +2,11 @@
 
 ## Codex Dispatch Format
 
-Reviewer and worker prompts must use the Codex v2 packet format:
+Codex subagent prompts must use the verified packet shape for this workstation:
 
 ```yaml
 Codex subagent packet (preferred v2):
-  task_name: "<stable_name>"
-  agent_type: "worker|reviewer|explorer|default"
+  agent_type: "worker|explorer|default"
   items:
     - type: "text"
       text: |
@@ -22,6 +21,9 @@ Codex subagent packet (preferred v2):
         response following the format
         specified in the instructions above.
 ```
+
+- Keep the `items[].text` framing above for dispatched instructions.
+- Read-only review packets route through `explorer` until a dedicated `reviewer` role is verified for this environment.
 
 ## Allowed Legacy State
 

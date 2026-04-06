@@ -5,12 +5,14 @@
 - Workbook mutation is `xlwings-only`.
 - `openpyxl` is validation-only.
 - Use the sibling `xlwings` runtime surface before blocking.
+- Remote workbook escalation uses the `spreadsheet` lane on the `maxfa-wsl` -> `maxfa-win` Office surface.
 
 ## Deck Contract
 
 - Generic `.pptx` work uses `PPTXGenJS`.
-- think-cell JSON lanes come before COM.
-- COM or VBA is the final escalation lane.
+- Remote think-cell lanes are `think-cell-json-automation-windows`, `think-cell-remote-automation-windows`, and `think-cell-com-automation-windows`.
+- Use the JSON-first order: `think-cell-json-automation-windows`, then `think-cell-remote-automation-windows`, then `think-cell-com-automation-windows`.
+- `think-cell-com-automation-windows` or VBA is the final escalation lane.
 
 ## Remote Office Contract
 
