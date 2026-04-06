@@ -206,6 +206,7 @@ profile = "workflow_fidelity"
 
 [features]
 multi_agent = true
+multi_agent_v2 = true
 enable_fanout = false
 
 [agents]
