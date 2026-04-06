@@ -478,28 +478,65 @@ from pathlib import Path
 import tomllib
 
 expected = {
-    'implementer': 'danger-full-access',
-    'spec_reviewer': 'read-only',
-    'code_quality_reviewer': 'read-only',
-    'parallel_explorer': 'read-only',
-    'final_reviewer': 'read-only',
+    'implementer': {
+        'config_file': './agents/implementer.toml',
+        'sandbox_mode': 'danger-full-access',
+    },
+    'spec_reviewer': {
+        'config_file': './agents/spec_reviewer.toml',
+        'sandbox_mode': 'read-only',
+    },
+    'code_quality_reviewer': {
+        'config_file': './agents/code_quality_reviewer.toml',
+        'sandbox_mode': 'read-only',
+    },
+    'parallel_explorer': {
+        'config_file': './agents/parallel_explorer.toml',
+        'sandbox_mode': 'read-only',
+    },
+    'final_reviewer': {
+        'config_file': './agents/final_reviewer.toml',
+        'sandbox_mode': 'read-only',
+    },
 }
 
-for name, sandbox_mode in expected.items():
+for config_path in (
+    Path('/Users/maxibon/.codex/config.macos-source.toml'),
+    Path('/Users/maxibon/.codex/config.toml'),
+):
+    config = tomllib.loads(config_path.read_text())
+    agents = config.get('agents', {})
+    for name, role_expectations in expected.items():
+        entry = agents.get(name)
+        if not isinstance(entry, dict):
+            raise SystemExit(f'{config_path} is missing [agents.{name}]')
+        if entry.get('config_file') != role_expectations['config_file']:
+            raise SystemExit(
+                f'{config_path} has unexpected config_file for {name}: '
+                f'{entry.get("config_file")!r}'
+            )
+        if not entry.get('description'):
+            raise SystemExit(f'{config_path} is missing description for [agents.{name}]')
+
+for name, role_expectations in expected.items():
     path = Path(f'/Users/maxibon/.codex/agents/{name}.toml')
     if not path.exists():
         raise SystemExit(f'missing agent file: {path}')
     data = tomllib.loads(path.read_text())
     if data.get('name') != name:
         raise SystemExit(f'{path} has unexpected name field: {data.get("name")!r}')
-    if data.get('sandbox_mode') != sandbox_mode:
+    if data.get('sandbox_mode') != role_expectations['sandbox_mode']:
         raise SystemExit(
             f'{path} has unexpected sandbox_mode: {data.get("sandbox_mode")!r}'
         )
     if not data.get('developer_instructions'):
         raise SystemExit(f'{path} is missing developer_instructions')
 
-print('all five agent TOMLs are present with expected names, sandbox modes, and developer instructions.')
+print(
+    'both config surfaces bind all five roles to the expected agent files, '
+    'and all five agent TOMLs have the expected names, sandbox modes, and '
+    'developer instructions.'
+)
 PY
 ```
 
@@ -508,6 +545,7 @@ Expected:
 - the tailored superpowers child mappings are present in both source and live config
 - review roles are visibly distinct from implementer roles
 - the mapping is stable enough that local superpowers docs can reference it directly
+- both config surfaces bind each custom role to the expected `./agents/<role>.toml` file
 - all five `/Users/maxibon/.codex/agents/*.toml` files exist with the expected `name`, `sandbox_mode`, and `developer_instructions` fields
 
 ### Skill Discovery Verification

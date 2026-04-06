@@ -77,7 +77,7 @@ Rules:
 - `multi_agent_v2 = true` is required for both `workflow_fidelity` and `parallel_readonly`.
 - `max_depth = 3` and `job_max_runtime_seconds = 3600` are authoritative.
 - `enable_fanout` stays off in the default controller profile and is enabled only for the explicit `parallel_readonly` lane.
-- Current proof on this workstation covers login-shell binary/version verification, profile feature-state verification, and matching role mappings present in both config surfaces.
+- Current proof on this workstation covers login-shell binary/version verification, profile feature-state verification, config-surface role-to-file bindings, and matching agent TOML contracts.
 - Disposable `codex exec` smoke currently resolves the live root checkout at `~/.codex/superpowers/skills`, not this branch worktree, so branch-local verification does not by itself prove active end-to-end custom-role dispatch.
 - Custom child-role dispatch behavior should be verified after integrating this branch into the live checkout if runtime behavior is in doubt.
 - If either `codex -p workflow_fidelity features list` or `codex -p parallel_readonly features list` does not show `multi_agent_v2 = true`, stop and treat that as a runtime blocker instead of weakening the docs.
