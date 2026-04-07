@@ -1,17 +1,13 @@
 ---
 name: subagent-driven-development
-description: Use when executing an implementation plan with write-owning task work in the current session
+description: Use when executing implementation plans with independent tasks in the current session
 ---
 
 # Subagent-Driven Development
 
 Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
 
-**Contract alignment:** This skill owns write-owning implementation in the current session. One implementer task is active at a time; reviewer subagents are separate quality gates, not parallel code owners.
-
-**Contract references:** Follow `../../contract/process-family.md`, `../../contract/prompt-packet.md`, and `../../contract/package-standards.md` for lifecycle ownership, dispatch packet format, and package structure.
-
-**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and only fork recent relevant history when a child genuinely needs the same thread context. This also preserves your own context for coordination work.
+**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and use `fork_turns="all"` only when a child genuinely needs the same thread history. This also preserves your own context for coordination work.
 
 **Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
 
@@ -56,7 +52,7 @@ digraph process {
         "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
         "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
         "Implementer subagent fixes spec gaps" [shape=box];
-        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" [shape=box];
         "Code quality reviewer subagent approves?" [shape=diamond];
         "Implementer subagent fixes quality issues" [shape=box];
         "Mark task complete in TodoWrite" [shape=box];
@@ -64,7 +60,7 @@ digraph process {
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
-    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Dispatch final_reviewer subagent (filled ../requesting-code-review/code-reviewer.md template directly) for whole-change review" [shape=box];
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
@@ -76,25 +72,30 @@ digraph process {
     "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
     "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
     "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
-    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
-    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
+    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" [label="yes"];
+    "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" -> "Code quality reviewer subagent approves?";
     "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
-    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
+    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" [label="re-review"];
     "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+    "More tasks remain?" -> "Dispatch final_reviewer subagent (filled ../requesting-code-review/code-reviewer.md template directly) for whole-change review" [label="no"];
+    "Dispatch final_reviewer subagent (filled ../requesting-code-review/code-reviewer.md template directly) for whole-change review" -> "Use superpowers:finishing-a-development-branch";
 }
 ```
 
-## Child Config Inheritance
+## Child Config Inheritance and Role Mapping
 
 Child agents inherit the parent session config by default. Preserve that inheritance unless the user explicitly asks for a role-specific override.
 
 - Do not pass `model` or `reasoning_effort` in `spawn_agent(...)` during normal operation.
-- Use better task decomposition, clearer acceptance criteria, and more focused ownership before considering any config override.
-- Prefer changing the role, scope, or supporting context over trying to tune child-model selection inside the workflow.
+- Use the config-owned superpowers role mapping instead of generic built-in role guessing:
+  - `implementer` for the single active code-changing child
+  - `spec_reviewer` for the read-only spec compliance pass
+  - `code_quality_reviewer` for the read-only code quality pass
+  - `final_reviewer` for the whole-change review at the end
+- Reviewers stay read-only.
+- The parent remains responsible for user clarification, packet refinement, arbitration, and final synthesis.
 
 ## Handling Implementer Status
 
@@ -119,6 +120,7 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 - `./implementer-prompt.md` - Dispatch implementer subagent
 - `./spec-reviewer-prompt.md` - Dispatch spec compliance reviewer subagent
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
+- `../requesting-code-review/code-reviewer.md` - Shared read-only review template; `code_quality_reviewer` embeds the filled template inside `./code-quality-reviewer-prompt.md`, while `final_reviewer` receives the filled shared template directly
 
 ## Example Workflow
 
@@ -148,8 +150,22 @@ Implementer: "Got it. Implementing now..."
 [Dispatch spec compliance reviewer]
 Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
 
-[Get git SHAs, dispatch code quality reviewer]
-Code reviewer: Strengths: Good test coverage, clean. Issues: None. Approved.
+[Get git SHAs from the saved task-start boundary, dispatch code quality reviewer with the filled ./code-quality-reviewer-prompt.md wrapper]
+Code reviewer:
+  ### Strengths
+  - Good test coverage and clean separation of concerns.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  None.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - No additional recommendations for this task.
+  ### Assessment
+  **Ready for requested review scope?** Yes
+  **Reasoning:** The implementation is clean, well-tested, and ready to proceed to Task 2.
 
 [Mark Task 1 complete]
 
@@ -176,22 +192,68 @@ Implementer: Removed --json flag, added progress reporting
 [Spec reviewer reviews again]
 Spec reviewer: ✅ Spec compliant now
 
-[Dispatch code quality reviewer]
-Code reviewer: Strengths: Solid. Issues (Important): Magic number (100)
+[Dispatch code quality reviewer with the filled ./code-quality-reviewer-prompt.md wrapper]
+Code reviewer:
+  ### Strengths
+  - Solid repair flow with clear test coverage.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  1. **Magic reporting interval**
+     - File: `src/indexer.ts:130`
+     - What's wrong: `100` is hard-coded in the progress reporting path.
+     - Why it matters: The reporting contract is harder to maintain and test.
+     - How to fix: Extract a named constant such as `PROGRESS_INTERVAL`.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - Extract the reporting interval before marking Task 2 complete.
+  ### Assessment
+  **Ready for requested review scope?** With fixes
+  **Reasoning:** The task is close, but the interval constant should be extracted before proceeding.
 
 [Implementer fixes]
 Implementer: Extracted PROGRESS_INTERVAL constant
 
 [Code reviewer reviews again]
-Code reviewer: ✅ Approved
+Code reviewer:
+  ### Strengths
+  - Clear reporting constant and focused repair flow.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  None.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - No additional recommendations for this task.
+  ### Assessment
+  **Ready for requested review scope?** Yes
+  **Reasoning:** The task-level review scope is satisfied, and the implementation is ready to proceed.
 
 [Mark Task 2 complete]
 
 ...
 
 [After all tasks]
-[Dispatch final code-reviewer]
-Final reviewer: All requirements met, ready to merge
+[Dispatch final_reviewer using the filled ../requesting-code-review/code-reviewer.md template directly for the whole-change review, with BASE_SHA set to $(git merge-base HEAD origin/main) or $(git merge-base HEAD origin/<target-branch>)]
+Final reviewer:
+  ### Strengths
+  - The full change matches the plan and keeps the implementation boundaries clean.
+  ### Issues
+  #### Critical (Must Fix)
+  None.
+  #### Important (Should Fix)
+  None.
+  #### Minor (Nice to Have)
+  None.
+  ### Recommendations
+  - No additional recommendations before merge or handoff.
+  ### Assessment
+  **Ready for requested review scope?** Yes
+  **Reasoning:** The whole change is well-structured, verified, and ready to merge or hand off.
 
 Done!
 ```
@@ -264,7 +326,7 @@ Done!
 **Required workflow skills:**
 - **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
 - **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:requesting-code-review** - Code review template for reviewer subagents
+- **superpowers:requesting-code-review** - shared read-only review workflow; `code_quality_reviewer` must receive `../requesting-code-review/code-reviewer.md` through `./code-quality-reviewer-prompt.md`, while `final_reviewer` receives the filled shared template directly
 - **superpowers:finishing-a-development-branch** - Complete development after all tasks
 
 **Subagents should use:**

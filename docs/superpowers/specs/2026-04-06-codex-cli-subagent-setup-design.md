@@ -160,8 +160,8 @@ If the runtime requires those logical roles to resolve onto built-in roles such 
 Treat `~/.codex/config.macos-source.toml` as the editable source for this workstation. After changes:
 
 1. apply or sync the live mirror to `~/.codex/config.toml`
-2. verify with `which -a codex`
-3. verify with `codex --version`
+2. verify with `zsh -lic 'which -a codex'`
+3. verify with `zsh -lic 'codex --version'`
 4. verify with `codex features list`
 
 Do not treat stale docs or an unverified source checkout as the source of truth for live config behavior.
@@ -176,11 +176,11 @@ Keep shared runtime invariants at the root:
 - `features.multi_agent = true`
 - `features.enable_fanout = false`
 
-Set a moderate root-level agent cap:
+Keep the authoritative root-level agent cap aligned with the live config and branch docs:
 
 ```toml
 [agents]
-max_threads = 12
+max_threads = 32
 max_depth = 3
 job_max_runtime_seconds = 3600
 ```
@@ -189,8 +189,8 @@ Rationale:
 
 - Profiles cannot override `agents.max_threads`, so this must work for both normal controller sessions and explicit parallel read-only sessions.
 - `max_depth = 3` and `job_max_runtime_seconds = 3600` are authoritative in this workstation design.
-- `12` is enough headroom for bounded parallel exploration and review without normalizing 32-way fanout.
-- The default workflow remains disciplined because concurrency policy is enforced by skills and prompts, not by a very low hard cap.
+- `32` is the final authoritative workstation cap already reflected in the live config and branch docs.
+- The default workflow remains disciplined because concurrency policy is enforced by skills, prompts, and profile feature-state rather than by reducing the shared hard cap below the documented runtime contract.
 
 ### Profiles
 
@@ -206,10 +206,11 @@ profile = "workflow_fidelity"
 
 [features]
 multi_agent = true
+multi_agent_v2 = true
 enable_fanout = false
 
 [agents]
-max_threads = 12
+max_threads = 32
 max_depth = 3
 job_max_runtime_seconds = 3600
 
@@ -448,8 +449,8 @@ Implementation is complete only when all of the following are true.
 Run:
 
 ```bash
-which -a codex
-codex --version
+zsh -lic 'which -a codex'
+zsh -lic 'codex --version'
 codex -p workflow_fidelity features list
 codex -p parallel_readonly features list
 rg -n '^\[agents\]|max_threads|max_depth|job_max_runtime_seconds' \
@@ -458,7 +459,7 @@ rg -n '^\[agents\]|max_threads|max_depth|job_max_runtime_seconds' \
 
 Expected:
 
-- active binary still resolves to the intended npm-global Codex install
+- the active login-shell binary still resolves to the intended npm-global Codex install
 - both profiles expose `multi_agent_v2 = true`
 - v2-capable mapping is the expected operational contract for both profiles
 - `enable_fanout` is disabled in `workflow_fidelity` and enabled only in `parallel_readonly`
@@ -471,6 +472,72 @@ Inspect the source and live config for tailored superpowers child mappings:
 ```bash
 rg -n 'implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer' \
   ~/.codex/config.macos-source.toml ~/.codex/config.toml
+
+python3 - <<'PY'
+from pathlib import Path
+import tomllib
+
+expected = {
+    'implementer': {
+        'config_file': './agents/implementer.toml',
+        'sandbox_mode': 'danger-full-access',
+    },
+    'spec_reviewer': {
+        'config_file': './agents/spec_reviewer.toml',
+        'sandbox_mode': 'read-only',
+    },
+    'code_quality_reviewer': {
+        'config_file': './agents/code_quality_reviewer.toml',
+        'sandbox_mode': 'read-only',
+    },
+    'parallel_explorer': {
+        'config_file': './agents/parallel_explorer.toml',
+        'sandbox_mode': 'read-only',
+    },
+    'final_reviewer': {
+        'config_file': './agents/final_reviewer.toml',
+        'sandbox_mode': 'read-only',
+    },
+}
+
+for config_path in (
+    Path('/Users/maxibon/.codex/config.macos-source.toml'),
+    Path('/Users/maxibon/.codex/config.toml'),
+):
+    config = tomllib.loads(config_path.read_text())
+    agents = config.get('agents', {})
+    for name, role_expectations in expected.items():
+        entry = agents.get(name)
+        if not isinstance(entry, dict):
+            raise SystemExit(f'{config_path} is missing [agents.{name}]')
+        if entry.get('config_file') != role_expectations['config_file']:
+            raise SystemExit(
+                f'{config_path} has unexpected config_file for {name}: '
+                f'{entry.get("config_file")!r}'
+            )
+        if not entry.get('description'):
+            raise SystemExit(f'{config_path} is missing description for [agents.{name}]')
+
+for name, role_expectations in expected.items():
+    path = Path(f'/Users/maxibon/.codex/agents/{name}.toml')
+    if not path.exists():
+        raise SystemExit(f'missing agent file: {path}')
+    data = tomllib.loads(path.read_text())
+    if data.get('name') != name:
+        raise SystemExit(f'{path} has unexpected name field: {data.get("name")!r}')
+    if data.get('sandbox_mode') != role_expectations['sandbox_mode']:
+        raise SystemExit(
+            f'{path} has unexpected sandbox_mode: {data.get("sandbox_mode")!r}'
+        )
+    if not data.get('developer_instructions'):
+        raise SystemExit(f'{path} is missing developer_instructions')
+
+print(
+    'both config surfaces bind all five roles to the expected agent files, '
+    'and all five agent TOMLs have the expected names, sandbox modes, and '
+    'developer instructions.'
+)
+PY
 ```
 
 Expected:
@@ -478,6 +545,8 @@ Expected:
 - the tailored superpowers child mappings are present in both source and live config
 - review roles are visibly distinct from implementer roles
 - the mapping is stable enough that local superpowers docs can reference it directly
+- both config surfaces bind each custom role to the expected `./agents/<role>.toml` file
+- all five `/Users/maxibon/.codex/agents/*.toml` files exist with the expected `name`, `sandbox_mode`, and `developer_instructions` fields
 
 ### Skill Discovery Verification
 
@@ -495,25 +564,43 @@ Expected:
 
 ### Prompt/Doc Contract Verification
 
+For branch-local implementation proof, check the Codex-facing superpowers files in the checkout under review. For this branch, that checkout is `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup`. After integration, replay the same checks against `~/.codex/superpowers` if you need live-root proof.
+
 Check the Codex-facing superpowers files for v2-first Codex claims and for stale legacy wording:
 
 ```bash
-rg -n 'multi_agent_v2|task_name|assign_task|send_message' \
-  ~/.codex/superpowers/docs/README.codex.md \
-  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md \
-  ~/.codex/superpowers/skills/subagent-driven-development \
-  ~/.codex/superpowers/skills/requesting-code-review/SKILL.md
+rg -n 'multi_agent_v2|\[profiles\.parallel_readonly\.features\]|workflow_fidelity|parallel_readonly|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer|test-driven-development|read-only' \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
 
-rg -n 'multi_agent = true is sufficient|legacy mapping is primary|v1 mapping is primary' \
-  ~/.codex/superpowers/docs/README.codex.md \
-  ~/.codex/superpowers/skills/using-superpowers/references/codex-tools.md
+! rg -n 'agent_type="worker"|agent_type="reviewer"|PLAN_REFERENCE|following TDD if task says to|send_message|assign_task|list_agents|multi_agent = true is sufficient|profile = "parallel_readonly"' \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+
+! rg -U -n '\[features\]\nmulti_agent = true\nmulti_agent_v2 = true\nenable_fanout = true' \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review
+
+! rg -n 'legacy mapping is primary|v1 mapping is primary' \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md \
+  /Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md
 ```
 
 Expected after implementation:
 
-- Codex-facing docs encode the v2-first contract the user requested
-- stale legacy-primary claims are removed or rewritten
-- legitimate workflow file names such as `spec-reviewer-prompt.md` are not treated as failures by the check
+- Codex-facing docs in the checkout under review encode the v2-first contract the user requested
+- the README and replacement blocks preserve the profile-scoped `parallel_readonly` feature override
+- stale dispatch wording and legacy-primary claims are removed or rewritten
+- the branch-local absence checks fail immediately if legacy packet, dispatch wording, or a stale root-scoped parallel `[features]` example is reintroduced
 
 ### Workflow Smoke Verification
 
@@ -532,13 +619,20 @@ Planned file changes for the implementation phase:
 
 - `/Users/maxibon/.codex/config.macos-source.toml`
 - `/Users/maxibon/.codex/config.toml`
-- `/Users/maxibon/.codex/superpowers/docs/README.codex.md`
-- `/Users/maxibon/.codex/superpowers/skills/using-superpowers/references/codex-tools.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/SKILL.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/implementer-prompt.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/spec-reviewer-prompt.md`
-- `/Users/maxibon/.codex/superpowers/skills/subagent-driven-development/code-quality-reviewer-prompt.md`
-- `/Users/maxibon/.codex/superpowers/skills/requesting-code-review/SKILL.md`
+- `/Users/maxibon/.codex/agents/implementer.toml`
+- `/Users/maxibon/.codex/agents/spec_reviewer.toml`
+- `/Users/maxibon/.codex/agents/code_quality_reviewer.toml`
+- `/Users/maxibon/.codex/agents/parallel_explorer.toml`
+- `/Users/maxibon/.codex/agents/final_reviewer.toml`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/docs/README.codex.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/using-superpowers/references/codex-tools.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/dispatching-parallel-agents/SKILL.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/SKILL.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/implementer-prompt.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/spec-reviewer-prompt.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/subagent-driven-development/code-quality-reviewer-prompt.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/SKILL.md`
+- `/Users/maxibon/.codex/superpowers/.worktrees/codex-cli-subagent-setup/skills/requesting-code-review/code-reviewer.md`
 
 ## Done Criteria
 

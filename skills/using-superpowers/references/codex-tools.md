@@ -1,42 +1,94 @@
 # Codex Tool Mapping
 
-Skills use Claude Code tool names. When you encounter these in a skill, use your platform equivalent:
+Skills may still mention Claude Code tool names. On this workstation, translate them to the local Codex contract below.
 
 | Skill references | Codex equivalent |
-|-----------------|------------------|
-| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type=..., message=...)` |
-| Follow-up turn for dispatched child | `followup_task(target=..., message=...)` for immediate work, `send_message(target=..., message=...)` for queued notes |
-| Task returns result | `wait_agent` to synchronize; the deliverable comes from the child completion reply, not the wait summary |
-| Inspect active children | `list_agents` |
-| Close completed child | `close_agent` after harvesting the deliverable and evidence |
-| `TodoWrite` (task tracking) | `update_plan` |
-| `Skill` tool (invoke a skill) | Skills load natively — just follow the instructions |
-| `Read`, `Write`, `Edit` (files) | Use your native file tools |
-| `Bash` (run commands) | Use your native shell tools |
+|---|---|
+| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="<configured_role>", message="...")` |
+| Multiple `Task` calls (parallel) | Multiple `spawn_agent(...)` calls; use `agent_type="parallel_explorer"` as the default bounded read-only fanout lane |
+| Task returns result | `wait_agent` to synchronize, then read the child completion reply |
+| Task completes automatically | `close_agent` when no further follow-up is needed after harvesting the child result |
+| `TodoWrite` | `update_plan` |
+| `Skill` tool | Use the available skills list, open the relevant `SKILL.md`, and follow it |
+| `Read`, `Write`, `Edit` | Use native file tools such as `exec_command` for reads and `apply_patch` for edits |
+| `Bash` | Use native shell tools such as `exec_command` |
+
+## Required Runtime Flags
+
+Add to the workstation config source at `~/.codex/config.macos-source.toml`, then sync `~/.codex/config.toml`:
+
+```toml
+[features]
+multi_agent = true
+multi_agent_v2 = true
+enable_fanout = false
+```
+
+For the explicit parallel profile:
+
+```toml
+[profiles.parallel_readonly.features]
+multi_agent = true
+multi_agent_v2 = true
+enable_fanout = true
+```
+
+`multi_agent_v2` is authoritative for the profile feature-state contract on this workstation. If the live runtime does not activate it, stop and fix the runtime before trusting any local docs. These checks verify profile flags; they do not by themselves prove end-to-end custom-role dispatch.
+
+## Config-Owned Child Roles
+
+Codex custom agents are defined in `~/.codex/config.macos-source.toml` and backed by `~/.codex/agents/*.toml`.
+
+| Role | Use |
+|---|---|
+| `implementer` | One bounded code-changing task |
+| `spec_reviewer` | Read-only spec compliance review |
+| `code_quality_reviewer` | Read-only quality review |
+| `parallel_explorer` | Read-only independent exploration and audit work |
+| `final_reviewer` | Read-only whole-change review |
+
+Treat these role names as the configured local contract. If actual dispatch behavior is in doubt, verify it separately instead of guessing between generic built-in roles.
 
 ## Dispatch Rules
 
-- Always pass `task_name` to `spawn_agent(...)`.
-- Prefer a stable task name for `followup_task`, `send_message`, `list_agents`, and `close_agent`.
-- Use `wait_agent` only as a general synchronization point when blocked on child progress. It does not target a specific `task_name`.
-- Preserve inherited child config by default. Do not pass `model` or `reasoning_effort` unless the user explicitly asks.
-- Put the rendered packet text in the `message` field.
+- Always pass a stable lowercase `task_name`.
+- Keep the parent session responsible for user clarification, escalation handling, and final synthesis.
+- Use `implementer` for code-changing work, one child at a time.
+- Use `spec_reviewer` before `code_quality_reviewer`.
+- Use `parallel_explorer` for bounded read-only fanout.
+- Use `final_reviewer` after the plan is complete.
+- Do not pass `model` or `reasoning_effort` unless the user explicitly requests an override.
+- Document only runtime behavior that was verified against the installed binary.
 
-## Process-Family Routing
+## Dispatch Payload Framing
 
-- `dispatching-parallel-agents` is for read-only investigation without shared write ownership.
-- `subagent-driven-development` is for write-owning implementation in the current session.
-- `executing-plans` is for sequential or separate-session implementation.
-- Review prompts must use the packet format in `../../../contract/prompt-packet.md`.
+The top-level `message` field is user-level input. Structure it like this:
 
-## Prompt Handoff
+```text
+Your task is to perform the following. Follow the instructions below exactly.
 
-When a skill points to a local prompt template:
+<agent-instructions>
+[filled prompt content]
+</agent-instructions>
 
-1. Read the prompt file.
-2. Fill its placeholders (`{BASE_SHA}`, `[PLAN_FILE_PATH]`, and similar).
-3. If the file already contains `Codex subagent packet:`, render that packet text directly.
-4. If the file is only the inner reviewer content, wrap the filled content in the packet format from `../../../contract/prompt-packet.md`.
-5. Pass the fully rendered packet text to `spawn_agent(..., message=...)`.
+Execute this now. Output ONLY the structured response requested above.
+```
 
-Use `agent_type="explorer"` for read-only investigation or review packets and `agent_type="worker"` for write-owning implementation packets unless the skill says otherwise.
+Use task framing, keep the packet narrow, and include all required context instead of making the child read the plan file on its own.
+
+## Environment Detection
+
+Skills that create worktrees or finish branches should detect their environment with read-only git commands before proceeding:
+
+```bash
+GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
+GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+BRANCH=$(git branch --show-current)
+```
+
+- `GIT_DIR != GIT_COMMON` means you are already in a linked worktree
+- empty `BRANCH` means detached HEAD
+
+## Codex App Finishing
+
+When the sandbox blocks branch or push operations in an externally managed worktree, the agent should still commit locally, report the current commit SHA, and hand off branch creation or PR creation to the host environment.
