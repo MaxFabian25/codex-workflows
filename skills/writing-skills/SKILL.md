@@ -7,9 +7,7 @@ description: Use when creating or editing skills and validating that they satisf
 
 Writing skills is test-driven documentation for Codex.
 
-References:
-- `../../contract/process-family.md`
-- `../../contract/package-standards.md`
+**Contract references:** Process-family skill edits must align with `../../contract/process-family.md`, and every skill package must satisfy `../../contract/package-standards.md`.
 
 Personal skills for Codex live under `~/.agents/skills/`.
 
