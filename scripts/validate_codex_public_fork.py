@@ -124,7 +124,15 @@ def read_json(path: Path) -> object:
 
 
 def contains_expected_heading(path: Path, heading: str) -> bool:
-    return heading in read_text(path)
+    for line in read_text(path).splitlines():
+        normalized = line.strip()
+        if path.name == "CHANGELOG.md":
+            if normalized == heading or normalized.startswith(f"{heading} - "):
+                return True
+            continue
+        if normalized == heading:
+            return True
+    return False
 
 
 def validate_required_paths() -> list[str]:

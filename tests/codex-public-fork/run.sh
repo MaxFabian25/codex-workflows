@@ -372,12 +372,34 @@ EOF
     "$tmpdir/changelog-version-contract" \
     'CHANGELOG.md must contain version heading `## 5.0.6-codex.1`'
 
+  expect_fixture_passes "$tmpdir/changelog-version-near-match"
+  cat >"$tmpdir/changelog-version-near-match/CHANGELOG.md" <<'EOF'
+## 5.0.6-codex.10
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/changelog-version-near-match" \
+    'CHANGELOG.md must contain version heading `## 5.0.6-codex.1`'
+
+  expect_fixture_passes "$tmpdir/changelog-version-with-date"
+  cat >"$tmpdir/changelog-version-with-date/CHANGELOG.md" <<'EOF'
+## 5.0.6-codex.1 - 2026-04-08
+EOF
+  expect_fixture_passes "$tmpdir/changelog-version-with-date"
+
   expect_fixture_passes "$tmpdir/release-notes-version-contract"
   cat >"$tmpdir/release-notes-version-contract/RELEASE-NOTES.md" <<'EOF'
 ## 5.0.6
 EOF
   expect_fixture_fails_with \
     "$tmpdir/release-notes-version-contract" \
+    'RELEASE-NOTES.md must contain version heading `## 5.0.6-codex.1`'
+
+  expect_fixture_passes "$tmpdir/release-notes-version-near-match"
+  cat >"$tmpdir/release-notes-version-near-match/RELEASE-NOTES.md" <<'EOF'
+## 5.0.6-codex.1-rc1
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/release-notes-version-near-match" \
     'RELEASE-NOTES.md must contain version heading `## 5.0.6-codex.1`'
 
   expect_fixture_passes "$tmpdir/public-conduct-route"
