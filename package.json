@@ -21,7 +21,9 @@
     "CHANGELOG.md",
     "RELEASE-NOTES.md",
     "package.json",
-    ".codex-plugin/plugin.json"
+    ".codex-plugin/plugin.json",
+    ".codex/INSTALL.md",
+    "docs/README.codex.md"
   ],
   "scripts": {
     "validate:public-fork": "bash tests/codex-public-fork/run.sh",
