@@ -133,20 +133,20 @@ You: I'm using Subagent-Driven Development to execute this plan.
 [Extract all 5 tasks with full text and context]
 [Create TodoWrite with all tasks]
 
-Task 1: Hook installation script
+Task 1: Codex plugin manifest validator
 
 [Get Task 1 text and context (already extracted)]
 [Dispatch implementation subagent with full task text + context]
 
-Implementer: "Before I begin - should the hook be installed at user or system level?"
+Implementer: "Before I begin - should a missing `.codex-plugin/plugin.json` be treated as a hard failure or a warning?"
 
-You: "User level (~/.config/superpowers/hooks/)"
+You: "Hard failure. The public fork must always ship a Codex plugin manifest."
 
 Implementer: "Got it. Implementing now..."
 [Later] Implementer:
-  - Implemented install-hook command
+  - Implemented plugin-manifest validation
   - Added tests, 5/5 passing
-  - Self-review: Found I missed --force flag, added it
+  - Self-review: Found I missed the version check, added it
   - Committed
 
 [Dispatch spec compliance reviewer]

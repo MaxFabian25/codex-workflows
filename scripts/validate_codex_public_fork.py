@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
+EXPECTED_RELEASE_VERSION = "5.0.6-codex.1"
+PRIVATE_REPORT_URL = "https://github.com/MaxFabian25/superpowers/security/advisories/new"
 
 REQUIRED_PATHS = [
     ".codex-plugin/plugin.json",
@@ -14,6 +16,7 @@ REQUIRED_PATHS = [
     ".codex/INSTALL.md",
     "docs/README.codex.md",
     "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
     "package.json",
 ]
 
@@ -41,6 +44,9 @@ FORBIDDEN_SNIPPETS = [
     join_fragments("max", "fa-"),
     join_fragments(".work", "trees/"),
     join_fragments("~/.claude/", "skills"),
+    join_fragments("Claude", " Code"),
+    join_fragments("CLAUDE", ".md"),
+    join_fragments("~/.config/", "superpowers/hooks/"),
     join_fragments("~/.config/", "opencode"),
     join_fragments("CLAUDE_", "PLUGIN_ROOT"),
     join_fragments("Open", "Code"),
@@ -49,7 +55,7 @@ FORBIDDEN_SNIPPETS = [
 
 EXPECTED_PACKAGE_FIELDS = {
     "name": "superpowers-codex",
-    "version": "5.0.6",
+    "version": EXPECTED_RELEASE_VERSION,
     "description": "Codex-only workflow and skills library, forked from obra/superpowers.",
     "type": "module",
     "license": "MIT",
@@ -83,6 +89,7 @@ REQUIRED_PACKAGE_FILE_ENTRIES = [
 
 EXPECTED_MANIFEST_FIELDS = {
     "name": "superpowers-codex",
+    "version": EXPECTED_RELEASE_VERSION,
     "skills": "./skills/",
     "repository": "https://github.com/MaxFabian25/superpowers",
     "homepage": "https://github.com/MaxFabian25/superpowers",
@@ -105,6 +112,10 @@ def read_text(path: Path) -> str:
 
 def read_json(path: Path) -> object:
     return json.loads(read_text(path))
+
+
+def contains_expected_heading(path: Path, heading: str) -> bool:
+    return heading in read_text(path)
 
 
 def validate_required_paths() -> list[str]:
@@ -241,6 +252,35 @@ def validate_manifest() -> list[str]:
     return issues
 
 
+def validate_release_docs() -> list[str]:
+    issues: list[str] = []
+    heading = f"## {EXPECTED_RELEASE_VERSION}"
+    for rel_path in ["CHANGELOG.md", "RELEASE-NOTES.md"]:
+        path = ROOT / rel_path
+        if not path.exists():
+            continue
+        if not contains_expected_heading(path, heading):
+            issues.append(f"{rel_path} must contain version heading `{heading}`")
+    return issues
+
+
+def validate_conduct_reporting() -> list[str]:
+    issues: list[str] = []
+    conduct_path = ROOT / "CODE_OF_CONDUCT.md"
+    if conduct_path.exists():
+        conduct_text = read_text(conduct_path)
+        if PRIVATE_REPORT_URL not in conduct_text or "/issues/new/choose" in conduct_text:
+            issues.append("CODE_OF_CONDUCT.md must use a private reporting channel")
+
+    issue_config_path = ROOT / ".github/ISSUE_TEMPLATE/config.yml"
+    if issue_config_path.exists():
+        issue_config_text = read_text(issue_config_path)
+        if PRIVATE_REPORT_URL not in issue_config_text:
+            issues.append(".github/ISSUE_TEMPLATE/config.yml must point conduct reporting to the private channel")
+
+    return issues
+
+
 def validate_package_contract() -> list[str]:
     package_path = ROOT / "package.json"
     if not package_path.exists():
@@ -298,6 +338,8 @@ def main() -> int:
         *validate_package_contract(),
         *validate_forbidden_snippets(),
         *validate_manifest(),
+        *validate_release_docs(),
+        *validate_conduct_reporting(),
     ]
 
     if issues:

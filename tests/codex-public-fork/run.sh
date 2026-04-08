@@ -17,6 +17,22 @@ forbidden_gemini_cli() {
   join_fragments "Gemini" " CLI"
 }
 
+forbidden_claude_code() {
+  join_fragments "Claude" " Code"
+}
+
+forbidden_claude_md() {
+  join_fragments "CLAUDE" ".md"
+}
+
+forbidden_stale_hooks_path() {
+  join_fragments "~/.config/" "superpowers/hooks/"
+}
+
+expected_release_version() {
+  printf '%s' '5.0.6-codex.1'
+}
+
 append_text() {
   local target_path="$1"
   local payload="$2"
@@ -49,6 +65,7 @@ prepare_fixture() {
     "$fixture_root/scripts" \
     "$fixture_root/.codex-plugin" \
     "$fixture_root/.codex" \
+    "$fixture_root/.github/ISSUE_TEMPLATE" \
     "$fixture_root/docs" \
     "$fixture_root/skills/sample" \
     "$fixture_root/contract" \
@@ -69,14 +86,26 @@ EOF
   cat >"$fixture_root/SECURITY.md" <<'EOF'
 Security policy.
 EOF
+  cat >"$fixture_root/CODE_OF_CONDUCT.md" <<'EOF'
+Instances of abusive, harassing, or otherwise unacceptable behavior may be
+reported privately through
+https://github.com/MaxFabian25/superpowers/security/advisories/new.
+EOF
   cat >"$fixture_root/LICENSE" <<'EOF'
 MIT
 EOF
   cat >"$fixture_root/CHANGELOG.md" <<'EOF'
-Changelog.
+## 5.0.6-codex.1
 EOF
   cat >"$fixture_root/RELEASE-NOTES.md" <<'EOF'
-Release notes.
+## 5.0.6-codex.1
+EOF
+  cat >"$fixture_root/.github/ISSUE_TEMPLATE/config.yml" <<'EOF'
+blank_issues_enabled: false
+contact_links:
+  - name: Private security or conduct report
+    url: https://github.com/MaxFabian25/superpowers/security/advisories/new
+    about: Report security issues or conduct concerns privately through GitHub Security Advisories.
 EOF
   cat >"$fixture_root/contract/process-family.md" <<'EOF'
 Process family contract.
@@ -100,7 +129,7 @@ EOF
   cat >"$fixture_root/.codex-plugin/plugin.json" <<'EOF'
 {
   "name": "superpowers-codex",
-  "version": "5.0.6",
+  "version": "5.0.6-codex.1",
   "description": "Codex-only workflow and skills library forked from obra/superpowers.",
   "author": {
     "name": "Max Fabian",
@@ -132,7 +161,7 @@ EOF
   cat >"$fixture_root/package.json" <<'EOF'
 {
   "name": "superpowers-codex",
-  "version": "5.0.6",
+  "version": "5.0.6-codex.1",
   "description": "Codex-only workflow and skills library, forked from obra/superpowers.",
   "type": "module",
   "license": "MIT",
@@ -218,6 +247,33 @@ run_self_tests() {
     "$tmpdir/release-surface" \
     "$(expected_issue "skills/private/notes.md" "$(forbidden_gemini_cli)")"
 
+  mkdir -p "$tmpdir/claude-code-surface/skills/private"
+  printf 'This published file still mentions %s.\n' "$(forbidden_claude_code)" \
+    >"$tmpdir/claude-code-surface/skills/private/notes.md"
+  expect_fixture_fails_with \
+    "$tmpdir/claude-code-surface" \
+    "$(expected_issue "skills/private/notes.md" "$(forbidden_claude_code)")"
+
+  mkdir -p "$tmpdir/claude-md-surface/skills/private"
+  printf 'This published file still points to %s.\n' "$(forbidden_claude_md)" \
+    >"$tmpdir/claude-md-surface/skills/private/notes.md"
+  expect_fixture_fails_with \
+    "$tmpdir/claude-md-surface" \
+    "$(expected_issue "skills/private/notes.md" "$(forbidden_claude_md)")"
+
+  mkdir -p "$tmpdir/stale-hook-surface/skills/private"
+  printf 'This published file still points to %s.\n' "$(forbidden_stale_hooks_path)" \
+    >"$tmpdir/stale-hook-surface/skills/private/notes.md"
+  expect_fixture_fails_with \
+    "$tmpdir/stale-hook-surface" \
+    "$(expected_issue "skills/private/notes.md" "$(forbidden_stale_hooks_path)")"
+
+  expect_fixture_passes "$tmpdir/no-hook-doc-wording"
+  append_text \
+    "$tmpdir/no-hook-doc-wording/docs/README.codex.md" \
+    $'\nThis package does not depend on hook bootstrap.\n'
+  expect_fixture_passes "$tmpdir/no-hook-doc-wording"
+
   expect_fixture_passes "$tmpdir/published-validator-scan"
   append_text \
     "$tmpdir/published-validator-scan/scripts/validate_codex_public_fork.py" \
@@ -245,7 +301,48 @@ data = json.loads(path.read_text(encoding="utf-8"))
 data["version"] = "0.0.1"
 path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY
-  expect_fixture_fails_with "$tmpdir/package-contract" 'package.json field `version` must be `5.0.6`'
+  expect_fixture_fails_with "$tmpdir/package-contract" 'package.json field `version` must be `5.0.6-codex.1`'
+
+  expect_fixture_passes "$tmpdir/plugin-version-contract"
+  python3 - <<'PY' "$tmpdir/plugin-version-contract/.codex-plugin/plugin.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["version"] = "0.0.1"
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  expect_fixture_fails_with \
+    "$tmpdir/plugin-version-contract" \
+    '.codex-plugin/plugin.json field `version` must be `5.0.6-codex.1`'
+
+  expect_fixture_passes "$tmpdir/changelog-version-contract"
+  cat >"$tmpdir/changelog-version-contract/CHANGELOG.md" <<'EOF'
+## 5.0.6
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/changelog-version-contract" \
+    'CHANGELOG.md must contain version heading `## 5.0.6-codex.1`'
+
+  expect_fixture_passes "$tmpdir/release-notes-version-contract"
+  cat >"$tmpdir/release-notes-version-contract/RELEASE-NOTES.md" <<'EOF'
+## 5.0.6
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/release-notes-version-contract" \
+    'RELEASE-NOTES.md must contain version heading `## 5.0.6-codex.1`'
+
+  expect_fixture_passes "$tmpdir/public-conduct-route"
+  cat >"$tmpdir/public-conduct-route/CODE_OF_CONDUCT.md" <<'EOF'
+Instances of abusive, harassing, or otherwise unacceptable behavior may be
+reported through
+https://github.com/MaxFabian25/superpowers/issues/new/choose.
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/public-conduct-route" \
+    'CODE_OF_CONDUCT.md must use a private reporting channel'
 
   expect_fixture_passes "$tmpdir/broken-symlink"
   ln -s missing-target "$tmpdir/broken-symlink/.claude-plugin"

@@ -59,8 +59,11 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported through
-https://github.com/MaxFabian25/superpowers/issues/new/choose.
+reported privately through
+https://github.com/MaxFabian25/superpowers/security/advisories/new.
+Until a dedicated conduct-reporting inbox exists for this fork, GitHub Security
+Advisories is the private reporting channel for both security issues and Code of
+Conduct reports.
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
