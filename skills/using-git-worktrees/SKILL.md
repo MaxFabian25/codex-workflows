@@ -46,7 +46,7 @@ If no directory exists and no CLAUDE.md preference:
 ```
 No worktree directory found. Where should I create worktrees?
 
-1. .worktrees/ (project-local, hidden)
+1. `.worktrees` (project-local, hidden)
 2. ~/.config/superpowers/worktrees/<project-name>/ (global location)
 
 Which would you prefer?
@@ -149,9 +149,9 @@ Ready to implement <feature-name>
 
 | Situation | Action |
 |-----------|--------|
-| `.worktrees/` exists | Use it (verify ignored) |
+| Hidden `.worktrees` dir exists | Use it (verify ignored) |
 | `worktrees/` exists | Use it (verify ignored) |
-| Both exist | Use `.worktrees/` |
+| Both exist | Use `.worktrees` |
 | Neither exists | Check CLAUDE.md → Ask user |
 | Directory not ignored | Add to .gitignore + commit |
 | Tests fail during baseline | Report failures + ask |
@@ -184,13 +184,13 @@ Ready to implement <feature-name>
 ```
 You: I'm using the using-git-worktrees skill to set up an isolated workspace.
 
-[Check .worktrees/ - exists]
-[Verify ignored - git check-ignore confirms .worktrees/ is ignored]
-[Create worktree: git worktree add .worktrees/auth -b feature/auth]
+[Check hidden `.worktrees` dir - exists]
+[Verify ignored - git check-ignore confirms `.worktrees` is ignored]
+[Create worktree: git worktree add <hidden-worktrees-dir>/auth -b feature/auth]
 [Run npm install]
 [Run npm test - 47 passing]
 
-Worktree ready at /Users/jesse/myproject/.worktrees/auth
+Worktree ready at /Users/example/myproject/worktrees/auth
 Tests passing (47 tests, 0 failures)
 Ready to implement auth feature
 ```

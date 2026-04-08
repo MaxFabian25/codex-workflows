@@ -550,15 +550,8 @@ git diff --stat HEAD~7
 
 Should show exactly 6 files changed (5 skill files + 1 test file). No other files modified.
 
-- [ ] **Step 4: Run existing test suite**
+- [ ] **Step 4: Run retained verification commands**
 
-If test runner exists:
-```bash
-# Run skill-triggering tests
-./tests/skill-triggering/run-all.sh 2>/dev/null || echo "Skill triggering tests not available in this environment"
+Legacy skill-triggering and Claude-Code-specific test surfaces were removed from the public fork. Use the active branch's retained validation commands instead, and document the exact commands and environment used when recording verification evidence.
 
-# Run SDD integration test
-./tests/claude-code/test-subagent-driven-development-integration.sh 2>/dev/null || echo "SDD integration test not available in this environment"
-```
-
-Note: these tests require Claude Code with `--dangerously-skip-permissions`. If not available, document that regression tests should be run manually.
+Note: if the required host environment is unavailable, record that constraint explicitly and identify the retained verification surface that should be run manually.

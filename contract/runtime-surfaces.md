@@ -5,7 +5,7 @@
 - Workbook mutation is `xlwings-only`.
 - `openpyxl` is validation-only.
 - Use the sibling `xlwings` runtime surface before blocking.
-- Remote workbook escalation uses the `spreadsheet` lane on the `maxfa-wsl` -> `maxfa-win` Office surface.
+- Remote workbook escalation uses the `spreadsheet` lane on a remote Linux control plane that hands off to a Windows Office host.
 
 ## Deck Contract
 
@@ -17,6 +17,6 @@
 ## Remote Office Contract
 
 - macOS is the default local control plane.
-- `maxfa-wsl` is the remote control plane for Office workflows.
-- `maxfa-win` is the native Office execution surface.
+- A remote Linux environment can act as the control plane for Office workflows.
+- A paired Windows host is the native Office execution surface.
 - Skills that may require Windows Office must name the remote escalation lane explicitly.
