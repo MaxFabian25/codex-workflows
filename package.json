@@ -1,6 +1,30 @@
 {
-  "name": "superpowers",
+  "name": "superpowers-codex",
   "version": "5.0.6",
+  "description": "Codex-only workflow and skills library, forked from obra/superpowers.",
   "type": "module",
-  "main": ".opencode/plugins/superpowers.js"
+  "license": "MIT",
+  "repository": "https://github.com/MaxFabian25/superpowers",
+  "homepage": "https://github.com/MaxFabian25/superpowers",
+  "bugs": {
+    "url": "https://github.com/MaxFabian25/superpowers"
+  },
+  "files": [
+    "skills",
+    "contract",
+    "_shared",
+    "scripts",
+    "tests",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "RELEASE-NOTES.md",
+    "package.json",
+    ".codex-plugin/plugin.json"
+  ],
+  "scripts": {
+    "validate:public-fork": "bash tests/codex-public-fork/run.sh",
+    "validate:process-family": "python3 _shared/validators/validate_skill_library.py --root . --family process"
+  }
 }

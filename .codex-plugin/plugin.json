@@ -1,0 +1,36 @@
+{
+  "name": "superpowers-codex",
+  "version": "5.0.6",
+  "description": "Codex-only workflow and skills library forked from obra/superpowers.",
+  "author": {
+    "name": "Max Fabian",
+    "url": "https://github.com/MaxFabian25"
+  },
+  "homepage": "https://github.com/MaxFabian25/superpowers",
+  "repository": "https://github.com/MaxFabian25/superpowers",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "plugin",
+    "skills",
+    "workflow",
+    "planning",
+    "tdd",
+    "debugging"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Superpowers for Codex",
+    "shortDescription": "Codex-only workflow and skill library",
+    "longDescription": "A Codex-specific fork of obra/superpowers focused on design, planning, execution, debugging, and review workflows.",
+    "developerName": "Max Fabian",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/MaxFabian25/superpowers",
+    "brandColor": "#0F172A",
+    "defaultPrompt": "Use the using-superpowers skill first to route the task.\nUse brainstorming before implementation planning when design needs exploration.\nUse writing-plans after the spec is approved and before touching code for multi-step work."
+  }
+}
