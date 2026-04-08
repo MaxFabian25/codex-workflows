@@ -10,4 +10,4 @@ All notable changes to the Codex-only fork are documented here.
 
 - Added `.codex-plugin/plugin.json` for native Codex plugin packaging.
 - Rewrote public documentation and release metadata to the Codex-only fork contract.
-- Removed non-Codex and private-material references from the public publishing path.
+- Rewrote the published release metadata for the in-progress Codex-only fork transition.

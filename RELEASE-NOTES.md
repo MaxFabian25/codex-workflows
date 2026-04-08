@@ -7,7 +7,7 @@ Highlights:
 - Native `.codex-plugin/plugin.json` packaging for Codex.
 - Codex-only installation and workflow documentation.
 - Fork-owned issue tracking, security reporting, and release metadata.
-- Removal of non-Codex plugin surfaces and private rollout artifacts from the public package.
+- Published release metadata for the in-progress Codex-only fork transition.
 
 Upstream lineage:
 

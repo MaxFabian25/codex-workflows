@@ -11,7 +11,34 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
    git clone https://github.com/MaxFabian25/superpowers.git ~/plugins/superpowers-codex
    ```
 
-2. Create `~/.agents/plugins/marketplace.json`, or append this plugin object to `plugins[]`:
+2. Register the local plugin.
+
+   If `~/.agents/plugins/marketplace.json` does not exist yet, create it with this full file content:
+
+   ```json
+   {
+     "name": "local-codex",
+     "interface": {
+       "displayName": "Local Codex Plugins"
+     },
+     "plugins": [
+       {
+         "name": "superpowers-codex",
+         "source": {
+           "source": "local",
+           "path": "./plugins/superpowers-codex"
+         },
+         "policy": {
+           "installation": "AVAILABLE",
+           "authentication": "ON_INSTALL"
+         },
+         "category": "Developer Tools"
+       }
+     ]
+   }
+   ```
+
+   If `~/.agents/plugins/marketplace.json` already exists, append this object inside its `plugins` array without changing unrelated entries:
 
    ```json
    {

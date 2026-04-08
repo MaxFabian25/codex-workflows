@@ -13,7 +13,7 @@ git clone https://github.com/MaxFabian25/superpowers.git ~/plugins/superpowers-c
 
 ### 2. Register the local plugin
 
-If `~/.agents/plugins/marketplace.json` does not exist, create it with:
+If `~/.agents/plugins/marketplace.json` does not exist yet, create it with this full file content:
 
 ```json
 {
@@ -38,7 +38,22 @@ If `~/.agents/plugins/marketplace.json` does not exist, create it with:
 }
 ```
 
-If the file already exists, append the same plugin object to `plugins[]` without changing unrelated entries.
+If `~/.agents/plugins/marketplace.json` already exists, append this object inside its `plugins` array without changing unrelated entries:
+
+```json
+{
+  "name": "superpowers-codex",
+  "source": {
+    "source": "local",
+    "path": "./plugins/superpowers-codex"
+  },
+  "policy": {
+    "installation": "AVAILABLE",
+    "authentication": "ON_INSTALL"
+  },
+  "category": "Developer Tools"
+}
+```
 
 ### 3. Restart Codex
 

@@ -23,7 +23,9 @@ Superpowers for Codex is a Codex-only fork of `obra/superpowers`. It packages th
    git clone https://github.com/MaxFabian25/superpowers.git ~/plugins/superpowers-codex
    ```
 
-2. Create `~/.agents/plugins/marketplace.json`, or append the plugin object below to its `plugins` array:
+2. Register the local plugin.
+
+   If `~/.agents/plugins/marketplace.json` does not exist yet, create it with this full file content:
 
    ```json
    {
@@ -45,6 +47,23 @@ Superpowers for Codex is a Codex-only fork of `obra/superpowers`. It packages th
          "category": "Developer Tools"
        }
      ]
+   }
+   ```
+
+   If `~/.agents/plugins/marketplace.json` already exists, append this object inside its `plugins` array without changing unrelated entries:
+
+   ```json
+   {
+     "name": "superpowers-codex",
+     "source": {
+       "source": "local",
+       "path": "./plugins/superpowers-codex"
+     },
+     "policy": {
+       "installation": "AVAILABLE",
+       "authentication": "ON_INSTALL"
+     },
+     "category": "Developer Tools"
    }
    ```
 
