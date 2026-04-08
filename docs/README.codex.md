@@ -1,130 +1,124 @@
 # Superpowers for Codex
 
-Guide for using Superpowers with OpenAI Codex via native skill discovery on this workstation.
+This public fork is the Codex-only packaging of `obra/superpowers`. It installs as a native Codex plugin and ships a skills library for design, planning, execution, debugging, and review.
 
-## Quick Install
+## Install
 
-Use the `Manual Installation` steps in this README. They are authoritative for this workstation because they include the config source edit, live mirror sync, profile split, and child-role contract instead of sending maintainers through the generic upstream install path.
+### 1. Clone the plugin
 
-## Manual Installation
+```bash
+mkdir -p ~/plugins
+git clone https://github.com/MaxFabian25/superpowers.git ~/plugins/superpowers-codex
+```
 
-### Prerequisites
+### 2. Register the local plugin
 
-- OpenAI Codex CLI
-- Git
+If `~/.agents/plugins/marketplace.json` does not exist, create it with:
 
-### Steps
+```json
+{
+  "name": "local-codex",
+  "interface": {
+    "displayName": "Local Codex Plugins"
+  },
+  "plugins": [
+    {
+      "name": "superpowers-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/superpowers-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
+```
 
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
-   ```
+If the file already exists, append the same plugin object to `plugins[]` without changing unrelated entries.
 
-2. Create the skills symlink:
-   ```bash
-   mkdir -p ~/.agents/skills
-   ln -s ~/.codex/superpowers/skills ~/.agents/skills/superpowers
-   ```
+### 3. Restart Codex
 
-3. Edit the workstation config source at `~/.codex/config.macos-source.toml`.
+Quit and relaunch Codex after the plugin registration change.
 
-4. Sync the live mirror:
-   ```bash
-   cp ~/.codex/config.macos-source.toml ~/.codex/config.toml
-   ```
+## Verify
 
-5. Restart Codex.
+Confirm the plugin manifest exists:
 
-## How Codex Sees Superpowers
+```bash
+test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
+```
 
-Codex discovers Superpowers through native skill discovery, not through a plugin manifest:
+Confirm plugin support is enabled:
+
+```bash
+codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
+```
+
+This public fork does not depend on Codex hook bootstrap. Start new sessions with:
 
 ```text
-~/.agents/skills/superpowers -> ~/.codex/superpowers/skills
+Use superpowers:using-superpowers before we start.
 ```
 
-The `using-superpowers` skill is discovered from that symlink and remains the workflow entrypoint.
+## Recommended workflow order
 
-## Required Agent Contract
+1. `using-superpowers`
+2. `brainstorming`
+3. `writing-plans`
+4. `using-git-worktrees`
+5. `subagent-driven-development` or `executing-plans`
 
-For this workstation, the configured local contract is:
-
-```toml
-profile = "workflow_fidelity"
-
-[features]
-multi_agent = true
-multi_agent_v2 = true
-enable_fanout = false
-
-[agents]
-max_threads = 32
-max_depth = 3
-job_max_runtime_seconds = 3600
-```
-
-Parallel override for bounded read-only fanout:
-
-```toml
-[profiles.parallel_readonly.features]
-multi_agent = true
-multi_agent_v2 = true
-enable_fanout = true
-```
-
-Rules:
-
-- `multi_agent_v2 = true` is required for both `workflow_fidelity` and `parallel_readonly`.
-- `max_depth = 3` and `job_max_runtime_seconds = 3600` are authoritative.
-- `enable_fanout` stays off in the default controller profile and is enabled only for the explicit `parallel_readonly` lane.
-- Current proof on this workstation covers login-shell binary/version verification, profile feature-state verification, config-surface role-to-file bindings, and matching agent TOML contracts.
-- Disposable `codex exec` smoke currently resolves the live root checkout at `~/.codex/superpowers/skills`, not this branch worktree, so branch-local verification does not by itself prove active end-to-end custom-role dispatch.
-- Custom child-role dispatch behavior should be verified after integrating this branch into the live checkout if runtime behavior is in doubt.
-- If either `codex -p workflow_fidelity features list` or `codex -p parallel_readonly features list` does not show `multi_agent_v2 = true`, stop and treat that as a runtime blocker instead of weakening the docs.
-
-## Profiles
-
-- `workflow_fidelity`: default controller-first profile for `brainstorming`, `using-git-worktrees`, `writing-plans`, `subagent-driven-development`, `executing-plans`, `requesting-code-review`, and `finishing-a-development-branch`
-- `parallel_readonly`: explicit profile for bounded read-only fanout such as `dispatching-parallel-agents`
-
-Do not use `parallel_readonly` as the default implementation profile.
-
-## Child Role Mapping
-
-This workstation is configured for a v2-first child-role mapping. The configured local contract is declared in `~/.codex/config.macos-source.toml`, mirrored into `~/.codex/config.toml`, and backed by `~/.codex/agents/*.toml`:
-
-| Role | Workflow use | Access mode |
-|---|---|---|
-| `implementer` | One bounded code-changing task in `subagent-driven-development` | Write-capable |
-| `spec_reviewer` | Spec-compliance review after each task | Read-only |
-| `code_quality_reviewer` | Code-quality review after spec passes | Read-only |
-| `parallel_explorer` | Independent parallel exploration and audit work | Read-only |
-| `final_reviewer` | Final whole-change review pass | Read-only |
-
-Superpowers workflow docs refer to these configured local role names. Profile feature-state verification proves the profile flags; if role-dispatch behavior is in doubt, it should be verified separately. The parent session remains responsible for user clarification, arbitration, and final synthesis.
+Use `subagent-driven-development` when the task benefits from bounded implementation slices with review gates. Use `executing-plans` when you want the same plan executed sequentially in one session.
 
 ## Updating
 
+Pull the local clone:
+
 ```bash
-cd ~/.codex/superpowers && git pull
-cp ~/.codex/config.macos-source.toml ~/.codex/config.toml
+git -C ~/plugins/superpowers-codex pull
+```
+
+Restart Codex after updating so the refreshed plugin and skill content are loaded into new sessions.
+
+## Uninstalling
+
+Remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`, then delete the local clone:
+
+```bash
+rm -rf ~/plugins/superpowers-codex
 ```
 
 ## Troubleshooting
 
-### Skills not showing up
+### Plugin not discovered
 
-1. Verify the symlink: `ls -la ~/.agents/skills/superpowers`
-2. Check skills exist: `ls ~/.codex/superpowers/skills`
-3. Restart Codex
+Check that the local clone exists and the manifest is present:
 
-### v2 not activating
+```bash
+test -d ~/plugins/superpowers-codex
+test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
+```
+
+Then confirm `~/.agents/plugins/marketplace.json` still contains the `superpowers-codex` entry and restart Codex.
+
+### Plugins feature not enabled
 
 Run:
 
 ```bash
-codex -p workflow_fidelity features list
-codex -p parallel_readonly features list
+codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
 ```
 
-If either profile reports `multi_agent_v2 = false`, stop and fix the runtime or config before trusting any subagent workflow docs.
+If that command prints nothing, update Codex to a build with stable plugin support before relying on the plugin install.
+
+### Skills not routing as expected
+
+Start a fresh session and use the explicit entry instruction:
+
+```text
+Use superpowers:using-superpowers before we start.
+```
