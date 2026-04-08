@@ -64,7 +64,7 @@ EXPECTED_PACKAGE_FIELDS = {
     "homepage": "https://github.com/MaxFabian25/superpowers",
 }
 
-EXPECTED_PACKAGE_BUGS_URL = "https://github.com/MaxFabian25/superpowers"
+EXPECTED_PACKAGE_BUGS_URL = "https://github.com/MaxFabian25/superpowers/issues"
 
 EXPECTED_PACKAGE_SCRIPTS = {
     "validate:public-fork": "bash tests/codex-public-fork/run.sh",
@@ -80,6 +80,7 @@ REQUIRED_PACKAGE_FILE_ENTRIES = [
     "README.md",
     "LICENSE",
     "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
     "CHANGELOG.md",
     "RELEASE-NOTES.md",
     "package.json",

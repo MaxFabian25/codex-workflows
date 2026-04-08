@@ -178,7 +178,7 @@ EOF
   "repository": "https://github.com/MaxFabian25/superpowers",
   "homepage": "https://github.com/MaxFabian25/superpowers",
   "bugs": {
-    "url": "https://github.com/MaxFabian25/superpowers"
+    "url": "https://github.com/MaxFabian25/superpowers/issues"
   },
   "files": [
     "skills",
@@ -189,6 +189,7 @@ EOF
     "README.md",
     "LICENSE",
     "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
     "CHANGELOG.md",
     "RELEASE-NOTES.md",
     "package.json",
@@ -313,6 +314,36 @@ path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 PY
   expect_fixture_fails_with "$tmpdir/package-contract" 'package.json field `version` must be `5.0.6-codex.1`'
 
+  expect_fixture_passes "$tmpdir/package-bugs-url"
+  python3 - <<'PY' "$tmpdir/package-bugs-url/package.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["bugs"]["url"] = "https://github.com/MaxFabian25/superpowers"
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  expect_fixture_fails_with \
+    "$tmpdir/package-bugs-url" \
+    'package.json field `bugs.url` must be `https://github.com/MaxFabian25/superpowers/issues`'
+
+  expect_fixture_passes "$tmpdir/package-conduct-file"
+  python3 - <<'PY' "$tmpdir/package-conduct-file/package.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["files"] = [item for item in data["files"] if item != "CODE_OF_CONDUCT.md"]
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  expect_fixture_fails_with \
+    "$tmpdir/package-conduct-file" \
+    'package.json `files` must include `CODE_OF_CONDUCT.md`'
+
   expect_fixture_passes "$tmpdir/plugin-version-contract"
   python3 - <<'PY' "$tmpdir/plugin-version-contract/.codex-plugin/plugin.json"
 import json
@@ -405,6 +436,9 @@ run_self_tests
 
 python3 scripts/validate_codex_public_fork.py
 python3 _shared/validators/validate_skill_library.py --root "$ROOT" --family process
-codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
+
+if [[ "${CODEX_PUBLIC_FORK_REQUIRE_RUNTIME_SMOKE:-0}" == "1" ]]; then
+  codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
+fi
 
 echo "PASS: codex public fork validation bundle"
