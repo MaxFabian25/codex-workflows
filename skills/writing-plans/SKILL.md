@@ -26,6 +26,26 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
 
+## PLANS.md / ExecPlan Interop
+
+If the repository already uses `.agent/PLANS.md`, a top-level `PLANS.md`, or the user explicitly asks for an Execution-Plan / ExecPlan, keep this skill as the plan-phase owner but switch to the compatible references in this package:
+
+- `references/execplan-interop.md`
+- `references/PLANS.md`
+- `references/AGENTS.execplans.snippet.md`
+- `references/execplan.example.valid.md`
+- `references/execplan.example.invalid.missing-section.md`
+- `references/execplan.example.invalid.incomplete-evidence.md`
+- `references/execplan.example.invalid.nested-fence.md`
+- `references/validate_execplan.py`
+
+In that mode:
+- follow the repo's planning standard exactly;
+- preserve the required living-plan sections and evidence expectations;
+- validate the generated ExecPlan with `python3 references/validate_execplan.py <plan-file> --strict-evidence` when the workflow warrants it.
+
+This does not change phase ownership: `writing-plans` still writes the plan, while `using-git-worktrees`, `subagent-driven-development`, and `executing-plans` own later phases.
+
 ## File Structure
 
 Before defining tasks, map out which files will be created or modified and what each one is responsible for. This is where decomposition decisions get locked in.
@@ -160,3 +180,15 @@ After saving the plan, offer execution choice:
 - First use `superpowers:using-git-worktrees` to create the isolated workspace
 - **REQUIRED SUB-SKILL:** Use superpowers:executing-plans
 - Batch execution with checkpoints for review
+
+## References in this skill
+
+- `plan-document-reviewer-prompt.md`: Review packet template for plan-quality checks before finalizing.
+- `references/execplan-interop.md`: Distilled guidance for repos that already require `.agent/PLANS.md` / ExecPlan output.
+- `references/PLANS.md`: Canonical ExecPlan standard text for repo bootstrap or compatibility checks.
+- `references/AGENTS.execplans.snippet.md`: Minimal `AGENTS.md` snippet enabling ExecPlan workflows.
+- `references/execplan.example.valid.md`: Passing ExecPlan example.
+- `references/execplan.example.invalid.missing-section.md`: Failing ExecPlan example missing a required section.
+- `references/execplan.example.invalid.incomplete-evidence.md`: Failing ExecPlan example with incomplete evidence.
+- `references/execplan.example.invalid.nested-fence.md`: Failing ExecPlan example showing nested-fence violations.
+- `references/validate_execplan.py`: Deterministic ExecPlan validator for strict-evidence checks.
