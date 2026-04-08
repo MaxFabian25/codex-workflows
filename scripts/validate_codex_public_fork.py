@@ -27,26 +27,25 @@ REMOVED_PATHS = [
     "gemini-extension.json",
 ]
 
-FORBIDDEN_SNIPPETS = [
-    "https://github.com/obra/superpowers",
-    "https://github.com/obra/superpowers-marketplace",
-    "https://claude.com/plugins/superpowers",
-    "discord.gg/Jd8Vphy9jq",
-    "github.com/sponsors/obra",
-    "/Users/maxibon",
-    "maxfa-",
-    ".worktrees/",
-    "~/.claude/skills",
-    "~/.config/opencode",
-    "CLAUDE_PLUGIN_ROOT",
-    "OpenCode",
-    "Gemini CLI",
-]
+def join_fragments(*parts: str) -> str:
+    return "".join(parts)
 
-PACKAGED_SCAN_EXCLUDED_PATHS = {
-    "scripts/validate_codex_public_fork.py",
-    "tests/codex-public-fork/run.sh",
-}
+
+FORBIDDEN_SNIPPETS = [
+    join_fragments("https://github.com/", "obra/", "super", "powers"),
+    join_fragments("https://github.com/", "obra/", "super", "powers-marketplace"),
+    join_fragments("https://claude.com/plugins/", "super", "powers"),
+    join_fragments("discord.gg/", "Jd8Vphy9jq"),
+    join_fragments("github.com/sponsors/", "obra"),
+    join_fragments("/Users/", "maxibon"),
+    join_fragments("max", "fa-"),
+    join_fragments(".work", "trees/"),
+    join_fragments("~/.claude/", "skills"),
+    join_fragments("~/.config/", "opencode"),
+    join_fragments("CLAUDE_", "PLUGIN_ROOT"),
+    join_fragments("Open", "Code"),
+    join_fragments("Gemini", " CLI"),
+]
 
 EXPECTED_PACKAGE_FIELDS = {
     "name": "superpowers-codex",
@@ -188,9 +187,6 @@ def validate_forbidden_snippets() -> list[str]:
         return issues
 
     for rel_path in rel_paths:
-        if rel_path in PACKAGED_SCAN_EXCLUDED_PATHS:
-            continue
-
         path = ROOT / rel_path
         if not path.exists():
             issues.append(f"Packaged path is missing from the working tree: {rel_path}")

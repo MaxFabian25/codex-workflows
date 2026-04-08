@@ -4,6 +4,40 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
+join_fragments() {
+  local fragment
+  local output=""
+  for fragment in "$@"; do
+    output+="$fragment"
+  done
+  printf '%s' "$output"
+}
+
+forbidden_gemini_cli() {
+  join_fragments "Gemini" " CLI"
+}
+
+append_text() {
+  local target_path="$1"
+  local payload="$2"
+
+  python3 - <<'PY' "$target_path" "$payload"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+payload = sys.argv[2]
+path.write_text(path.read_text(encoding="utf-8") + payload, encoding="utf-8")
+PY
+}
+
+expected_issue() {
+  local rel_path="$1"
+  local snippet="$2"
+
+  join_fragments "$rel_path" " contains forbidden snippet: " "$snippet"
+}
+
 prepare_fixture() {
   local fixture_root="$1"
 
@@ -178,10 +212,27 @@ run_self_tests() {
   expect_fixture_passes "$tmpdir/base"
 
   mkdir -p "$tmpdir/release-surface/skills/private"
-  cat >"$tmpdir/release-surface/skills/private/notes.md" <<'EOF'
-This published file still mentions Gemini CLI.
-EOF
-  expect_fixture_fails_with "$tmpdir/release-surface" "skills/private/notes.md contains forbidden snippet: Gemini CLI"
+  printf 'This published file still mentions %s.\n' "$(forbidden_gemini_cli)" \
+    >"$tmpdir/release-surface/skills/private/notes.md"
+  expect_fixture_fails_with \
+    "$tmpdir/release-surface" \
+    "$(expected_issue "skills/private/notes.md" "$(forbidden_gemini_cli)")"
+
+  expect_fixture_passes "$tmpdir/published-validator-scan"
+  append_text \
+    "$tmpdir/published-validator-scan/scripts/validate_codex_public_fork.py" \
+    "$(printf "\nPUBLISHED_MARKER = '%s'\n" "$(forbidden_gemini_cli)")"
+  expect_fixture_fails_with \
+    "$tmpdir/published-validator-scan" \
+    "$(expected_issue "scripts/validate_codex_public_fork.py" "$(forbidden_gemini_cli)")"
+
+  expect_fixture_passes "$tmpdir/published-harness-scan"
+  append_text \
+    "$tmpdir/published-harness-scan/tests/codex-public-fork/run.sh" \
+    "$(printf '\n# %s\n' "$(forbidden_gemini_cli)")"
+  expect_fixture_fails_with \
+    "$tmpdir/published-harness-scan" \
+    "$(expected_issue "tests/codex-public-fork/run.sh" "$(forbidden_gemini_cli)")"
 
   expect_fixture_passes "$tmpdir/package-contract"
   python3 - <<'PY' "$tmpdir/package-contract/package.json"
