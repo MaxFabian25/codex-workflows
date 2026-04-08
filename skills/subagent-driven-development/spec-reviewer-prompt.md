@@ -5,70 +5,71 @@ Use this template when dispatching a spec compliance reviewer subagent.
 **Purpose:** Verify the implementer built what was requested, nothing more and nothing less.
 
 ```yaml
-Codex subagent packet (preferred v2):
-  task_name: "<stable_spec_review_name>"
-  agent_type: "spec_reviewer"
-  message: |
-    Your task is to perform the following.
-    Follow the instructions below exactly.
+Codex subagent packet:
+  agent_type: "explorer"
+  items:
+    - type: "text"
+      text: |
+        Your task is to perform the following.
+        Follow the instructions below exactly.
 
-    <agent-instructions>
-    You are reviewing whether an implementation matches its specification.
+        <agent-instructions>
+        You are reviewing whether an implementation matches its specification.
 
-    ## Hard Rules
+        ## Hard Rules
 
-    - Stay read-only. Do not edit files, stage changes, or commit.
-    - Verify the code directly. Do not trust the implementer report.
+        - Stay read-only. Do not edit files, stage changes, or commit.
+        - Verify the code directly. Do not trust the implementer report.
 
-    ## What Was Requested
+        ## What Was Requested
 
-    [FULL TEXT of task requirements]
+        [FULL TEXT of task requirements]
 
-    ## What Implementer Claims They Built
+        ## What Implementer Claims They Built
 
-    [From implementer's report]
+        [From implementer's report]
 
-    ## CRITICAL: Do Not Trust the Report
+        ## CRITICAL: Do Not Trust the Report
 
-    The implementer finished suspiciously quickly. Their report may be incomplete,
-    inaccurate, or optimistic. You MUST verify everything independently.
+        The implementer finished suspiciously quickly. Their report may be incomplete,
+        inaccurate, or optimistic. You MUST verify everything independently.
 
-    **DO NOT:**
-    - Take their word for what they implemented
-    - Trust their claims about completeness
-    - Accept their interpretation of requirements
+        **DO NOT:**
+        - Take their word for what they implemented
+        - Trust their claims about completeness
+        - Accept their interpretation of requirements
 
-    **DO:**
-    - Read the actual code they wrote
-    - Compare actual implementation to requirements line by line
-    - Check for missing pieces they claimed to implement
-    - Look for extra features they didn't mention
+        **DO:**
+        - Read the actual code they wrote
+        - Compare actual implementation to requirements line by line
+        - Check for missing pieces they claimed to implement
+        - Look for extra features they didn't mention
 
-    ## Your Job
+        ## Your Job
 
-    Read the implementation code and verify:
+        Read the implementation code and verify:
 
-    **Missing requirements:**
-    - Did they implement everything that was requested?
-    - Are there requirements they skipped or missed?
-    - Did they claim something works but didn't actually implement it?
+        **Missing requirements:**
+        - Did they implement everything that was requested?
+        - Are there requirements they skipped or missed?
+        - Did they claim something works but didn't actually implement it?
 
-    **Extra/unneeded work:**
-    - Did they build things that weren't requested?
-    - Did they over-engineer or add unnecessary features?
-    - Did they add "nice to haves" that weren't in spec?
+        **Extra/unneeded work:**
+        - Did they build things that weren't requested?
+        - Did they over-engineer or add unnecessary features?
+        - Did they add "nice to haves" that weren't in spec?
 
-    **Misunderstandings:**
-    - Did they interpret requirements differently than intended?
-    - Did they solve the wrong problem?
-    - Did they implement the right feature but the wrong way?
+        **Misunderstandings:**
+        - Did they interpret requirements differently than intended?
+        - Did they solve the wrong problem?
+        - Did they implement the right feature but the wrong way?
 
-    Report:
-    - ✅ Spec compliant
-    - ❌ Issues found: [list specific missing or extra items with file references]
-    </agent-instructions>
+        Report:
+        - ✅ Spec compliant
+        - ❌ Issues found: [list specific missing or extra items with file references]
+        </agent-instructions>
 
-    Execute this now. Output ONLY the structured
-    response following the format
-    specified in the instructions above.
+        Execute this now. Output ONLY the structured
+        response following the format
+        specified in the instructions above.
 ```

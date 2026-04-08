@@ -1,17 +1,19 @@
 ---
 name: dispatching-parallel-agents
-description: Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies
+description: Use when you have multiple independent investigation tasks that can run in parallel without shared write ownership
 ---
 
 # Dispatching Parallel Agents
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer bounded child context over blindly forking full history, and use `fork_turns="all"` only when the child genuinely needs the same working context. This also preserves your own context for coordination work.
+You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded child packet over blindly forking full history, and only use full-history fork mode when the child genuinely needs the same working context. This also preserves your own context for coordination work.
 
 When you have multiple unrelated failures (different test files, different subsystems, different bugs), investigating them sequentially wastes time. Each investigation is independent and can happen in parallel.
 
 **Core principle:** Dispatch one agent per independent problem domain. Let them work concurrently.
+
+**Contract references:** Follow [../../contract/process-family.md](../../contract/process-family.md), [../../contract/package-standards.md](../../contract/package-standards.md), and [../../contract/prompt-packet.md](../../contract/prompt-packet.md) when writing or updating process-family dispatch guidance.
 
 **Codex v2 translation:** Use `spawn_agent(task_name=..., agent_type="parallel_explorer", message="...")` for the default read-only fanout lane. Keep follow-up coordination in the parent, use one long `wait_agent` only when blocked on a child, and reserve write-capable child roles for explicitly approved non-overlapping implementation slices.
 
@@ -81,7 +83,7 @@ When agents return:
 - Use `wait_agent` only when blocked on a specific child, then prefer the canonical `task_name` for any follow-up
 - Synthesize the root-cause map in the parent
 - Decide whether implementation is needed later
-- If implementation is later approved, keep write-capable work on explicitly non-overlapping slices
+- If implementation is later approved, keep write-owning work on explicitly non-overlapping slices
 
 ## Agent Prompt Structure
 
@@ -129,7 +131,7 @@ Return: Summary of the root cause, evidence, and the file references the parent 
 **Need full context:** Understanding requires seeing entire system
 **Exploratory debugging:** You don't know what's broken yet
 **Shared state:** Agents would interfere (editing same files, using same resources)
-**Overlapping implementation:** If two children would edit the same files or shared state, do not use this skill as the execution lane. Go back to the controller-first plan flow instead.
+**Overlapping implementation:** If two children would edit the same files or shared state, do not use this skill as the execution lane. Go back to the controller-first plan flow instead, and keep write-owning work under a single owner.
 
 ## Real Example from Session
 

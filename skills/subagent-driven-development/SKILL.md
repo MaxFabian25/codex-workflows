@@ -1,15 +1,17 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: Use when executing an implementation plan with write-owning task work in the current session
 ---
 
 # Subagent-Driven Development
 
 Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and use `fork_turns="all"` only when a child genuinely needs the same thread history. This also preserves your own context for coordination work.
+**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and only use full-history fork mode when a child genuinely needs the same thread history. This also preserves your own context for coordination work.
 
 **Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+
+**Contract references:** Follow [../../contract/process-family.md](../../contract/process-family.md), [../../contract/package-standards.md](../../contract/package-standards.md), and [../../contract/prompt-packet.md](../../contract/prompt-packet.md) when writing or updating this workflow.
 
 ## When to Use
 
@@ -90,7 +92,7 @@ Child agents inherit the parent session config by default. Preserve that inherit
 
 - Do not pass `model` or `reasoning_effort` in `spawn_agent(...)` during normal operation.
 - Use the config-owned superpowers role mapping instead of generic built-in role guessing:
-  - `implementer` for the single active code-changing child
+  - `implementer` for the single active write-owning child
   - `spec_reviewer` for the read-only spec compliance pass
   - `code_quality_reviewer` for the read-only code quality pass
   - `final_reviewer` for the whole-change review at the end

@@ -9,6 +9,8 @@ Dispatch a focused read-only review child to catch issues before they cascade. T
 
 **Core principle:** Review early, review often.
 
+**Contract references:** Follow [../../contract/process-family.md](../../contract/process-family.md), [../../contract/package-standards.md](../../contract/package-standards.md), and [../../contract/prompt-packet.md](../../contract/prompt-packet.md) when writing or updating review-dispatch guidance.
+
 ## When to Request Review
 
 **Mandatory:**
