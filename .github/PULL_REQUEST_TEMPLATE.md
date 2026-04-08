@@ -46,9 +46,9 @@ of human involvement will be closed without review.
 
 ## Environment tested
 
-| Harness (e.g. Claude Code, Cursor) | Harness version | Model | Model version/ID |
-|-------------------------------------|-----------------|-------|------------------|
-|                                     |                 |       |                  |
+| Codex version | Model | Model version/ID | OS + shell |
+|---------------|-------|------------------|------------|
+|               |       |                  |            |
 
 ## Evaluation
 - What was the initial prompt you (or your human partner) used to start

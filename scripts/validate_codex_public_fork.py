@@ -18,6 +18,7 @@ REQUIRED_PATHS = [
     "SECURITY.md",
     "CODE_OF_CONDUCT.md",
     "package.json",
+    ".github/PULL_REQUEST_TEMPLATE.md",
 ]
 
 REMOVED_PATHS = [
@@ -310,6 +311,12 @@ def validate_issue_templates() -> list[str]:
         feature_request_text = read_text(feature_request_path)
         if "harness" in feature_request_text.lower():
             issues.append(".github/ISSUE_TEMPLATE/feature_request.md must not use generic harness wording")
+
+    pull_request_template_path = ROOT / ".github/PULL_REQUEST_TEMPLATE.md"
+    if pull_request_template_path.exists():
+        pull_request_template_text = read_text(pull_request_template_path)
+        if "Harness (" in pull_request_template_text or join_fragments("Claude", " Code") in pull_request_template_text:
+            issues.append(".github/PULL_REQUEST_TEMPLATE.md must use Codex-only environment wording")
 
     return issues
 

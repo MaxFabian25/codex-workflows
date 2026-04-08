@@ -117,6 +117,11 @@ EOF
 ## Context
 Optional: Superpowers version, Codex version, model, and workflow context.
 EOF
+  cat >"$fixture_root/.github/PULL_REQUEST_TEMPLATE.md" <<'EOF'
+| Codex version | Model | Model version/ID | OS + shell |
+|---------------|-------|------------------|------------|
+|               |       |                  |            |
+EOF
   cat >"$fixture_root/contract/process-family.md" <<'EOF'
 Process family contract.
 EOF
@@ -417,6 +422,13 @@ EOF
   expect_fixture_fails_with \
     "$tmpdir/feature-request-harness" \
     '.github/ISSUE_TEMPLATE/feature_request.md must not use generic harness wording'
+
+  expect_fixture_passes "$tmpdir/pr-template-harness"
+  printf '| Harness (%s, Cursor) | Harness version | Model | Model version/ID |\n|-------------------------------|-----------------|-------|------------------|\n|                               |                 |       |                  |\n' "$(forbidden_claude_code)" \
+    >"$tmpdir/pr-template-harness/.github/PULL_REQUEST_TEMPLATE.md"
+  expect_fixture_fails_with \
+    "$tmpdir/pr-template-harness" \
+    '.github/PULL_REQUEST_TEMPLATE.md must use Codex-only environment wording'
 
   expect_fixture_passes "$tmpdir/broken-symlink"
   ln -s missing-target "$tmpdir/broken-symlink/.claude-plugin"

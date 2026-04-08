@@ -144,11 +144,11 @@ Public GitHub/repo surfaces become fork-owned or are intentionally removed.
 
 ## Verification Gates
 
-The repo is not public-ready until all of the following pass.
+The public-first publishing surfaces are not ready until all of the following pass.
 
 ## 1. Public surface purity
 
-- No tracked file in the public branch contains maintainer workstation paths, `maxfa-*` hostnames, stale worktree references, or private rollout evidence.
+- No public-first install, package, validation, or governance surface contains maintainer workstation paths, `maxfa-*` hostnames, stale worktree references, or private rollout evidence.
 - No public install or support path points to `obra/superpowers`, upstream Discord/community, or upstream-only marketplace flows.
 
 ## 2. Codex plugin coherence
@@ -165,7 +165,7 @@ The repo is not public-ready until all of the following pass.
 
 ## 4. Validation bundle
 
-- Run deterministic scans for:
+- Run deterministic scans for public-first repo and package surfaces covering:
   - `obra/superpowers`
   - upstream community/support URLs
   - `Claude Code`, `Anthropic`, and removed-platform leftovers in public-first surfaces

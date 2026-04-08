@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED FLOW: First use superpowers:using-git-worktrees to create the isolated workspace for this plan. Then use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Convert this repository into a public, Codex-only fork of `obra/superpowers` with a native Codex plugin manifest, fork-owned public metadata, and no non-Codex or private-operator public surfaces.
+**Goal:** Convert this repository into a public, Codex-only fork of `obra/superpowers` with a native Codex plugin manifest, fork-owned public metadata, and no non-Codex or private-operator leakage across the public-first publishing surfaces.
 
-**Architecture:** Build the cutover around a new public-fork validator and a native `.codex-plugin/plugin.json` manifest, then rewrite the public docs/metadata and the Codex-facing skill entrypoints to match that contract. Remove non-Codex plugin surfaces, private rollout artifacts, and legacy hook-driven bootstrap files, then finish with a deterministic validation bundle that proves the public branch is fork-owned, plugin-first, and free of private workstation drift.
+**Architecture:** Build the cutover around a new public-fork validator and a native `.codex-plugin/plugin.json` manifest, then rewrite the public docs/metadata and the Codex-facing skill entrypoints to match that contract. Remove non-Codex plugin surfaces, private rollout artifacts, and legacy hook-driven bootstrap files, then finish with a deterministic validation bundle that proves the public-first publishing surfaces are fork-owned, plugin-first, and free of private workstation drift.
 
 **Tech Stack:** Markdown docs, JSON manifests, shell validation, Python 3 structural validator, existing process-family validator
 
