@@ -107,6 +107,16 @@ contact_links:
     url: https://github.com/MaxFabian25/superpowers/security/advisories/new
     about: Report security issues or conduct concerns privately through GitHub Security Advisories.
 EOF
+  cat >"$fixture_root/.github/ISSUE_TEMPLATE/bug_report.md" <<'EOF'
+| Superpowers version | |
+| Codex version | |
+| Model | |
+| OS + shell | |
+EOF
+  cat >"$fixture_root/.github/ISSUE_TEMPLATE/feature_request.md" <<'EOF'
+## Context
+Optional: Superpowers version, Codex version, model, and workflow context.
+EOF
   cat >"$fixture_root/contract/process-family.md" <<'EOF'
 Process family contract.
 EOF
@@ -343,6 +353,39 @@ EOF
   expect_fixture_fails_with \
     "$tmpdir/public-conduct-route" \
     'CODE_OF_CONDUCT.md must use a private reporting channel'
+
+  expect_fixture_passes "$tmpdir/platform-support-removed"
+  cat >"$tmpdir/platform-support-removed/.github/ISSUE_TEMPLATE/platform_support.md" <<'EOF'
+Legacy multi-platform support form.
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/platform-support-removed" \
+    'Removed path still exists: .github/ISSUE_TEMPLATE/platform_support.md'
+
+  expect_fixture_passes "$tmpdir/bug-report-codex-version"
+  cat >"$tmpdir/bug-report-codex-version/.github/ISSUE_TEMPLATE/bug_report.md" <<'EOF'
+| Superpowers version | |
+| Model | |
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/bug-report-codex-version" \
+    '.github/ISSUE_TEMPLATE/bug_report.md must ask for Codex version'
+
+  expect_fixture_passes "$tmpdir/bug-report-harness"
+  printf '| Harness (%s, Cursor, etc.) | |\n| Codex version | |\n' "$(forbidden_claude_code)" \
+    >"$tmpdir/bug-report-harness/.github/ISSUE_TEMPLATE/bug_report.md"
+  expect_fixture_fails_with \
+    "$tmpdir/bug-report-harness" \
+    '.github/ISSUE_TEMPLATE/bug_report.md must not ask for generic harness information'
+
+  expect_fixture_passes "$tmpdir/feature-request-harness"
+  cat >"$tmpdir/feature-request-harness/.github/ISSUE_TEMPLATE/feature_request.md" <<'EOF'
+## Context
+Optional: version info, harness, model, workflow where you hit this.
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/feature-request-harness" \
+    '.github/ISSUE_TEMPLATE/feature_request.md must not use generic harness wording'
 
   expect_fixture_passes "$tmpdir/broken-symlink"
   ln -s missing-target "$tmpdir/broken-symlink/.claude-plugin"

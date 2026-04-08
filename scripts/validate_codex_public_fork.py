@@ -25,6 +25,7 @@ REMOVED_PATHS = [
     ".cursor-plugin",
     ".opencode",
     "hooks",
+    ".github/ISSUE_TEMPLATE/platform_support.md",
     "docs/README.opencode.md",
     "GEMINI.md",
     "gemini-extension.json",
@@ -87,6 +88,12 @@ REQUIRED_PACKAGE_FILE_ENTRIES = [
     "docs/README.codex.md",
 ]
 
+REQUIRED_ISSUE_TEMPLATE_FILES = [
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".github/ISSUE_TEMPLATE/bug_report.md",
+    ".github/ISSUE_TEMPLATE/feature_request.md",
+]
+
 EXPECTED_MANIFEST_FIELDS = {
     "name": "superpowers-codex",
     "version": EXPECTED_RELEASE_VERSION,
@@ -121,6 +128,9 @@ def contains_expected_heading(path: Path, heading: str) -> bool:
 def validate_required_paths() -> list[str]:
     issues: list[str] = []
     for rel_path in REQUIRED_PATHS:
+        if not (ROOT / rel_path).exists():
+            issues.append(f"Missing required path: {rel_path}")
+    for rel_path in REQUIRED_ISSUE_TEMPLATE_FILES:
         if not (ROOT / rel_path).exists():
             issues.append(f"Missing required path: {rel_path}")
     return issues
@@ -281,6 +291,28 @@ def validate_conduct_reporting() -> list[str]:
     return issues
 
 
+def validate_issue_templates() -> list[str]:
+    issues: list[str] = []
+
+    bug_report_path = ROOT / ".github/ISSUE_TEMPLATE/bug_report.md"
+    if bug_report_path.exists():
+        bug_report_text = read_text(bug_report_path)
+        if "Codex version" not in bug_report_text:
+            issues.append(".github/ISSUE_TEMPLATE/bug_report.md must ask for Codex version")
+        if "Harness (" in bug_report_text:
+            issues.append(".github/ISSUE_TEMPLATE/bug_report.md must not ask for generic harness information")
+        if "Windows SessionStart" in bug_report_text:
+            issues.append(".github/ISSUE_TEMPLATE/bug_report.md must not mention legacy Windows SessionStart hooks")
+
+    feature_request_path = ROOT / ".github/ISSUE_TEMPLATE/feature_request.md"
+    if feature_request_path.exists():
+        feature_request_text = read_text(feature_request_path)
+        if "harness" in feature_request_text.lower():
+            issues.append(".github/ISSUE_TEMPLATE/feature_request.md must not use generic harness wording")
+
+    return issues
+
+
 def validate_package_contract() -> list[str]:
     package_path = ROOT / "package.json"
     if not package_path.exists():
@@ -340,6 +372,7 @@ def main() -> int:
         *validate_manifest(),
         *validate_release_docs(),
         *validate_conduct_reporting(),
+        *validate_issue_templates(),
     ]
 
     if issues:
