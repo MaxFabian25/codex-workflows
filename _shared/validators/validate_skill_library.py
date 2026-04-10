@@ -188,6 +188,7 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "The root thread owns user elicitation.",
     ],
     "skills/brainstorming/SKILL.md": [
+        "3. **Ask clarifying questions / branch-point questions** — one at a time; use `request_user_input` for discrete decisions and prose when the user needs rich feedback",
         "## Structured Elicitation In Codex",
         "The root thread owns user decisions and user-facing elicitation.",
         "When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.",
@@ -196,8 +197,12 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before asking the next wedge-lock question.",
         "Use normal prose for explanatory discussion, editorial feedback, and rich free text that does not fit a discrete branch.",
         "## Fallback Ladder",
+        "If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.",
+        "If the session is non-interactive or child-scoped, return a blocker or make a documented assumption only when the risk is acceptable.",
         "## Overuse Guardrails",
         "Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.",
+        "Do not use `request_user_input` when rich prose is the real need.",
+        "Do not re-ask an accepted branch-point under a different wrapper.",
     ],
 }
 

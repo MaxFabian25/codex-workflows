@@ -27,7 +27,7 @@ You MUST create a task for each of these items and complete them in order:
 
 1. **Explore project context** — check files, docs, recent commits
 2. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
-3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Ask clarifying questions / branch-point questions** — one at a time; use `request_user_input` for discrete decisions and prose when the user needs rich feedback
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
@@ -100,14 +100,15 @@ Use normal prose for explanatory discussion, editorial feedback, and rich free t
 ## Fallback Ladder
 
 - Use `request_user_input` first for discrete branch points when the runtime supports it.
-- If structured elicitation is unavailable or the answer needs free-form detail, ask one prose question in the chat.
-- If a child lane discovers ambiguity, return the decision to the root thread instead of asking the user from the child.
+- If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.
+- If the session is non-interactive or child-scoped, return a blocker or make a documented assumption only when the risk is acceptable.
 - Keep the written-spec approval gate explicit even when the final approval arrives in prose.
 
 ## Overuse Guardrails
 
 - Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.
-- Do not use structured elicitation for explanatory discussion, editorial feedback, or rich free text.
+- Do not use `request_user_input` when rich prose is the real need.
+- Do not re-ask an accepted branch-point under a different wrapper.
 - Avoid bundling multiple unrelated decisions into one structured prompt.
 - After a structured answer, restate the selected branch in prose and move the design forward.
 
