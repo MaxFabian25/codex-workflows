@@ -88,7 +88,10 @@ When agents return:
 
 ### 5. Return unresolved decisions to the parent
 
-Children must not call `request_user_input`. If a child hits ambiguity that blocks confident progress, it must return a structured handoff to the parent instead of asking the user directly.
+Children operating under this skill stay read-only and parent-mediated.
+
+- Do not ask the user directly or call `request_user_input`.
+- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
 
 Minimum handoff:
 
@@ -110,7 +113,8 @@ Required fields:
 - `options`: 2-3 concrete choices the parent can arbitrate
 - `evidence`: file references and why the decision matters
 
-Children may recommend options but may not ask the user directly. The parent decides whether to ask the user or make a documented assumption before more dispatch or planning.
+Children may recommend options but may not ask the user directly.
+The parent decides whether to open a user decision or make a documented assumption before more dispatch or planning.
 
 ## Agent Prompt Structure
 

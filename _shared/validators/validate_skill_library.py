@@ -100,6 +100,7 @@ PROMPT_PACKET_SKILL_TARGETS = [
 CHILD_ELICITATION_TARGETS = [
     *PROMPT_TARGETS,
     "skills/requesting-code-review/code-reviewer.md",
+    "skills/dispatching-parallel-agents/SKILL.md",
 ]
 
 CHILD_ELICITATION_REQUIRED_SUBSTRINGS = [
@@ -110,6 +111,7 @@ CHILD_ELICITATION_REQUIRED_SUBSTRINGS = [
 CHILD_ELICITATION_ALLOWED_LINES = {
     "- Do not ask the user directly or call `request_user_input`.",
     "- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
+    "Children may recommend options but may not ask the user directly.",
 }
 
 CHILD_ELICITATION_PARTIES = r"(?:(?:the\s+)?(?:user|operator|human))"
@@ -338,6 +340,14 @@ def find_frontmatter_line(frontmatter: list[str] | None, key: str) -> str | None
     return None
 
 
+def require_target(root: Path, rel_path: str, issues: list[str], *, context: str) -> Path | None:
+    target = root / rel_path
+    if target.exists():
+        return target
+    issues.append(f"{context} target missing from repo: {rel_path}")
+    return None
+
+
 def validate_family(root: Path, family: str) -> list[str]:
     issues: list[str] = []
     manifest_path = root / MANIFEST_BY_FAMILY[family]
@@ -424,8 +434,8 @@ def validate_family(root: Path, family: str) -> list[str]:
                 issues.append(f"{rel_path} must mention `{phrase}`")
 
     for rel_path, required_phrases in TARGETED_REQUIRED_SUBSTRINGS.items():
-        target = root / rel_path
-        if not target.exists():
+        target = require_target(root, rel_path, issues, context="Targeted required-substrings")
+        if target is None:
             continue
         text = read_text(target)
         for phrase in required_phrases:
@@ -447,8 +457,8 @@ def validate_family(root: Path, family: str) -> list[str]:
                     break
 
     for rel_path, guards in TARGETED_CONTENT_GUARDS.items():
-        target = root / rel_path
-        if not target.exists():
+        target = require_target(root, rel_path, issues, context="Targeted content-guard")
+        if target is None:
             continue
         text = read_text(target)
         for pattern, message in guards:
