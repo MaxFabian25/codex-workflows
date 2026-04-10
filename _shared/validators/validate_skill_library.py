@@ -102,6 +102,24 @@ BOUNDARY_REQUIREMENTS = {
     "skills/subagent-driven-development/SKILL.md": ["write-owning"],
 }
 
+TARGETED_REQUIRED_SUBSTRINGS = {
+    "contract/process-family.md": [
+        "## Root-Owned Elicitation",
+        "The root thread owns all user decisions.",
+        "When available, use `request_user_input` for discrete branch-point decisions.",
+        "Child agents return unresolved decisions to the parent using a `decision_needed` handoff.",
+    ],
+    "contract/prompt-packet.md": [
+        "`parallel_explorer`",
+        "`implementer`",
+        "`spec_reviewer`",
+        "`code_quality_reviewer`",
+        "`final_reviewer`",
+        "Child packets must not instruct the child to call `request_user_input`.",
+        "If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.",
+    ],
+}
+
 NO_BACKWARD_COMPAT_TARGETS = [
     "skills/requesting-code-review/SKILL.md",
     "skills/requesting-code-review/code-reviewer.md",
@@ -248,6 +266,15 @@ def validate_family(root: Path, family: str) -> list[str]:
                 issues.append(f"{rel_path} contains forbidden prompt text `{forbidden}`")
 
     for rel_path, required_phrases in BOUNDARY_REQUIREMENTS.items():
+        target = root / rel_path
+        if not target.exists():
+            continue
+        text = read_text(target)
+        for phrase in required_phrases:
+            if phrase not in text:
+                issues.append(f"{rel_path} must mention `{phrase}`")
+
+    for rel_path, required_phrases in TARGETED_REQUIRED_SUBSTRINGS.items():
         target = root / rel_path
         if not target.exists():
             continue

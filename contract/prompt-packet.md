@@ -6,7 +6,7 @@ Codex subagent prompts must use the verified packet shape for this workstation:
 
 ```yaml
 Codex subagent packet:
-  agent_type: "worker|explorer|default"
+  agent_type: "worker|explorer|parallel_explorer|implementer|spec_reviewer|code_quality_reviewer|final_reviewer|default"
   items:
     - type: "text"
       text: |
@@ -24,6 +24,7 @@ Codex subagent packet:
 
 - Keep the `items[].text` framing above for dispatched instructions.
 - Read-only review packets route through `explorer` until a dedicated `reviewer` role is verified for this environment.
+- Additional verified child role labels in this environment include `parallel_explorer`, `implementer`, `spec_reviewer`, `code_quality_reviewer`, and `final_reviewer`.
 
 ## Allowed Legacy State
 
@@ -34,3 +35,9 @@ Codex subagent packet:
 
 - Preserve inherited child config by default.
 - Do not set `model` or `reasoning_effort` unless the user explicitly asks.
+
+## Child Elicitation Rule
+
+- Child packets must not instruct the child to call `request_user_input`.
+- If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.
+- Keep parent-owned arbitration and user-facing clarification in the root thread.
