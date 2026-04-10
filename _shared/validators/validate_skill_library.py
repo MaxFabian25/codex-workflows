@@ -118,7 +118,7 @@ CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
     re.compile(rf"\bask the {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
     re.compile(rf"\bget clarification from the {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
     re.compile(rf"\bprompt the {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
-    re.compile(rf"\bcheck with the {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(rf"\b(?:check|confirm|clarify|consult) with the {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
     re.compile(r"\brequest_user_input\b", re.IGNORECASE),
 ]
 

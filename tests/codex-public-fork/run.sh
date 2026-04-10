@@ -593,6 +593,14 @@ EOF
     "$tmpdir/process-family-child-check-human" \
     'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Check with the human before continuing.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-confirm-user"
+  append_text \
+    "$tmpdir/process-family-child-confirm-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConfirm with the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-confirm-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm with the user before continuing.`'
+
   echo "PASS: codex public fork self-tests"
 }
 
