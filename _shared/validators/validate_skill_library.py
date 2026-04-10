@@ -189,6 +189,7 @@ TARGETED_REQUIRED_SUBSTRINGS = {
     ],
     "skills/brainstorming/SKILL.md": [
         "3. **Ask clarifying questions / branch-point questions** — one at a time; use `request_user_input` for discrete decisions and prose when the user needs rich feedback",
+        '"Ask clarifying questions / branch-point questions" [shape=box];',
         "## Structured Elicitation In Codex",
         "The root thread owns user decisions and user-facing elicitation.",
         "When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.",
@@ -203,6 +204,7 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.",
         "Do not use `request_user_input` when rich prose is the real need.",
         "Do not re-ask an accepted branch-point under a different wrapper.",
+        "- **Structured decisions preferred** - Use `request_user_input` for discrete branches and prose when the user needs nuance",
     ],
 }
 
@@ -247,6 +249,24 @@ TARGETED_CONTENT_GUARDS = {
         (
             re.compile(r"\{PLAN_REFERENCE\}"),
             'contains stale `{PLAN_REFERENCE}` placeholder; use `{PLAN_OR_REQUIREMENTS}` consistently',
+        ),
+    ],
+    "skills/brainstorming/SKILL.md": [
+        (
+            re.compile(r'"Ask clarifying questions"\s*\[shape=box\]'),
+            'contains stale plain-text-only diagram node for clarifying questions',
+        ),
+        (
+            re.compile(r'"Ask clarifying questions"\s*->'),
+            'contains stale plain-text-only diagram edge for clarifying questions',
+        ),
+        (
+            re.compile(r'->\s*"Ask clarifying questions"'),
+            'contains stale plain-text-only diagram edge target for clarifying questions',
+        ),
+        (
+            re.compile(r"\*\*Multiple choice preferred\*\*"),
+            'contains stale `Multiple choice preferred` guidance after the structured elicitation cutover',
         ),
     ],
 }
