@@ -113,7 +113,7 @@ CHILD_ELICITATION_ALLOWED_LINES = {
 }
 
 CHILD_ELICITATION_FORBIDDEN_PATTERNS = [
-    re.compile(r"ask the user directly", re.IGNORECASE),
+    re.compile(r"\bask the user\b", re.IGNORECASE),
     re.compile(r"request_user_input", re.IGNORECASE),
 ]
 

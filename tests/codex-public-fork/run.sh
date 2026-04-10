@@ -522,6 +522,22 @@ EOF
     "$tmpdir/process-family-child-elicitation" \
     'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask the user directly before continuing.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-clarification"
+  append_text \
+    "$tmpdir/process-family-child-clarification/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk the user for clarification before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-clarification" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask the user for clarification before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-request-user-input"
+  append_text \
+    "$tmpdir/process-family-child-request-user-input/skills/requesting-code-review/code-reviewer.md" \
+    $'\nCall `request_user_input` if you need clarification.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-request-user-input" \
+    'skills/requesting-code-review/code-reviewer.md contains forbidden child elicitation text `Call `request_user_input` if you need clarification.`'
+
   echo "PASS: codex public fork self-tests"
 }
 
