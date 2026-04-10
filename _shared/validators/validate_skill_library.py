@@ -117,8 +117,10 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "`spec_reviewer`",
         "`code_quality_reviewer`",
         "`final_reviewer`",
+        'Current wrapper packet templates for read-only review still use inner `agent_type: "explorer"` until packet-level bindings are verified end-to-end.',
         "Child packets must not instruct the child to call `request_user_input`.",
         "If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.",
+        "Keep parent-owned arbitration and user-facing clarification in the root thread.",
     ],
 }
 

@@ -6,7 +6,7 @@ Codex subagent prompts must use the verified packet shape for this workstation:
 
 ```yaml
 Codex subagent packet:
-  agent_type: "worker|explorer|parallel_explorer|implementer|spec_reviewer|code_quality_reviewer|final_reviewer|default"
+  agent_type: "worker|explorer|default"
   items:
     - type: "text"
       text: |
@@ -23,9 +23,8 @@ Codex subagent packet:
 ```
 
 - Keep the `items[].text` framing above for dispatched instructions.
-- Read-only review packets route through `explorer` until a dedicated `reviewer` role is verified for this environment.
-- The broader verified `spawn_agent(..., agent_type=...)` surface in this environment includes `parallel_explorer`, `implementer`, `spec_reviewer`, `code_quality_reviewer`, and `final_reviewer`.
-- Current read-only review packet templates still route through `explorer` until dedicated packet role bindings are verified end-to-end.
+- The verified outer `spawn_agent(..., agent_type=...)` role surface in this environment includes `parallel_explorer`, `implementer`, `spec_reviewer`, `code_quality_reviewer`, and `final_reviewer`.
+- Current wrapper packet templates for read-only review still use inner `agent_type: "explorer"` until packet-level bindings are verified end-to-end.
 
 ## Allowed Legacy State
 
