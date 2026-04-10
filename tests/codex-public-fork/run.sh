@@ -258,6 +258,7 @@ prepare_process_family_fixture() {
 
   python3 - <<'PY' "$ROOT" "$fixture_root"
 from pathlib import Path
+import importlib.util
 import shutil
 import sys
 
@@ -266,7 +267,30 @@ dst_root = Path(sys.argv[2])
 manifest_rel = Path("_shared/validators/process_family_targets.txt")
 validator_rel = Path("_shared/validators/validate_skill_library.py")
 manifest_path = src_root / manifest_rel
-targets = [line.strip() for line in manifest_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+spec = importlib.util.spec_from_file_location("validate_skill_library", src_root / validator_rel)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+previous_dont_write_bytecode = sys.dont_write_bytecode
+sys.dont_write_bytecode = True
+try:
+    spec.loader.exec_module(module)
+finally:
+    sys.dont_write_bytecode = previous_dont_write_bytecode
+
+manifest_targets = {
+    line.strip()
+    for line in manifest_path.read_text(encoding="utf-8").splitlines()
+    if line.strip()
+}
+targeted_targets = set()
+for name, value in vars(module).items():
+    if not name.startswith("TARGETED_") or not isinstance(value, dict):
+        continue
+    targeted_targets.update(
+        key for key in value if isinstance(key, str) and "/" in key
+    )
+
+targets = sorted(manifest_targets | targeted_targets)
 
 for rel in [manifest_rel, validator_rel, *map(Path, targets)]:
     src = src_root / rel
@@ -292,6 +316,48 @@ run_process_family_fixture_validator() {
   local fixture_root="$1"
 
   python3 "$fixture_root/_shared/validators/validate_skill_library.py" --root "$fixture_root" --family process
+}
+
+expect_process_family_fixture_copies_targeted_only_paths() {
+  local fixture_root="$1"
+
+  prepare_process_family_fixture "$fixture_root"
+  python3 - <<'PY' "$ROOT" "$fixture_root"
+from pathlib import Path
+import importlib.util
+import sys
+
+src_root = Path(sys.argv[1])
+fixture_root = Path(sys.argv[2])
+validator_path = src_root / "_shared/validators/validate_skill_library.py"
+
+spec = importlib.util.spec_from_file_location("validate_skill_library", validator_path)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+previous_dont_write_bytecode = sys.dont_write_bytecode
+sys.dont_write_bytecode = True
+try:
+    spec.loader.exec_module(module)
+finally:
+    sys.dont_write_bytecode = previous_dont_write_bytecode
+
+manifest_path = src_root / module.MANIFEST_BY_FAMILY["process"]
+manifest_entries = {
+    line.strip()
+    for line in manifest_path.read_text(encoding="utf-8").splitlines()
+    if line.strip()
+}
+targeted_entries = set(module.TARGETED_REQUIRED_SUBSTRINGS) | set(module.TARGETED_CONTENT_GUARDS)
+missing = [
+    rel_path
+    for rel_path in sorted(targeted_entries - manifest_entries)
+    if not (fixture_root / rel_path).exists()
+]
+if missing:
+    raise SystemExit(
+        "Fixture is missing validator-targeted non-manifest paths: " + ", ".join(missing)
+    )
+PY
 }
 
 expect_process_family_fixture_passes() {
@@ -544,6 +610,7 @@ EOF
   expect_fixture_fails_with "$tmpdir/broken-symlink" "Removed path still exists: .claude-plugin"
 
   expect_process_family_fixture_uses_copied_validator "$tmpdir/process-family-fixture-validator-artifact"
+  expect_process_family_fixture_copies_targeted_only_paths "$tmpdir/process-family-targeted-path-copy"
 
   expect_process_family_fixture_passes "$tmpdir/process-family-child-elicitation"
   append_text \
