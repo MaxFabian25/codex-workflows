@@ -625,6 +625,14 @@ EOF
     "$tmpdir/process-family-child-consult-user" \
     'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Consult the user before continuing.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-confirm-directly-user"
+  append_text \
+    "$tmpdir/process-family-child-confirm-directly-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConfirm directly with the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-confirm-directly-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm directly with the user before continuing.`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-contract-child-agent-direct-elicitation"
   append_text \
     "$tmpdir/process-family-contract-child-agent-direct-elicitation/contract/process-family.md" \
@@ -664,6 +672,14 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-contract-consult-user" \
     'contract/process-family.md contains forbidden root-owned elicitation text `- Child agents may consult the user if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-confirm-directly-user"
+  append_text \
+    "$tmpdir/process-family-contract-confirm-directly-user/contract/process-family.md" \
+    $'\n- Confirm directly with the user if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-confirm-directly-user" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Confirm directly with the user if blocked.`'
 
   echo "PASS: codex public fork self-tests"
 }
