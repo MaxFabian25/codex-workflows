@@ -107,6 +107,16 @@ CHILD_ELICITATION_REQUIRED_SUBSTRINGS = [
     "If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
 ]
 
+CHILD_ELICITATION_ALLOWED_LINES = {
+    "- Do not ask the user directly or call `request_user_input`.",
+    "- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
+}
+
+CHILD_ELICITATION_FORBIDDEN_PATTERNS = [
+    re.compile(r"ask the user directly", re.IGNORECASE),
+    re.compile(r"request_user_input", re.IGNORECASE),
+]
+
 BOUNDARY_REQUIREMENTS = {
     "skills/dispatching-parallel-agents/SKILL.md": ["read-only", "write-owning", "task_name=", 'message="'],
     "skills/subagent-driven-development/SKILL.md": ["write-owning"],
@@ -287,6 +297,14 @@ def validate_family(root: Path, family: str) -> list[str]:
         for required in CHILD_ELICITATION_REQUIRED_SUBSTRINGS:
             if required not in text:
                 issues.append(f"{rel_path} must mention `{required}`")
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped in CHILD_ELICITATION_ALLOWED_LINES:
+                continue
+            for pattern in CHILD_ELICITATION_FORBIDDEN_PATTERNS:
+                if pattern.search(stripped):
+                    issues.append(f"{rel_path} contains forbidden child elicitation text `{stripped}`")
+                    break
 
     for rel_path, required_phrases in BOUNDARY_REQUIREMENTS.items():
         target = root / rel_path

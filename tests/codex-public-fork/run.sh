@@ -249,6 +249,64 @@ expect_fixture_fails_with() {
   fi
 }
 
+prepare_process_family_fixture() {
+  local fixture_root="$1"
+
+  if [[ -e "$fixture_root/_shared/validators/process_family_targets.txt" ]]; then
+    return 0
+  fi
+
+  python3 - <<'PY' "$ROOT" "$fixture_root"
+from pathlib import Path
+import shutil
+import sys
+
+src_root = Path(sys.argv[1])
+dst_root = Path(sys.argv[2])
+manifest_rel = Path("_shared/validators/process_family_targets.txt")
+manifest_path = src_root / manifest_rel
+targets = [line.strip() for line in manifest_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+for rel in [manifest_rel, *map(Path, targets)]:
+    src = src_root / rel
+    dst = dst_root / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+PY
+}
+
+run_process_family_fixture_validator() {
+  local fixture_root="$1"
+
+  python3 "$ROOT/_shared/validators/validate_skill_library.py" --root "$fixture_root" --family process
+}
+
+expect_process_family_fixture_passes() {
+  local fixture_root="$1"
+
+  prepare_process_family_fixture "$fixture_root"
+  if ! output="$(run_process_family_fixture_validator "$fixture_root" 2>&1)"; then
+    printf 'Expected process-family validator to pass, but it failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+}
+
+expect_process_family_fixture_fails_with() {
+  local fixture_root="$1"
+  local expected_fragment="$2"
+
+  prepare_process_family_fixture "$fixture_root"
+  if output="$(run_process_family_fixture_validator "$fixture_root" 2>&1)"; then
+    printf 'Expected process-family validator to fail, but it passed.\n' >&2
+    return 1
+  fi
+
+  if [[ "$output" != *"$expected_fragment"* ]]; then
+    printf 'Expected process-family validator output to contain %q, but saw:\n%s\n' "$expected_fragment" "$output" >&2
+    return 1
+  fi
+}
+
 run_self_tests() {
   local tmpdir
   tmpdir="$(mktemp -d)"
@@ -455,6 +513,14 @@ EOF
   expect_fixture_passes "$tmpdir/broken-symlink"
   ln -s missing-target "$tmpdir/broken-symlink/.claude-plugin"
   expect_fixture_fails_with "$tmpdir/broken-symlink" "Removed path still exists: .claude-plugin"
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-elicitation"
+  append_text \
+    "$tmpdir/process-family-child-elicitation/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk the user directly before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-elicitation" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask the user directly before continuing.`'
 
   echo "PASS: codex public fork self-tests"
 }
