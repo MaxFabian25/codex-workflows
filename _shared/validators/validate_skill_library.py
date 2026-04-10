@@ -206,6 +206,18 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "Do not re-ask an accepted branch-point under a different wrapper.",
         "- **Structured decisions preferred** - Use `request_user_input` for discrete branches and prose when the user needs nuance",
     ],
+    "skills/dispatching-parallel-agents/SKILL.md": [
+        "### 5. Return unresolved decisions to the parent",
+        "`decision_needed`",
+        "`decision_id`",
+        "`recommended_option`",
+        "Children may recommend options but may not ask the user directly.",
+    ],
+    "skills/brainstorming/visual-companion.md": [
+        "Launch this with `exec_command` and keep the session alive.",
+        "no extra background flag is required",
+        "Use `apply_patch` or another non-heredoc file-write path",
+    ],
 }
 
 NO_BACKWARD_COMPAT_TARGETS = [
@@ -267,6 +279,20 @@ TARGETED_CONTENT_GUARDS = {
         (
             re.compile(r"\*\*Multiple choice preferred\*\*"),
             'contains stale `Multiple choice preferred` guidance after the structured elicitation cutover',
+        ),
+    ],
+    "skills/brainstorming/visual-companion.md": [
+        (
+            re.compile(r"run_in_background:\s*true"),
+            'contains stale `run_in_background: true` guidance',
+        ),
+        (
+            re.compile(r"Use Write tool"),
+            'contains stale `Use Write tool` guidance',
+        ),
+        (
+            re.compile(r"Bash tool call"),
+            'contains stale `Bash tool call` guidance',
         ),
     ],
 }
