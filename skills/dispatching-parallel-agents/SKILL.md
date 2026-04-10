@@ -82,8 +82,39 @@ When agents return:
 - Read each summary
 - Use `wait_agent` only when blocked on a specific child, then prefer the canonical `task_name` for any follow-up
 - Synthesize the root-cause map in the parent
+- If a child returns `decision_needed`, resolve that branch in the parent before further dispatch or planning
 - Decide whether implementation is needed later
 - If implementation is later approved, keep write-owning work on explicitly non-overlapping slices
+
+### 5. Return unresolved decisions to the parent
+
+Children operating under this skill stay read-only and parent-mediated.
+
+- Do not ask the user directly or call `request_user_input`.
+- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
+
+Minimum handoff:
+
+```text
+decision_needed: yes
+decision_id: choose_abort_contract
+recommended_option: Keep partial output capture and update the abort-path expectation.
+options:
+- Preserve partial output capture semantics
+- Drop partial output capture from the abort contract
+evidence:
+- src/agents/agent-tool-abort.test.ts: failing expectation depends on this choice
+- src/agents/tool-runner.ts: current event ordering preserves partial output before abort
+```
+
+Required fields:
+- `decision_id`: stable short identifier the parent can reference later
+- `recommended_option`: the child's best current recommendation
+- `options`: 2-3 concrete choices the parent can arbitrate
+- `evidence`: file references and why the decision matters
+
+Children may recommend options but may not ask the user directly.
+The parent decides whether to open a user decision or make a documented assumption before more dispatch or planning.
 
 ## Agent Prompt Structure
 

@@ -23,7 +23,8 @@ Codex subagent packet:
 ```
 
 - Keep the `items[].text` framing above for dispatched instructions.
-- Read-only review packets route through `explorer` until a dedicated `reviewer` role is verified for this environment.
+- The verified outer `spawn_agent(..., agent_type=...)` role surface in this environment includes `parallel_explorer`, `implementer`, `spec_reviewer`, `code_quality_reviewer`, and `final_reviewer`.
+- Current wrapper packet templates for read-only review still use inner `agent_type: "explorer"` until packet-level bindings are verified end-to-end.
 
 ## Allowed Legacy State
 
@@ -34,3 +35,9 @@ Codex subagent packet:
 
 - Preserve inherited child config by default.
 - Do not set `model` or `reasoning_effort` unless the user explicitly asks.
+
+## Child Elicitation Rule
+
+- Child packets must not instruct the child to call `request_user_input`.
+- If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.
+- Keep parent-owned arbitration and user-facing clarification in the root thread.

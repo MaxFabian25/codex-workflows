@@ -57,19 +57,20 @@ scripts/start-server.sh --project-dir /path/to/project
 
 **Terminal agents (Windows):**
 ```bash
-# Windows auto-detects and uses foreground mode, which blocks the tool call.
-# Use run_in_background: true on the Bash tool call so the server survives
-# across conversation turns.
+# Windows auto-detects and uses foreground mode.
+# Start it in a long-lived foreground session and keep that session open while
+# the helper is active.
 scripts/start-server.sh --project-dir /path/to/project
 ```
-When calling this via the Bash tool, set `run_in_background: true`. Then read `$STATE_DIR/server-info` on the next turn to get the URL and port.
+Keep the foreground session alive, then read `$STATE_DIR/server-info` on the next turn if you need to recover the URL and port from disk.
 
 **Codex:**
 ```bash
 # Codex reaps background processes. The script auto-detects CODEX_CI and
-# switches to foreground mode. Run it normally — no extra flags needed.
+# switches to foreground mode.
 scripts/start-server.sh --project-dir /path/to/project
 ```
+Launch this with `exec_command` and keep the session alive. The script auto-foregrounds under `CODEX_CI`, so no extra background flag is required.
 
 **Other environments:** The server must keep running in the background across conversation turns. If your environment reaps detached processes, use `--foreground` and launch the command with your platform's background execution mechanism.
 
@@ -90,7 +91,7 @@ Use `--url-host` to control what hostname is printed in the returned URL JSON.
    - Before each write, check that `$STATE_DIR/server-info` exists. If it doesn't (or `$STATE_DIR/server-stopped` exists), the server has shut down — restart it with `start-server.sh` before continuing. The server auto-exits after 30 minutes of inactivity.
    - Use semantic filenames: `platform.html`, `visual-style.html`, `layout.html`
    - **Never reuse filenames** — each screen gets a fresh file
-   - Use Write tool — **never use cat/heredoc** (dumps noise into terminal)
+   - Use `apply_patch` or another non-heredoc file-write path — **never use cat/heredoc** (dumps noise into terminal)
    - Server automatically serves the newest file
 
 2. **Tell user what to expect and end your turn:**

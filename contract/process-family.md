@@ -19,10 +19,17 @@ The process family owns one canonical phase order:
 - `using-git-worktrees` owns `isolate` only.
 - `subagent-driven-development` owns write-owning implementation in the current session.
 - `executing-plans` owns sequential or separate-session implementation.
-- `dispatching-parallel-agents` is for read-only or non-owning parallel investigation, not write-owning execution.
+- `dispatching-parallel-agents` is for read-only or non-owning parallel investigation, not write-owning execution or direct user elicitation.
 - `requesting-code-review` and `receiving-code-review` own review interactions, not verification or finish decisions.
 - `verification-before-completion` owns evidence collection before success claims.
 - `finishing-a-development-branch` owns closeout after verification passes.
+
+## Root-Owned Elicitation
+
+- The root thread owns all user decisions.
+- When available, use `request_user_input` for discrete branch-point decisions.
+- Child agents never ask the user directly.
+- Child agents return unresolved decisions to the parent using a `decision_needed` handoff.
 
 ## Hard-Cut Rules
 

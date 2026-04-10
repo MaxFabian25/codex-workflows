@@ -27,7 +27,7 @@ You MUST create a task for each of these items and complete them in order:
 
 1. **Explore project context** — check files, docs, recent commits
 2. **Offer visual companion** (if topic will involve visual questions) — this is its own message, not combined with a clarifying question. See the Visual Companion section below.
-3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+3. **Ask clarifying questions / branch-point questions** — one at a time; use `request_user_input` for discrete decisions and prose when the user needs rich feedback
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
 6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
@@ -42,7 +42,7 @@ digraph brainstorming {
     "Explore project context" [shape=box];
     "Visual questions ahead?" [shape=diamond];
     "Offer Visual Companion\n(own message, no other content)" [shape=box];
-    "Ask clarifying questions" [shape=box];
+    "Ask clarifying questions / branch-point questions" [shape=box];
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
@@ -53,9 +53,9 @@ digraph brainstorming {
 
     "Explore project context" -> "Visual questions ahead?";
     "Visual questions ahead?" -> "Offer Visual Companion\n(own message, no other content)" [label="yes"];
-    "Visual questions ahead?" -> "Ask clarifying questions" [label="no"];
-    "Offer Visual Companion\n(own message, no other content)" -> "Ask clarifying questions";
-    "Ask clarifying questions" -> "Propose 2-3 approaches";
+    "Visual questions ahead?" -> "Ask clarifying questions / branch-point questions" [label="no"];
+    "Offer Visual Companion\n(own message, no other content)" -> "Ask clarifying questions / branch-point questions";
+    "Ask clarifying questions / branch-point questions" -> "Propose 2-3 approaches";
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
@@ -79,9 +79,38 @@ This skill stops after spec approval. Isolation is the next phase and is handled
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
-- Prefer multiple choice questions when possible, but open-ended is fine too
+- Prefer crisp branch-point questions. Use structured elicitation for discrete choices when available, and use open-ended prose when the user needs to explain nuance.
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
 - Focus on understanding: purpose, constraints, success criteria
+
+## Structured Elicitation In Codex
+
+The root thread owns user decisions and user-facing elicitation.
+
+When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.
+
+Use it for wedge-lock questions, approach selection, section approval, and the written-spec approval gate.
+
+Keep it to one decision per tool call unless two choices are inseparable and the user cannot answer one without the other.
+
+If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before asking the next wedge-lock question.
+
+Use normal prose for explanatory discussion, editorial feedback, and rich free text that does not fit a discrete branch.
+
+## Fallback Ladder
+
+- Use `request_user_input` first for discrete branch points when the runtime supports it.
+- If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.
+- If the session is non-interactive or child-scoped, return a blocker or make a documented assumption only when the risk is acceptable.
+- Keep the written-spec approval gate explicit even when the final approval arrives in prose.
+
+## Overuse Guardrails
+
+- Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.
+- Do not use `request_user_input` when rich prose is the real need.
+- Do not re-ask an accepted branch-point under a different wrapper.
+- Avoid bundling multiple unrelated decisions into one structured prompt.
+- After a structured answer, restate the selected branch in prose and move the design forward.
 
 **Exploring approaches:**
 
@@ -144,7 +173,7 @@ Wait for the user's response. If they request changes, make them and re-run the 
 ## Key Principles
 
 - **One question at a time** - Don't overwhelm with multiple questions
-- **Multiple choice preferred** - Easier to answer than open-ended when possible
+- **Structured decisions preferred** - Use `request_user_input` for discrete branches and prose when the user needs nuance
 - **YAGNI ruthlessly** - Remove unnecessary features from all designs
 - **Explore alternatives** - Always propose 2-3 approaches before settling
 - **Incremental validation** - Present design, get approval before moving on

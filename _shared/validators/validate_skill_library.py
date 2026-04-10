@@ -97,9 +97,129 @@ PROMPT_PACKET_SKILL_TARGETS = [
     "skills/requesting-code-review/SKILL.md",
 ]
 
+CHILD_ELICITATION_TARGETS = [
+    *PROMPT_TARGETS,
+    "skills/requesting-code-review/code-reviewer.md",
+    "skills/dispatching-parallel-agents/SKILL.md",
+]
+
+CHILD_ELICITATION_REQUIRED_SUBSTRINGS = [
+    "Do not ask the user directly or call `request_user_input`.",
+    "If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
+]
+
+CHILD_ELICITATION_ALLOWED_LINES = {
+    "- Do not ask the user directly or call `request_user_input`.",
+    "- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
+    "Children may recommend options but may not ask the user directly.",
+}
+
+CHILD_ELICITATION_PARTIES = r"(?:(?:the\s+)?(?:user|operator|human))"
+CHILD_ELICITATION_FILLER = r"(?:\s+\w+){0,8}"
+
+CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
+    re.compile(rf"\bask{CHILD_ELICITATION_FILLER}\s+{CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(rf"\bget clarification{CHILD_ELICITATION_FILLER}\s+from\s+{CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(rf"\bprompt{CHILD_ELICITATION_FILLER}\s+{CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(
+        rf"\b(?:check|confirm|clarify|consult){CHILD_ELICITATION_FILLER}(?:\s+with)?\s+{CHILD_ELICITATION_PARTIES}\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\brequest_user_input\b", re.IGNORECASE),
+]
+
+ROOT_OWNED_CONTRACT_ALLOWED_LINES = {
+    "- When available, use `request_user_input` for discrete branch-point decisions.",
+    "- Child agents never ask the user directly.",
+    "- Child packets must not instruct the child to call `request_user_input`.",
+}
+
+ROOT_OWNED_CONTRACT_FORBIDDEN_LINE_PATTERNS = {
+    "contract/process-family.md": [
+        re.compile(
+            rf"\b(?:ask{CHILD_ELICITATION_FILLER}|get clarification{CHILD_ELICITATION_FILLER}\s+from|prompt{CHILD_ELICITATION_FILLER}|(?:check|confirm|clarify|consult){CHILD_ELICITATION_FILLER}(?:\s+with)?)\s+{CHILD_ELICITATION_PARTIES}\b",
+            re.IGNORECASE,
+        ),
+        re.compile(r"\brequest_user_input\b", re.IGNORECASE),
+    ],
+    "contract/prompt-packet.md": [
+        re.compile(
+            rf"\b(?:ask{CHILD_ELICITATION_FILLER}|get clarification{CHILD_ELICITATION_FILLER}\s+from|prompt{CHILD_ELICITATION_FILLER}|(?:check|confirm|clarify|consult){CHILD_ELICITATION_FILLER}(?:\s+with)?)\s+{CHILD_ELICITATION_PARTIES}\b",
+            re.IGNORECASE,
+        ),
+        re.compile(r"\brequest_user_input\b", re.IGNORECASE),
+    ],
+}
+
 BOUNDARY_REQUIREMENTS = {
     "skills/dispatching-parallel-agents/SKILL.md": ["read-only", "write-owning", "task_name=", 'message="'],
     "skills/subagent-driven-development/SKILL.md": ["write-owning"],
+}
+
+TARGETED_REQUIRED_SUBSTRINGS = {
+    "contract/process-family.md": [
+        "## Root-Owned Elicitation",
+        "The root thread owns all user decisions.",
+        "When available, use `request_user_input` for discrete branch-point decisions.",
+        "not write-owning execution or direct user elicitation.",
+        "Child agents never ask the user directly.",
+        "Child agents return unresolved decisions to the parent using a `decision_needed` handoff.",
+    ],
+    "contract/prompt-packet.md": [
+        "`parallel_explorer`",
+        "`implementer`",
+        "`spec_reviewer`",
+        "`code_quality_reviewer`",
+        "`final_reviewer`",
+        'Current wrapper packet templates for read-only review still use inner `agent_type: "explorer"` until packet-level bindings are verified end-to-end.',
+        "Child packets must not instruct the child to call `request_user_input`.",
+        "If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.",
+        "Keep parent-owned arbitration and user-facing clarification in the root thread.",
+    ],
+    "skills/using-superpowers/references/codex-tools.md": [
+        "`request_user_input(...)`",
+        "`request_user_input(questions=[...])`",
+        "`send_message(...)`",
+        "`followup_task(...)`",
+        "`list_agents(...)`",
+        "default_mode_request_user_input",
+        "multi_agent_v2",
+        "codex features list | rg '^(plugins|multi_agent_v2|default_mode_request_user_input)[[:space:]]+'",
+        "Use `request_user_input` in Default mode only when `default_mode_request_user_input` is enabled.",
+        "Use the V2 child-agent surface (`send_message(...)`, `followup_task(...)`, `list_agents(...)`) only when `multi_agent_v2` is enabled.",
+        "The root thread owns user elicitation.",
+    ],
+    "skills/brainstorming/SKILL.md": [
+        "3. **Ask clarifying questions / branch-point questions** — one at a time; use `request_user_input` for discrete decisions and prose when the user needs rich feedback",
+        '"Ask clarifying questions / branch-point questions" [shape=box];',
+        "## Structured Elicitation In Codex",
+        "The root thread owns user decisions and user-facing elicitation.",
+        "When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.",
+        "Use it for wedge-lock questions, approach selection, section approval, and the written-spec approval gate.",
+        "Keep it to one decision per tool call unless two choices are inseparable and the user cannot answer one without the other.",
+        "If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before asking the next wedge-lock question.",
+        "Use normal prose for explanatory discussion, editorial feedback, and rich free text that does not fit a discrete branch.",
+        "## Fallback Ladder",
+        "If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.",
+        "If the session is non-interactive or child-scoped, return a blocker or make a documented assumption only when the risk is acceptable.",
+        "## Overuse Guardrails",
+        "Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.",
+        "Do not use `request_user_input` when rich prose is the real need.",
+        "Do not re-ask an accepted branch-point under a different wrapper.",
+        "- **Structured decisions preferred** - Use `request_user_input` for discrete branches and prose when the user needs nuance",
+    ],
+    "skills/dispatching-parallel-agents/SKILL.md": [
+        "### 5. Return unresolved decisions to the parent",
+        "`decision_needed`",
+        "`decision_id`",
+        "`recommended_option`",
+        "Children may recommend options but may not ask the user directly.",
+    ],
+    "skills/brainstorming/visual-companion.md": [
+        "Launch this with `exec_command` and keep the session alive.",
+        "no extra background flag is required",
+        "Use `apply_patch` or another non-heredoc file-write path",
+    ],
 }
 
 NO_BACKWARD_COMPAT_TARGETS = [
@@ -145,6 +265,38 @@ TARGETED_CONTENT_GUARDS = {
             'contains stale `{PLAN_REFERENCE}` placeholder; use `{PLAN_OR_REQUIREMENTS}` consistently',
         ),
     ],
+    "skills/brainstorming/SKILL.md": [
+        (
+            re.compile(r'"Ask clarifying questions"\s*\[shape=box\]'),
+            'contains stale plain-text-only diagram node for clarifying questions',
+        ),
+        (
+            re.compile(r'"Ask clarifying questions"\s*->'),
+            'contains stale plain-text-only diagram edge for clarifying questions',
+        ),
+        (
+            re.compile(r'->\s*"Ask clarifying questions"'),
+            'contains stale plain-text-only diagram edge target for clarifying questions',
+        ),
+        (
+            re.compile(r"\*\*Multiple choice preferred\*\*"),
+            'contains stale `Multiple choice preferred` guidance after the structured elicitation cutover',
+        ),
+    ],
+    "skills/brainstorming/visual-companion.md": [
+        (
+            re.compile(r"run_in_background:\s*true"),
+            'contains stale `run_in_background: true` guidance',
+        ),
+        (
+            re.compile(r"Use Write tool"),
+            'contains stale `Use Write tool` guidance',
+        ),
+        (
+            re.compile(r"Bash tool call"),
+            'contains stale `Bash tool call` guidance',
+        ),
+    ],
 }
 
 
@@ -185,6 +337,14 @@ def find_frontmatter_line(frontmatter: list[str] | None, key: str) -> str | None
     for line in frontmatter:
         if line.startswith(prefix):
             return line.strip()
+    return None
+
+
+def require_target(root: Path, rel_path: str, issues: list[str], *, context: str) -> Path | None:
+    target = root / rel_path
+    if target.exists():
+        return target
+    issues.append(f"{context} target missing from repo: {rel_path}")
     return None
 
 
@@ -247,6 +407,23 @@ def validate_family(root: Path, family: str) -> list[str]:
             if forbidden in text:
                 issues.append(f"{rel_path} contains forbidden prompt text `{forbidden}`")
 
+    for rel_path in CHILD_ELICITATION_TARGETS:
+        target = root / rel_path
+        if not target.exists():
+            continue
+        text = read_text(target)
+        for required in CHILD_ELICITATION_REQUIRED_SUBSTRINGS:
+            if required not in text:
+                issues.append(f"{rel_path} must mention `{required}`")
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped in CHILD_ELICITATION_ALLOWED_LINES:
+                continue
+            for pattern in CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS:
+                if pattern.search(stripped):
+                    issues.append(f"{rel_path} contains forbidden child elicitation text `{stripped}`")
+                    break
+
     for rel_path, required_phrases in BOUNDARY_REQUIREMENTS.items():
         target = root / rel_path
         if not target.exists():
@@ -256,9 +433,32 @@ def validate_family(root: Path, family: str) -> list[str]:
             if phrase not in text:
                 issues.append(f"{rel_path} must mention `{phrase}`")
 
-    for rel_path, guards in TARGETED_CONTENT_GUARDS.items():
+    for rel_path, required_phrases in TARGETED_REQUIRED_SUBSTRINGS.items():
+        target = require_target(root, rel_path, issues, context="Targeted required-substrings")
+        if target is None:
+            continue
+        text = read_text(target)
+        for phrase in required_phrases:
+            if phrase not in text:
+                issues.append(f"{rel_path} must mention `{phrase}`")
+
+    for rel_path, patterns in ROOT_OWNED_CONTRACT_FORBIDDEN_LINE_PATTERNS.items():
         target = root / rel_path
         if not target.exists():
+            continue
+        text = read_text(target)
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped in ROOT_OWNED_CONTRACT_ALLOWED_LINES:
+                continue
+            for pattern in patterns:
+                if pattern.search(stripped):
+                    issues.append(f"{rel_path} contains forbidden root-owned elicitation text `{stripped}`")
+                    break
+
+    for rel_path, guards in TARGETED_CONTENT_GUARDS.items():
+        target = require_target(root, rel_path, issues, context="Targeted content-guard")
+        if target is None:
             continue
         text = read_text(target)
         for pattern, message in guards:

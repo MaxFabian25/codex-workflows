@@ -249,6 +249,159 @@ expect_fixture_fails_with() {
   fi
 }
 
+prepare_process_family_fixture() {
+  local fixture_root="$1"
+
+  if [[ -e "$fixture_root/_shared/validators/process_family_targets.txt" ]]; then
+    return 0
+  fi
+
+  python3 - <<'PY' "$ROOT" "$fixture_root"
+from pathlib import Path
+import importlib.util
+import shutil
+import sys
+
+src_root = Path(sys.argv[1])
+dst_root = Path(sys.argv[2])
+manifest_rel = Path("_shared/validators/process_family_targets.txt")
+validator_rel = Path("_shared/validators/validate_skill_library.py")
+manifest_path = src_root / manifest_rel
+spec = importlib.util.spec_from_file_location("validate_skill_library", src_root / validator_rel)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+previous_dont_write_bytecode = sys.dont_write_bytecode
+sys.dont_write_bytecode = True
+try:
+    spec.loader.exec_module(module)
+finally:
+    sys.dont_write_bytecode = previous_dont_write_bytecode
+
+manifest_targets = {
+    line.strip()
+    for line in manifest_path.read_text(encoding="utf-8").splitlines()
+    if line.strip()
+}
+targeted_targets = set()
+for name, value in vars(module).items():
+    if not name.startswith("TARGETED_") or not isinstance(value, dict):
+        continue
+    targeted_targets.update(
+        key for key in value if isinstance(key, str) and "/" in key
+    )
+
+targets = sorted(manifest_targets | targeted_targets)
+
+for rel in [manifest_rel, validator_rel, *map(Path, targets)]:
+    src = src_root / rel
+    dst = dst_root / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+PY
+}
+
+set_process_family_fixture_validator_probe() {
+  local fixture_root="$1"
+
+  cat >"$fixture_root/_shared/validators/validate_skill_library.py" <<'EOF'
+#!/usr/bin/env python3
+import sys
+print("fixture validator probe")
+sys.exit(0)
+EOF
+  chmod +x "$fixture_root/_shared/validators/validate_skill_library.py"
+}
+
+run_process_family_fixture_validator() {
+  local fixture_root="$1"
+
+  python3 "$fixture_root/_shared/validators/validate_skill_library.py" --root "$fixture_root" --family process
+}
+
+expect_process_family_fixture_copies_targeted_only_paths() {
+  local fixture_root="$1"
+
+  prepare_process_family_fixture "$fixture_root"
+  python3 - <<'PY' "$ROOT" "$fixture_root"
+from pathlib import Path
+import importlib.util
+import sys
+
+src_root = Path(sys.argv[1])
+fixture_root = Path(sys.argv[2])
+validator_path = src_root / "_shared/validators/validate_skill_library.py"
+
+spec = importlib.util.spec_from_file_location("validate_skill_library", validator_path)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+previous_dont_write_bytecode = sys.dont_write_bytecode
+sys.dont_write_bytecode = True
+try:
+    spec.loader.exec_module(module)
+finally:
+    sys.dont_write_bytecode = previous_dont_write_bytecode
+
+manifest_path = src_root / module.MANIFEST_BY_FAMILY["process"]
+manifest_entries = {
+    line.strip()
+    for line in manifest_path.read_text(encoding="utf-8").splitlines()
+    if line.strip()
+}
+targeted_entries = set(module.TARGETED_REQUIRED_SUBSTRINGS) | set(module.TARGETED_CONTENT_GUARDS)
+missing = [
+    rel_path
+    for rel_path in sorted(targeted_entries - manifest_entries)
+    if not (fixture_root / rel_path).exists()
+]
+if missing:
+    raise SystemExit(
+        "Fixture is missing validator-targeted non-manifest paths: " + ", ".join(missing)
+    )
+PY
+}
+
+expect_process_family_fixture_passes() {
+  local fixture_root="$1"
+
+  prepare_process_family_fixture "$fixture_root"
+  if ! output="$(run_process_family_fixture_validator "$fixture_root" 2>&1)"; then
+    printf 'Expected process-family validator to pass, but it failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+}
+
+expect_process_family_fixture_fails_with() {
+  local fixture_root="$1"
+  local expected_fragment="$2"
+
+  prepare_process_family_fixture "$fixture_root"
+  if output="$(run_process_family_fixture_validator "$fixture_root" 2>&1)"; then
+    printf 'Expected process-family validator to fail, but it passed.\n' >&2
+    return 1
+  fi
+
+  if [[ "$output" != *"$expected_fragment"* ]]; then
+    printf 'Expected process-family validator output to contain %q, but saw:\n%s\n' "$expected_fragment" "$output" >&2
+    return 1
+  fi
+}
+
+expect_process_family_fixture_uses_copied_validator() {
+  local fixture_root="$1"
+
+  prepare_process_family_fixture "$fixture_root"
+  set_process_family_fixture_validator_probe "$fixture_root"
+  if ! output="$(run_process_family_fixture_validator "$fixture_root" 2>&1)"; then
+    printf 'Expected copied process-family validator probe to run, but command failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  if [[ "$output" != *"fixture validator probe"* ]]; then
+    printf 'Expected copied process-family validator probe output, but saw:\n%s\n' "$output" >&2
+    return 1
+  fi
+}
+
 run_self_tests() {
   local tmpdir
   tmpdir="$(mktemp -d)"
@@ -455,6 +608,161 @@ EOF
   expect_fixture_passes "$tmpdir/broken-symlink"
   ln -s missing-target "$tmpdir/broken-symlink/.claude-plugin"
   expect_fixture_fails_with "$tmpdir/broken-symlink" "Removed path still exists: .claude-plugin"
+
+  expect_process_family_fixture_uses_copied_validator "$tmpdir/process-family-fixture-validator-artifact"
+  expect_process_family_fixture_copies_targeted_only_paths "$tmpdir/process-family-targeted-path-copy"
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-elicitation"
+  append_text \
+    "$tmpdir/process-family-child-elicitation/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk the user directly before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-elicitation" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask the user directly before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-clarification"
+  append_text \
+    "$tmpdir/process-family-child-clarification/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk the user for clarification before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-clarification" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask the user for clarification before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-no-article-ask"
+  append_text \
+    "$tmpdir/process-family-child-no-article-ask/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk user directly before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-no-article-ask" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask user directly before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-request-user-input"
+  append_text \
+    "$tmpdir/process-family-child-request-user-input/skills/requesting-code-review/code-reviewer.md" \
+    $'\nCall `request_user_input` if you need clarification.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-request-user-input" \
+    'skills/requesting-code-review/code-reviewer.md contains forbidden child elicitation text `Call `request_user_input` if you need clarification.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-get-clarification"
+  append_text \
+    "$tmpdir/process-family-child-get-clarification/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nGet clarification from the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-get-clarification" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Get clarification from the user before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-prompt-operator"
+  append_text \
+    "$tmpdir/process-family-child-prompt-operator/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nPrompt the operator for clarification before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-prompt-operator" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Prompt the operator for clarification before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-check-human"
+  append_text \
+    "$tmpdir/process-family-child-check-human/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nCheck with the human before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-check-human" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Check with the human before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-confirm-user"
+  append_text \
+    "$tmpdir/process-family-child-confirm-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConfirm with the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-confirm-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm with the user before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-confirm-no-article-user"
+  append_text \
+    "$tmpdir/process-family-child-confirm-no-article-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConfirm with user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-confirm-no-article-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm with user before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-consult-user"
+  append_text \
+    "$tmpdir/process-family-child-consult-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConsult the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-consult-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Consult the user before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-confirm-directly-user"
+  append_text \
+    "$tmpdir/process-family-child-confirm-directly-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConfirm directly with the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-confirm-directly-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm directly with the user before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-brief-question-user"
+  append_text \
+    "$tmpdir/process-family-child-brief-question-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk one brief clarifying question to the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-brief-question-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask one brief clarifying question to the user before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-child-agent-direct-elicitation"
+  append_text \
+    "$tmpdir/process-family-contract-child-agent-direct-elicitation/contract/process-family.md" \
+    $'\n- Child agents may ask the user directly if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-child-agent-direct-elicitation" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Child agents may ask the user directly if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-unprefixed-direct-elicitation"
+  append_text \
+    "$tmpdir/process-family-contract-unprefixed-direct-elicitation/contract/process-family.md" \
+    $'\n- Ask the user directly if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-unprefixed-direct-elicitation" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Ask the user directly if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-child-packet-request-user-input"
+  append_text \
+    "$tmpdir/process-family-contract-child-packet-request-user-input/contract/prompt-packet.md" \
+    $'\n- Child packets may call `request_user_input` directly if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-child-packet-request-user-input" \
+    'contract/prompt-packet.md contains forbidden root-owned elicitation text `- Child packets may call `request_user_input` directly if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-cross-subject-direct-elicitation"
+  append_text \
+    "$tmpdir/process-family-contract-cross-subject-direct-elicitation/contract/prompt-packet.md" \
+    $'\n- Child agents may ask the user directly if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-cross-subject-direct-elicitation" \
+    'contract/prompt-packet.md contains forbidden root-owned elicitation text `- Child agents may ask the user directly if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-consult-user"
+  append_text \
+    "$tmpdir/process-family-contract-consult-user/contract/process-family.md" \
+    $'\n- Child agents may consult the user if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-consult-user" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Child agents may consult the user if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-confirm-directly-user"
+  append_text \
+    "$tmpdir/process-family-contract-confirm-directly-user/contract/process-family.md" \
+    $'\n- Confirm directly with the user if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-confirm-directly-user" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Confirm directly with the user if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-brief-question-user"
+  append_text \
+    "$tmpdir/process-family-contract-brief-question-user/contract/process-family.md" \
+    $'\n- Ask one brief clarifying question to the user if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-brief-question-user" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Ask one brief clarifying question to the user if blocked.`'
 
   echo "PASS: codex public fork self-tests"
 }

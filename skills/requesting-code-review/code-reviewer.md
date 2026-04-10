@@ -7,6 +7,8 @@ You are performing a read-only review of code changes for the requested review s
 - Review only the requested git range and cited requirements.
 - Report concrete findings with severity and file references.
 - If something is unclear, say so instead of guessing.
+- Do not ask the user directly or call `request_user_input`.
+- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
 
 Use this as the shared inner template for both review scopes:
 - `code_quality_reviewer`: receive this content embedded inside `../subagent-driven-development/code-quality-reviewer-prompt.md`; assess whether the task or implementation batch is ready to proceed.
