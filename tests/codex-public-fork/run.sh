@@ -617,6 +617,14 @@ EOF
     "$tmpdir/process-family-child-confirm-no-article-user" \
     'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm with user before continuing.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-consult-user"
+  append_text \
+    "$tmpdir/process-family-child-consult-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConsult the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-consult-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Consult the user before continuing.`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-contract-child-agent-direct-elicitation"
   append_text \
     "$tmpdir/process-family-contract-child-agent-direct-elicitation/contract/process-family.md" \
@@ -648,6 +656,14 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-contract-cross-subject-direct-elicitation" \
     'contract/prompt-packet.md contains forbidden root-owned elicitation text `- Child agents may ask the user directly if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-consult-user"
+  append_text \
+    "$tmpdir/process-family-contract-consult-user/contract/process-family.md" \
+    $'\n- Child agents may consult the user if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-consult-user" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Child agents may consult the user if blocked.`'
 
   echo "PASS: codex public fork self-tests"
 }

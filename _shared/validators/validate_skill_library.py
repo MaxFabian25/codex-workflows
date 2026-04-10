@@ -118,7 +118,8 @@ CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
     re.compile(rf"\bask {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
     re.compile(rf"\bget clarification from {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
     re.compile(rf"\bprompt {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
-    re.compile(rf"\b(?:check|confirm|clarify|consult) with {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(rf"\b(?:check|confirm|clarify)(?: with)? {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(rf"\bconsult(?: with)? {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
     re.compile(r"\brequest_user_input\b", re.IGNORECASE),
 ]
 
@@ -131,14 +132,14 @@ ROOT_OWNED_CONTRACT_ALLOWED_LINES = {
 ROOT_OWNED_CONTRACT_FORBIDDEN_LINE_PATTERNS = {
     "contract/process-family.md": [
         re.compile(
-            rf"\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
+            rf"\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify)(?:\s+with)?|consult(?:\s+with)?)\s+{CHILD_ELICITATION_PARTIES}\b",
             re.IGNORECASE,
         ),
         re.compile(r"\brequest_user_input\b", re.IGNORECASE),
     ],
     "contract/prompt-packet.md": [
         re.compile(
-            rf"\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
+            rf"\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify)(?:\s+with)?|consult(?:\s+with)?)\s+{CHILD_ELICITATION_PARTIES}\b",
             re.IGNORECASE,
         ),
         re.compile(r"\brequest_user_input\b", re.IGNORECASE),
