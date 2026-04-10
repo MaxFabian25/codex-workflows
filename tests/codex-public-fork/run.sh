@@ -625,6 +625,14 @@ EOF
     "$tmpdir/process-family-contract-child-agent-direct-elicitation" \
     'contract/process-family.md contains forbidden root-owned elicitation text `- Child agents may ask the user directly if blocked.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-unprefixed-direct-elicitation"
+  append_text \
+    "$tmpdir/process-family-contract-unprefixed-direct-elicitation/contract/process-family.md" \
+    $'\n- Ask the user directly if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-unprefixed-direct-elicitation" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Ask the user directly if blocked.`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-contract-child-packet-request-user-input"
   append_text \
     "$tmpdir/process-family-contract-child-packet-request-user-input/contract/prompt-packet.md" \
@@ -632,6 +640,14 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-contract-child-packet-request-user-input" \
     'contract/prompt-packet.md contains forbidden root-owned elicitation text `- Child packets may call `request_user_input` directly if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-cross-subject-direct-elicitation"
+  append_text \
+    "$tmpdir/process-family-contract-cross-subject-direct-elicitation/contract/prompt-packet.md" \
+    $'\n- Child agents may ask the user directly if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-cross-subject-direct-elicitation" \
+    'contract/prompt-packet.md contains forbidden root-owned elicitation text `- Child agents may ask the user directly if blocked.`'
 
   echo "PASS: codex public fork self-tests"
 }

@@ -123,6 +123,7 @@ CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
 ]
 
 ROOT_OWNED_CONTRACT_ALLOWED_LINES = {
+    "- When available, use `request_user_input` for discrete branch-point decisions.",
     "- Child agents never ask the user directly.",
     "- Child packets must not instruct the child to call `request_user_input`.",
 }
@@ -130,17 +131,17 @@ ROOT_OWNED_CONTRACT_ALLOWED_LINES = {
 ROOT_OWNED_CONTRACT_FORBIDDEN_LINE_PATTERNS = {
     "contract/process-family.md": [
         re.compile(
-            rf"\bchild agents\b.*\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
+            rf"\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
             re.IGNORECASE,
         ),
-        re.compile(r"\bchild agents\b.*\brequest_user_input\b", re.IGNORECASE),
+        re.compile(r"\brequest_user_input\b", re.IGNORECASE),
     ],
     "contract/prompt-packet.md": [
         re.compile(
-            rf"\bchild packets?\b.*\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
+            rf"\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
             re.IGNORECASE,
         ),
-        re.compile(r"\bchild packets?\b.*\brequest_user_input\b", re.IGNORECASE),
+        re.compile(r"\brequest_user_input\b", re.IGNORECASE),
     ],
 }
 
