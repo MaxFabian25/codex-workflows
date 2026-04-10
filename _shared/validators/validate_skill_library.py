@@ -97,6 +97,16 @@ PROMPT_PACKET_SKILL_TARGETS = [
     "skills/requesting-code-review/SKILL.md",
 ]
 
+CHILD_ELICITATION_TARGETS = [
+    *PROMPT_TARGETS,
+    "skills/requesting-code-review/code-reviewer.md",
+]
+
+CHILD_ELICITATION_REQUIRED_SUBSTRINGS = [
+    "Do not ask the user directly or call `request_user_input`.",
+    "If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
+]
+
 BOUNDARY_REQUIREMENTS = {
     "skills/dispatching-parallel-agents/SKILL.md": ["read-only", "write-owning", "task_name=", 'message="'],
     "skills/subagent-driven-development/SKILL.md": ["write-owning"],
@@ -268,6 +278,15 @@ def validate_family(root: Path, family: str) -> list[str]:
         for forbidden in PROMPT_FORBIDDEN_STRINGS:
             if forbidden in text:
                 issues.append(f"{rel_path} contains forbidden prompt text `{forbidden}`")
+
+    for rel_path in CHILD_ELICITATION_TARGETS:
+        target = root / rel_path
+        if not target.exists():
+            continue
+        text = read_text(target)
+        for required in CHILD_ELICITATION_REQUIRED_SUBSTRINGS:
+            if required not in text:
+                issues.append(f"{rel_path} must mention `{required}`")
 
     for rel_path, required_phrases in BOUNDARY_REQUIREMENTS.items():
         target = root / rel_path

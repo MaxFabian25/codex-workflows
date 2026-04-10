@@ -20,6 +20,10 @@ Codex subagent packet:
 
         Verify that the plan is complete, matches the spec, and is actionable for implementation.
 
+        Elicitation boundary:
+        - Do not ask the user directly or call `request_user_input`.
+        - If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
+
         Check:
         - Completeness: TODOs, placeholders, incomplete tasks, or missing steps
         - Spec alignment: plan covers the approved spec and does not drift into major scope creep

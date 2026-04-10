@@ -31,6 +31,10 @@ Codex subagent packet:
         - Dependencies or assumptions
         - Anything unclear in the task description
 
+        Elicitation boundary:
+        - Do not ask the user directly or call `request_user_input`.
+        - If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
+
         **Raise them now.** Return a blocking question
         before starting work if anything is unclear.
 

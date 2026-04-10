@@ -20,6 +20,10 @@ Codex subagent packet:
         <agent-instructions>
         Stay read-only. Do not edit files, stage changes, or commit.
 
+        Elicitation boundary:
+        - Do not ask the user directly or call `request_user_input`.
+        - If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
+
         The filled shared review template is included below. Treat it as the primary review contract.
 
         <filled-shared-review-template>

@@ -20,6 +20,8 @@ Codex subagent packet:
 
         - Stay read-only. Do not edit files, stage changes, or commit.
         - Verify the code directly. Do not trust the implementer report.
+        - Do not ask the user directly or call `request_user_input`.
+        - If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
 
         ## What Was Requested
 

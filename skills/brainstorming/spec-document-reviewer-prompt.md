@@ -20,6 +20,10 @@ Codex subagent packet:
 
         Verify that it is complete, internally consistent, and ready for implementation planning.
 
+        Elicitation boundary:
+        - Do not ask the user directly or call `request_user_input`.
+        - If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
+
         Check:
         - Completeness: TODOs, placeholders, "TBD" markers, or missing sections
         - Consistency: contradictions or conflicting requirements
