@@ -112,13 +112,13 @@ CHILD_ELICITATION_ALLOWED_LINES = {
     "- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
 }
 
-CHILD_ELICITATION_PARTIES = r"(?:user|operator|human)"
+CHILD_ELICITATION_PARTIES = r"(?:(?:the\s+)?(?:user|operator|human))"
 
 CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
-    re.compile(rf"\bask the {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
-    re.compile(rf"\bget clarification from the {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
-    re.compile(rf"\bprompt the {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
-    re.compile(rf"\b(?:check|confirm|clarify|consult) with the {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(rf"\bask {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
+    re.compile(rf"\bget clarification from {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
+    re.compile(rf"\bprompt {CHILD_ELICITATION_PARTIES}(?: directly| for clarification)?\b", re.IGNORECASE),
+    re.compile(rf"\b(?:check|confirm|clarify|consult) with {CHILD_ELICITATION_PARTIES}\b", re.IGNORECASE),
     re.compile(r"\brequest_user_input\b", re.IGNORECASE),
 ]
 

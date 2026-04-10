@@ -561,6 +561,14 @@ EOF
     "$tmpdir/process-family-child-clarification" \
     'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask the user for clarification before continuing.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-no-article-ask"
+  append_text \
+    "$tmpdir/process-family-child-no-article-ask/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk user directly before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-no-article-ask" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask user directly before continuing.`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-child-request-user-input"
   append_text \
     "$tmpdir/process-family-child-request-user-input/skills/requesting-code-review/code-reviewer.md" \
@@ -600,6 +608,14 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-child-confirm-user" \
     'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm with the user before continuing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-confirm-no-article-user"
+  append_text \
+    "$tmpdir/process-family-child-confirm-no-article-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nConfirm with user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-confirm-no-article-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm with user before continuing.`'
 
   echo "PASS: codex public fork self-tests"
 }
