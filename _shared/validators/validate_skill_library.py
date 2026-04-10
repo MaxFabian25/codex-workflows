@@ -122,6 +122,28 @@ CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
     re.compile(r"\brequest_user_input\b", re.IGNORECASE),
 ]
 
+ROOT_OWNED_CONTRACT_ALLOWED_LINES = {
+    "- Child agents never ask the user directly.",
+    "- Child packets must not instruct the child to call `request_user_input`.",
+}
+
+ROOT_OWNED_CONTRACT_FORBIDDEN_LINE_PATTERNS = {
+    "contract/process-family.md": [
+        re.compile(
+            rf"\bchild agents\b.*\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
+            re.IGNORECASE,
+        ),
+        re.compile(r"\bchild agents\b.*\brequest_user_input\b", re.IGNORECASE),
+    ],
+    "contract/prompt-packet.md": [
+        re.compile(
+            rf"\bchild packets?\b.*\b(?:ask|get clarification from|prompt|(?:check|confirm|clarify|consult) with)\s+{CHILD_ELICITATION_PARTIES}\b",
+            re.IGNORECASE,
+        ),
+        re.compile(r"\bchild packets?\b.*\brequest_user_input\b", re.IGNORECASE),
+    ],
+}
+
 BOUNDARY_REQUIREMENTS = {
     "skills/dispatching-parallel-agents/SKILL.md": ["read-only", "write-owning", "task_name=", 'message="'],
     "skills/subagent-driven-development/SKILL.md": ["write-owning"],
@@ -328,6 +350,20 @@ def validate_family(root: Path, family: str) -> list[str]:
         for phrase in required_phrases:
             if phrase not in text:
                 issues.append(f"{rel_path} must mention `{phrase}`")
+
+    for rel_path, patterns in ROOT_OWNED_CONTRACT_FORBIDDEN_LINE_PATTERNS.items():
+        target = root / rel_path
+        if not target.exists():
+            continue
+        text = read_text(target)
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped in ROOT_OWNED_CONTRACT_ALLOWED_LINES:
+                continue
+            for pattern in patterns:
+                if pattern.search(stripped):
+                    issues.append(f"{rel_path} contains forbidden root-owned elicitation text `{stripped}`")
+                    break
 
     for rel_path, guards in TARGETED_CONTENT_GUARDS.items():
         target = root / rel_path
