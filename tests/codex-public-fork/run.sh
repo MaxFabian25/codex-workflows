@@ -264,10 +264,11 @@ import sys
 src_root = Path(sys.argv[1])
 dst_root = Path(sys.argv[2])
 manifest_rel = Path("_shared/validators/process_family_targets.txt")
+validator_rel = Path("_shared/validators/validate_skill_library.py")
 manifest_path = src_root / manifest_rel
 targets = [line.strip() for line in manifest_path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
-for rel in [manifest_rel, *map(Path, targets)]:
+for rel in [manifest_rel, validator_rel, *map(Path, targets)]:
     src = src_root / rel
     dst = dst_root / rel
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -275,10 +276,22 @@ for rel in [manifest_rel, *map(Path, targets)]:
 PY
 }
 
+set_process_family_fixture_validator_probe() {
+  local fixture_root="$1"
+
+  cat >"$fixture_root/_shared/validators/validate_skill_library.py" <<'EOF'
+#!/usr/bin/env python3
+import sys
+print("fixture validator probe")
+sys.exit(0)
+EOF
+  chmod +x "$fixture_root/_shared/validators/validate_skill_library.py"
+}
+
 run_process_family_fixture_validator() {
   local fixture_root="$1"
 
-  python3 "$ROOT/_shared/validators/validate_skill_library.py" --root "$fixture_root" --family process
+  python3 "$fixture_root/_shared/validators/validate_skill_library.py" --root "$fixture_root" --family process
 }
 
 expect_process_family_fixture_passes() {
@@ -303,6 +316,22 @@ expect_process_family_fixture_fails_with() {
 
   if [[ "$output" != *"$expected_fragment"* ]]; then
     printf 'Expected process-family validator output to contain %q, but saw:\n%s\n' "$expected_fragment" "$output" >&2
+    return 1
+  fi
+}
+
+expect_process_family_fixture_uses_copied_validator() {
+  local fixture_root="$1"
+
+  prepare_process_family_fixture "$fixture_root"
+  set_process_family_fixture_validator_probe "$fixture_root"
+  if ! output="$(run_process_family_fixture_validator "$fixture_root" 2>&1)"; then
+    printf 'Expected copied process-family validator probe to run, but command failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  if [[ "$output" != *"fixture validator probe"* ]]; then
+    printf 'Expected copied process-family validator probe output, but saw:\n%s\n' "$output" >&2
     return 1
   fi
 }
@@ -514,6 +543,8 @@ EOF
   ln -s missing-target "$tmpdir/broken-symlink/.claude-plugin"
   expect_fixture_fails_with "$tmpdir/broken-symlink" "Removed path still exists: .claude-plugin"
 
+  expect_process_family_fixture_uses_copied_validator "$tmpdir/process-family-fixture-validator-artifact"
+
   expect_process_family_fixture_passes "$tmpdir/process-family-child-elicitation"
   append_text \
     "$tmpdir/process-family-child-elicitation/skills/subagent-driven-development/implementer-prompt.md" \
@@ -537,6 +568,14 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-child-request-user-input" \
     'skills/requesting-code-review/code-reviewer.md contains forbidden child elicitation text `Call `request_user_input` if you need clarification.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-get-clarification"
+  append_text \
+    "$tmpdir/process-family-child-get-clarification/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nGet clarification from the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-get-clarification" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Get clarification from the user before continuing.`'
 
   echo "PASS: codex public fork self-tests"
 }

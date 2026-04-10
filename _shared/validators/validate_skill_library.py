@@ -112,9 +112,10 @@ CHILD_ELICITATION_ALLOWED_LINES = {
     "- If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.",
 }
 
-CHILD_ELICITATION_FORBIDDEN_PATTERNS = [
-    re.compile(r"\bask the user\b", re.IGNORECASE),
-    re.compile(r"request_user_input", re.IGNORECASE),
+CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
+    re.compile(r"\bask the user(?: directly| for clarification)?\b", re.IGNORECASE),
+    re.compile(r"\bget clarification from the user\b", re.IGNORECASE),
+    re.compile(r"\brequest_user_input\b", re.IGNORECASE),
 ]
 
 BOUNDARY_REQUIREMENTS = {
@@ -301,7 +302,7 @@ def validate_family(root: Path, family: str) -> list[str]:
             stripped = line.strip()
             if stripped in CHILD_ELICITATION_ALLOWED_LINES:
                 continue
-            for pattern in CHILD_ELICITATION_FORBIDDEN_PATTERNS:
+            for pattern in CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS:
                 if pattern.search(stripped):
                     issues.append(f"{rel_path} contains forbidden child elicitation text `{stripped}`")
                     break
