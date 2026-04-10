@@ -107,6 +107,8 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "## Root-Owned Elicitation",
         "The root thread owns all user decisions.",
         "When available, use `request_user_input` for discrete branch-point decisions.",
+        "not write-owning execution or direct user elicitation.",
+        "Child agents never ask the user directly.",
         "Child agents return unresolved decisions to the parent using a `decision_needed` handoff.",
     ],
     "contract/prompt-packet.md": [
