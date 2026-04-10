@@ -633,6 +633,14 @@ EOF
     "$tmpdir/process-family-child-confirm-directly-user" \
     'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Confirm directly with the user before continuing.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-child-brief-question-user"
+  append_text \
+    "$tmpdir/process-family-child-brief-question-user/skills/subagent-driven-development/implementer-prompt.md" \
+    $'\nAsk one brief clarifying question to the user before continuing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-child-brief-question-user" \
+    'skills/subagent-driven-development/implementer-prompt.md contains forbidden child elicitation text `Ask one brief clarifying question to the user before continuing.`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-contract-child-agent-direct-elicitation"
   append_text \
     "$tmpdir/process-family-contract-child-agent-direct-elicitation/contract/process-family.md" \
@@ -680,6 +688,14 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-contract-confirm-directly-user" \
     'contract/process-family.md contains forbidden root-owned elicitation text `- Confirm directly with the user if blocked.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-brief-question-user"
+  append_text \
+    "$tmpdir/process-family-contract-brief-question-user/contract/process-family.md" \
+    $'\n- Ask one brief clarifying question to the user if blocked.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-brief-question-user" \
+    'contract/process-family.md contains forbidden root-owned elicitation text `- Ask one brief clarifying question to the user if blocked.`'
 
   echo "PASS: codex public fork self-tests"
 }
