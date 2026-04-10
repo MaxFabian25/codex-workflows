@@ -79,9 +79,37 @@ This skill stops after spec approval. Isolation is the next phase and is handled
 - Before asking detailed questions, assess scope: if the request describes multiple independent subsystems (e.g., "build a platform with chat, file storage, billing, and analytics"), flag this immediately. Don't spend questions refining details of a project that needs to be decomposed first.
 - If the project is too large for a single spec, help the user decompose into sub-projects: what are the independent pieces, how do they relate, what order should they be built? Then brainstorm the first sub-project through the normal design flow. Each sub-project gets its own spec → plan → implementation cycle.
 - For appropriately-scoped projects, ask questions one at a time to refine the idea
-- Prefer multiple choice questions when possible, but open-ended is fine too
+- Prefer crisp branch-point questions. Use structured elicitation for discrete choices when available, and use open-ended prose when the user needs to explain nuance.
 - Only one question per message - if a topic needs more exploration, break it into multiple questions
 - Focus on understanding: purpose, constraints, success criteria
+
+## Structured Elicitation In Codex
+
+The root thread owns user decisions and user-facing elicitation.
+
+When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.
+
+Use it for wedge-lock questions, approach selection, section approval, and the written-spec approval gate.
+
+Keep it to one decision per tool call unless two choices are inseparable and the user cannot answer one without the other.
+
+If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before asking the next wedge-lock question.
+
+Use normal prose for explanatory discussion, editorial feedback, and rich free text that does not fit a discrete branch.
+
+## Fallback Ladder
+
+- Use `request_user_input` first for discrete branch points when the runtime supports it.
+- If structured elicitation is unavailable or the answer needs free-form detail, ask one prose question in the chat.
+- If a child lane discovers ambiguity, return the decision to the root thread instead of asking the user from the child.
+- Keep the written-spec approval gate explicit even when the final approval arrives in prose.
+
+## Overuse Guardrails
+
+- Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.
+- Do not use structured elicitation for explanatory discussion, editorial feedback, or rich free text.
+- Avoid bundling multiple unrelated decisions into one structured prompt.
+- After a structured answer, restate the selected branch in prose and move the design forward.
 
 **Exploring approaches:**
 

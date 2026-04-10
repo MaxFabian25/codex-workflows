@@ -174,6 +174,22 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.",
         "Keep parent-owned arbitration and user-facing clarification in the root thread.",
     ],
+    "skills/using-superpowers/references/codex-tools.md": [
+        "`request_user_input(...)`",
+        "`send_message(...)`",
+        "`followup_task(...)`",
+        "`list_agents(...)`",
+        "default_mode_request_user_input",
+        "multi_agent_v2",
+        "The root thread owns user elicitation.",
+    ],
+    "skills/brainstorming/SKILL.md": [
+        "## Structured Elicitation In Codex",
+        "When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.",
+        "Use it for wedge-lock questions, approach selection, section approval, and the written-spec approval gate.",
+        "If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before asking the next wedge-lock question.",
+        "Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.",
+    ],
 }
 
 NO_BACKWARD_COMPAT_TARGETS = [
