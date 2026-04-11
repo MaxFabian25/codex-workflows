@@ -8,12 +8,20 @@ CMUX_BIN="${CMUX_BIN:-$(command -v cmux || true)}"
 test -n "$CMUX_BIN" || fail "cmux binary not found on PATH"
 
 tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
 
 logs="$tmp/logs"
 state="$tmp/state"
 stub="$tmp/codex-stub"
 mkdir -p "$logs" "$state"
+owned_workspaces=()
+
+cleanup() {
+  for workspace_id in "${owned_workspaces[@]}"; do
+    "$CMUX_BIN" close-workspace --workspace "$workspace_id" >/dev/null 2>&1 || true
+  done
+  rm -rf "$tmp"
+}
+trap cleanup EXIT
 
 cat >"$stub" <<'EOF'
 #!/usr/bin/env bash
@@ -52,6 +60,12 @@ import json, sys
 print(json.loads(sys.argv[1])["manifest_path"])
 PY
 )"
+workspace_id="$(python3 - <<'PY' "$payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$workspace_id")
 
 assert_file "$manifest_path"
 python3 - <<'PY' "$manifest_path"
@@ -77,6 +91,51 @@ for _ in $(seq 1 20); do
 done
 test "$log_count" -ge 2 || fail "expected main + review codex launches, saw $log_count"
 
+default_logs="$tmp/default-logs"
+default_state="$tmp/default-state"
+mkdir -p "$default_logs" "$default_state"
+
+default_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$default_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$default_state" \
+  python3 "$TEAM" team --json --cwd "$ROOT" --no-hud "Audit the repo with default workers"
+)"
+
+default_manifest_path="$(python3 - <<'PY' "$default_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+default_workspace_id="$(python3 - <<'PY' "$default_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$default_workspace_id")
+
+python3 - <<'PY' "$default_manifest_path"
+import json, sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert len(manifest["workers"]) == 2
+assert [worker["role"] for worker in manifest["workers"]] == ["review", "general"]
+PY
+
+default_log_count=0
+for _ in $(seq 1 20); do
+  default_log_count="$(find "$default_logs" -type f | wc -l | tr -d ' ')"
+  if [[ "$default_log_count" -ge 3 ]]; then
+    break
+  fi
+  sleep 0.25
+done
+test "$default_log_count" -ge 3 || fail "expected main + review + general codex launches, saw $default_log_count"
+
+reject_state="$tmp/reject-state"
+mkdir -p "$reject_state"
 implement_output="$tmp/implement-output.log"
 assert_command_fails_with_output \
   "$implement_output" \
@@ -84,6 +143,7 @@ assert_command_fails_with_output \
     CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
     CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
     CMUX_SUPERPOWERS_STUB_LOG_DIR="$logs" \
-    CMUX_SUPERPOWERS_STATE_ROOT="$state" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$reject_state" \
     python3 "$TEAM" team --json --cwd "$ROOT" --worker implement --no-hud "Implement the approved change"
 assert_contains "$implement_output" "write-capable workers are not implemented yet"
+test -z "$(find "$reject_state" -mindepth 1 -print -quit)" || fail "expected rejected write-capable launch to leave no state behind"

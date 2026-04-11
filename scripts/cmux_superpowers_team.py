@@ -603,12 +603,12 @@ def codex_command(
 
 
 def cmd_team(args: argparse.Namespace) -> int:
-    session_id = f"session-{uuid.uuid4().hex[:8]}"
-    session_root = session_dir(session_id)
-    session_root.mkdir(parents=True, exist_ok=True)
     workers = args.worker or ["review", "general"]
     if any(bool(ROLE_SPECS[role]["write"]) for role in workers):
         raise SystemExit("team not implemented yet: write-capable workers are not implemented yet")
+    session_id = f"session-{uuid.uuid4().hex[:8]}"
+    session_root = session_dir(session_id)
+    session_root.mkdir(parents=True, exist_ok=True)
     task = args.task
     cwd = str(Path(args.cwd).expanduser().resolve())
 
