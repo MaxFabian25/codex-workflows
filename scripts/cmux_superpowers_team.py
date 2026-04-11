@@ -760,15 +760,24 @@ def cmd_team(args: argparse.Namespace) -> int:
     except BaseException as exc:
         if isinstance(exc, KeyboardInterrupt):
             raise
+        launch_detail = launch_failure_detail(exc)
+        close_error = None
         if workspace_id:
-            subprocess.run(
+            close_proc = subprocess.run(
                 [resolve_cmux_bin(), "close-workspace", "--workspace", workspace_id],
                 check=False,
                 text=True,
                 capture_output=True,
             )
+            if close_proc.returncode != 0:
+                close_detail = probe_failure_detail(close_proc) or f"exit {close_proc.returncode}"
+                close_error = f"close-workspace failed: {close_detail}"
+        if close_error:
+            raise SystemExit(
+                f"team launch failed: {launch_detail}; {close_error}; session state preserved at {session_root}"
+            ) from None
         shutil.rmtree(session_root, ignore_errors=True)
-        raise SystemExit(f"team launch failed: {launch_failure_detail(exc)}") from None
+        raise SystemExit(f"team launch failed: {launch_detail}") from None
 
 
 def main() -> int:

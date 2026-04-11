@@ -226,6 +226,10 @@ JSON
     fi
     ;;
   close-workspace)
+    if [[ "${CMUX_SUPERPOWERS_FAIL_MODE:-exit}" == "close" ]]; then
+      echo "forced close-workspace failure" >&2
+      exit 11
+    fi
     exit 0
     ;;
   *)
@@ -249,6 +253,21 @@ assert_command_fails_with_output \
     python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Fail during split"
 assert_contains "$failed_launch_output" "team launch failed"
 test -z "$(find "$failed_launch_state" -mindepth 1 -print -quit)" || fail "expected failed launch to leave no state behind"
+
+close_fail_state="$tmp/close-fail-state"
+mkdir -p "$close_fail_state"
+close_fail_output="$tmp/close-fail-output.log"
+assert_command_fails_with_output \
+  "$close_fail_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$failing_cmux" \
+    CMUX_SUPERPOWERS_FAIL_MODE="close" \
+    CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+    CMUX_SUPERPOWERS_STUB_LOG_DIR="$tmp/close-fail-logs" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$close_fail_state" \
+    python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Fail during rollback close"
+assert_contains "$close_fail_output" "close-workspace failed"
+test -n "$(find "$close_fail_state" -mindepth 1 -print -quit)" || fail "expected close-workspace failure to preserve state"
 
 malformed_state="$tmp/malformed-state"
 mkdir -p "$malformed_state"
