@@ -8,6 +8,9 @@ import shlex
 import shutil
 import subprocess
 import sys
+import uuid
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import tomllib
@@ -15,12 +18,34 @@ import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CODEX_HOME = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+STATE_ROOT = Path(
+    os.environ.get("CMUX_SUPERPOWERS_STATE_ROOT")
+    or (Path.home() / ".cmuxterm" / "superpowers-team")
+)
 CMUX_PROBE_TIMEOUT_SECONDS = 0.5
 CODEX_PROBE_TIMEOUT_SECONDS = 2.0
 NOOP_EXECUTABLES = {"echo", "printf", "true", "false"}
 SHELL_COMMAND_BOUNDARIES = {"&&", "||", ";", "then", "do", "elif"}
 PYTHON_OPTIONS_WITH_VALUES = {"-W", "-X"}
 PYTHON_REJECTED_SCRIPT_MODES = {"-c", "-m", "-"}
+ROLE_SPECS = {
+    "review": {"write": False, "profile": "parallel_readonly"},
+    "general": {"write": False, "profile": "workflow_fidelity"},
+    "implement": {"write": True, "profile": "workflow_fidelity"},
+}
+
+
+@dataclass
+class WorkerPlan:
+    worker_id: str
+    role: str
+    write_capable: bool
+    profile: str | None
+    cwd: str
+    packet_path: str
+    pane_ref: str | None = None
+    surface_ref: str | None = None
+    worktree_path: str | None = None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -69,6 +94,64 @@ def resolve_binary(env_var: str, fallback: str) -> tuple[str | None, str | None]
     if resolved is None:
         return None, f"{fallback} not found on PATH"
     return resolved, None
+
+
+def session_dir(session_id: str) -> Path:
+    return STATE_ROOT / session_id
+
+
+def build_packet(role: str, task: str, cwd: str, write_capable: bool) -> str:
+    mode = "write-capable" if write_capable else "read-only"
+    return (
+        f"# Cmux Superpowers Worker Packet\n\n"
+        f"- Role: {role}\n"
+        f"- Mode: {mode}\n"
+        f"- Working directory: {cwd}\n\n"
+        f"## Task\n\n{task}\n\n"
+        f"## Contract\n\n"
+        f"- You are running inside a cmux-superpowers team session.\n"
+        f"- Use Superpowers skills normally.\n"
+        f"- Stay within your declared role and ownership.\n"
+        f"- Report status clearly in the terminal session.\n"
+    )
+
+
+def run(argv: list[str], *, capture: bool = True) -> subprocess.CompletedProcess[str]:
+    kwargs = {
+        "check": True,
+        "text": True,
+    }
+    if capture:
+        kwargs["capture_output"] = True
+    return subprocess.run(argv, **kwargs)
+
+
+def resolve_cmux_bin() -> str:
+    path, error = resolve_binary("CMUX_SUPERPOWERS_CMUX_BIN", "cmux")
+    if error:
+        raise SystemExit(error)
+    if path is None:
+        raise SystemExit("cmux binary not found")
+    return path
+
+
+def resolve_codex_bin() -> str:
+    path, error = resolve_binary("CMUX_SUPERPOWERS_CODEX_BIN", "codex")
+    if error:
+        raise SystemExit(error)
+    if path is None:
+        raise SystemExit("codex binary not found")
+    return path
+
+
+def write_packet(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def load_hooks_json(codex_home: Path) -> dict:
@@ -456,13 +539,198 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 0 if payload["ok"] else 1
 
 
+def cmux_json(*args: str) -> dict:
+    proc = run([resolve_cmux_bin(), *args])
+    return json.loads(proc.stdout)
+
+
+def cmux_text(*args: str) -> str:
+    return run([resolve_cmux_bin(), *args]).stdout.strip()
+
+
+def shell_join(parts: list[str]) -> str:
+    return " ".join(shlex.quote(part) for part in parts)
+
+
+def first_ref(text: str, prefix: str) -> str:
+    for token in text.split():
+        if token.startswith(prefix):
+            return token
+    raise SystemExit(f"team not implemented yet: missing {prefix} ref in cmux output: {text}")
+
+
+def cmux_selected_pane(workspace_id: str) -> str:
+    return first_ref(cmux_text("list-panes", "--workspace", workspace_id), "pane:")
+
+
+def cmux_selected_surface(workspace_id: str, pane_ref: str) -> str:
+    return first_ref(
+        cmux_text("list-pane-surfaces", "--workspace", workspace_id, "--pane", pane_ref),
+        "surface:",
+    )
+
+
+def caller_context(workspace_id: str, surface_ref: str) -> dict[str, object]:
+    payload = cmux_json("identify", "--workspace", workspace_id, "--surface", surface_ref)
+    caller = payload.get("caller")
+    if not isinstance(caller, dict):
+        raise SystemExit("team not implemented yet: cmux identify missing caller context")
+    if not isinstance(caller.get("surface_ref"), str) or not isinstance(
+        caller.get("pane_ref"), str
+    ):
+        raise SystemExit("team not implemented yet: cmux identify missing pane or surface ref")
+    return caller
+
+
+def codex_command(
+    cwd: str, packet_path: Path, role: str, profile: str | None, session_id: str
+) -> str:
+    exports = [
+        f"CMUX_SUPERPOWERS_PACKET_PATH={shlex.quote(str(packet_path))}",
+        f"CMUX_SUPERPOWERS_ROLE={shlex.quote(role)}",
+        f"CMUX_SUPERPOWERS_SESSION_ID={shlex.quote(session_id)}",
+    ]
+    stub_log_dir = os.environ.get("CMUX_SUPERPOWERS_STUB_LOG_DIR")
+    if stub_log_dir:
+        exports.append(f"CMUX_SUPERPOWERS_STUB_LOG_DIR={shlex.quote(stub_log_dir)}")
+    profile_flags = ["-p", profile] if profile else []
+    prompt_expr = f'PROMPT=$(cat {shlex.quote(str(packet_path))})'
+    cmd = [resolve_codex_bin(), "-C", cwd, *profile_flags]
+    return (
+        f"cd -- {shlex.quote(cwd)} && {prompt_expr} && "
+        f"{' '.join(exports)} {shell_join(cmd)} \"$PROMPT\""
+    )
+
+
+def cmd_team(args: argparse.Namespace) -> int:
+    session_id = f"session-{uuid.uuid4().hex[:8]}"
+    session_root = session_dir(session_id)
+    session_root.mkdir(parents=True, exist_ok=True)
+    workers = args.worker or ["review", "general"]
+    task = args.task
+    cwd = str(Path(args.cwd).expanduser().resolve())
+
+    main_packet = session_root / "packets" / "main.md"
+    write_packet(main_packet, build_packet("main", task, cwd, write_capable=False))
+    main_command = codex_command(
+        cwd, main_packet, "main", args.profile or "workflow_fidelity", session_id
+    )
+
+    workspace_name = args.name or f"superpowers-{session_id}"
+    workspace_id = first_ref(
+        cmux_text(
+            "new-workspace",
+            "--name",
+            workspace_name,
+            "--cwd",
+            cwd,
+            "--command",
+            main_command,
+        ),
+        "workspace:",
+    )
+    main_pane = cmux_selected_pane(workspace_id)
+    main_surface = cmux_selected_surface(workspace_id, main_pane)
+    main_context = caller_context(workspace_id, main_surface)
+    main_surface = str(main_context["surface_ref"])
+    main_pane = str(main_context["pane_ref"])
+
+    planned_workers: list[WorkerPlan] = []
+    anchor_surface = main_surface
+    for index, role in enumerate(workers, start=1):
+        worker_id = f"worker-{index}"
+        role_spec = ROLE_SPECS[role]
+        packet_path = session_root / "packets" / f"{worker_id}.md"
+        write_packet(packet_path, build_packet(role, task, cwd, role_spec["write"]))
+        anchor_surface = first_ref(
+            cmux_text(
+                "new-split",
+                "right" if index == 1 else "down",
+                "--workspace",
+                workspace_id,
+                "--surface",
+                anchor_surface,
+            ),
+            "surface:",
+        )
+        focused = caller_context(workspace_id, anchor_surface)
+        run(
+            [
+                resolve_cmux_bin(),
+                "rename-tab",
+                "--workspace",
+                workspace_id,
+                "--surface",
+                anchor_surface,
+                worker_id,
+            ]
+        )
+        run(
+            [
+                resolve_cmux_bin(),
+                "send",
+                "--workspace",
+                workspace_id,
+                "--surface",
+                anchor_surface,
+                codex_command(cwd, packet_path, role, role_spec["profile"], session_id) + "\n",
+            ]
+        )
+        planned_workers.append(
+            WorkerPlan(
+                worker_id=worker_id,
+                role=role,
+                write_capable=bool(role_spec["write"]),
+                profile=role_spec["profile"],
+                cwd=cwd,
+                packet_path=str(packet_path),
+                pane_ref=str(focused["pane_ref"]),
+                surface_ref=str(focused["surface_ref"]),
+            )
+        )
+
+    manifest = {
+        "session_id": session_id,
+        "created_at": datetime.now(UTC).isoformat(),
+        "workspace_id": workspace_id,
+        "session_root": str(session_root),
+        "main": {
+            "pane_ref": main_pane,
+            "surface_ref": main_surface,
+            "packet_path": str(main_packet),
+            "cwd": cwd,
+        },
+        "workers": [asdict(worker) for worker in planned_workers],
+        "hud": None,
+        "cleanup": {"status": "active"},
+    }
+    manifest_path = session_root / "manifest.json"
+    write_json(manifest_path, manifest)
+    for worker in planned_workers:
+        write_json(session_root / "workers" / f"{worker.worker_id}.json", asdict(worker))
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "session_id": session_id,
+                    "workspace_id": workspace_id,
+                    "manifest_path": str(manifest_path),
+                }
+            )
+        )
+    else:
+        print(f"Created {session_id} in {workspace_id}")
+    return 0
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     if args.command == "doctor":
         return cmd_doctor(args)
     if args.command == "team":
-        raise SystemExit("team not implemented yet")
+        return cmd_team(args)
     if args.command == "cleanup":
         raise SystemExit("cleanup not implemented yet")
     parser.error(f"unknown command {args.command}")
