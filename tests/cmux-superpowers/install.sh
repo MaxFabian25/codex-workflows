@@ -37,10 +37,51 @@ run_wrapper_parser_rejection_smoke() {
 run_wrapper_parser_smoke() {
   local wrapper="$1"
   local output_dir="$2"
+  local wrapper_dir
+  wrapper_dir="$(cd "$(dirname "$wrapper")" && pwd -P)"
+  local codex_home="$output_dir/codex-home"
 
-  "$wrapper" doctor --json >/dev/null
-  "$wrapper" team --json --cwd . --profile demo --worker review --worker implement --worker general --name scaffold --no-hud "task text" >/dev/null
-  "$wrapper" cleanup --session demo --close-workers --close-hud --remove-worktrees --purge-state >/dev/null
+  write_default_cmux "$wrapper_dir"
+  write_default_codex "$wrapper_dir"
+  write_healthy_hooks_fixture "$codex_home"
+  write_enabled_config "$codex_home"
+
+  env PATH="$wrapper_dir:$PATH" CODEX_HOME="$codex_home" "$wrapper" doctor --json >/dev/null
+
+  local team_output="$output_dir/team-not-implemented.log"
+  assert_command_fails_with_output \
+    "$team_output" \
+    env \
+      PATH="$wrapper_dir:$PATH" \
+      CODEX_HOME="$codex_home" \
+      "$wrapper" \
+      team \
+      --json \
+      --cwd . \
+      --profile demo \
+      --worker review \
+      --worker implement \
+      --worker general \
+      --name scaffold \
+      --no-hud \
+      "task text"
+  assert_contains "$team_output" "team not implemented yet"
+
+  local cleanup_output="$output_dir/cleanup-not-implemented.log"
+  assert_command_fails_with_output \
+    "$cleanup_output" \
+    env \
+      PATH="$wrapper_dir:$PATH" \
+      CODEX_HOME="$codex_home" \
+      "$wrapper" \
+      cleanup \
+      --session demo \
+      --close-workers \
+      --close-hud \
+      --remove-worktrees \
+      --purge-state
+  assert_contains "$cleanup_output" "cleanup not implemented yet"
+
   run_wrapper_parser_rejection_smoke "$wrapper" "$output_dir"
 }
 
