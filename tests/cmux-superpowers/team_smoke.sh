@@ -30,7 +30,7 @@ cat >"$stub" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p "${CMUX_SUPERPOWERS_STUB_LOG_DIR:?}"
-python3 - <<'PY'
+python3 - "$@" <<'PY'
 import json
 import os
 import time
@@ -98,6 +98,19 @@ for _ in $(seq 1 20); do
   sleep 0.25
 done
 test "$log_count" -ge 2 || fail "expected main + review codex launches, saw $log_count"
+python3 - <<'PY' "$logs"
+import json, sys
+from pathlib import Path
+
+entries = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(sys.argv[1]).glob("*.json"))]
+assert sorted(entry["role"] for entry in entries) == ["main", "review"], entries
+for entry in entries:
+    assert entry["argv"], entry
+    assert entry["packet_path"], entry
+    packet = Path(entry["packet_path"])
+    assert packet.exists(), entry
+    assert entry["argv"][-1] == packet.read_text(encoding="utf-8").rstrip("\n"), entry
+PY
 
 default_logs="$tmp/default-logs"
 default_state="$tmp/default-state"
@@ -148,6 +161,19 @@ for _ in $(seq 1 20); do
   sleep 0.25
 done
 test "$default_log_count" -ge 3 || fail "expected main + review + general codex launches, saw $default_log_count"
+python3 - <<'PY' "$default_logs"
+import json, sys
+from pathlib import Path
+
+entries = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(sys.argv[1]).glob("*.json"))]
+assert sorted(entry["role"] for entry in entries) == ["general", "main", "review"], entries
+for entry in entries:
+    assert entry["argv"], entry
+    assert entry["packet_path"], entry
+    packet = Path(entry["packet_path"])
+    assert packet.exists(), entry
+    assert entry["argv"][-1] == packet.read_text(encoding="utf-8").rstrip("\n"), entry
+PY
 
 reject_state="$tmp/reject-state"
 mkdir -p "$reject_state"
@@ -162,3 +188,53 @@ assert_command_fails_with_output \
     python3 "$TEAM" team --json --cwd "$ROOT" --worker implement --no-hud "Implement the approved change"
 assert_contains "$implement_output" "write-capable workers are not implemented yet"
 test -z "$(find "$reject_state" -mindepth 1 -print -quit)" || fail "expected rejected write-capable launch to leave no state behind"
+
+failing_cmux="$tmp/failing-cmux"
+cat >"$failing_cmux" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+cmd="${1:?}"
+shift
+case "$cmd" in
+  new-workspace)
+    echo "workspace:fail"
+    ;;
+  list-panes)
+    echo "* pane:fail  [1 surface]  [focused]"
+    ;;
+  list-pane-surfaces)
+    echo "* surface:fail  smoke  [selected]"
+    ;;
+  identify)
+    cat <<'JSON'
+{"caller":{"workspace_ref":"workspace:fail","pane_ref":"pane:fail","surface_ref":"surface:fail","tab_ref":"tab:fail","window_ref":"window:fail","surface_type":"terminal","is_browser_surface":false},"focused":{"workspace_ref":"workspace:fail","pane_ref":"pane:fail","surface_ref":"surface:fail","tab_ref":"tab:fail","window_ref":"window:fail","surface_type":"terminal","is_browser_surface":false}}
+JSON
+    ;;
+  new-split)
+    echo "forced split failure" >&2
+    exit 9
+    ;;
+  close-workspace)
+    exit 0
+    ;;
+  *)
+    echo "unexpected command: $cmd" >&2
+    exit 7
+    ;;
+esac
+EOF
+chmod +x "$failing_cmux"
+
+failed_launch_state="$tmp/failed-launch-state"
+mkdir -p "$failed_launch_state"
+failed_launch_output="$tmp/failed-launch-output.log"
+assert_command_fails_with_output \
+  "$failed_launch_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$failing_cmux" \
+    CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+    CMUX_SUPERPOWERS_STUB_LOG_DIR="$tmp/failed-launch-logs" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$failed_launch_state" \
+    python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Fail during split"
+assert_contains "$failed_launch_output" "team launch failed"
+test -z "$(find "$failed_launch_state" -mindepth 1 -print -quit)" || fail "expected failed launch to leave no state behind"

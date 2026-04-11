@@ -102,6 +102,18 @@ def session_dir(session_id: str) -> Path:
 
 def build_packet(role: str, task: str, cwd: str, write_capable: bool) -> str:
     mode = "write-capable" if write_capable else "read-only"
+    if role == "main":
+        contract_lines = [
+            "- Task scope: coordinate the task above from the main pane.",
+            "- Pane lifecycle is owned by the external cmux-superpowers conductor.",
+            "- Use Superpowers skills normally.",
+        ]
+    else:
+        contract_lines = [
+            f"- Task scope: stay within the {role} role for the task above.",
+            f"- Reporting contract: report status and blockers back through the main pane.",
+            "- Direct user input: do not ask the user directly; route clarification through the main pane.",
+        ]
     return (
         f"# Cmux Superpowers Worker Packet\n\n"
         f"- Role: {role}\n"
@@ -110,9 +122,8 @@ def build_packet(role: str, task: str, cwd: str, write_capable: bool) -> str:
         f"## Task\n\n{task}\n\n"
         f"## Contract\n\n"
         f"- You are running inside a cmux-superpowers team session.\n"
-        f"- Use Superpowers skills normally.\n"
-        f"- Stay within your declared role and ownership.\n"
-        f"- Report status clearly in the terminal session.\n"
+        + "\n".join(contract_lines)
+        + "\n"
     )
 
 
@@ -611,119 +622,135 @@ def cmd_team(args: argparse.Namespace) -> int:
     session_root.mkdir(parents=True, exist_ok=True)
     task = args.task
     cwd = str(Path(args.cwd).expanduser().resolve())
+    workspace_id: str | None = None
 
-    main_packet = session_root / "packets" / "main.md"
-    write_packet(main_packet, build_packet("main", task, cwd, write_capable=False))
-    main_command = codex_command(
-        cwd, main_packet, "main", args.profile or "workflow_fidelity", session_id
-    )
+    try:
+        main_packet = session_root / "packets" / "main.md"
+        write_packet(main_packet, build_packet("main", task, cwd, write_capable=False))
+        main_command = codex_command(
+            cwd, main_packet, "main", args.profile or "workflow_fidelity", session_id
+        )
 
-    workspace_name = args.name or f"superpowers-{session_id}"
-    workspace_id = first_ref(
-        cmux_text(
-            "new-workspace",
-            "--name",
-            workspace_name,
-            "--cwd",
-            cwd,
-            "--command",
-            main_command,
-        ),
-        "workspace:",
-    )
-    main_pane = cmux_selected_pane(workspace_id)
-    main_surface = cmux_selected_surface(workspace_id, main_pane)
-    main_context = caller_context(workspace_id, main_surface)
-    main_surface = str(main_context["surface_ref"])
-    main_pane = str(main_context["pane_ref"])
-
-    planned_workers: list[WorkerPlan] = []
-    anchor_surface = main_surface
-    for index, role in enumerate(workers, start=1):
-        worker_id = f"worker-{index}"
-        role_spec = ROLE_SPECS[role]
-        packet_path = session_root / "packets" / f"{worker_id}.md"
-        write_packet(packet_path, build_packet(role, task, cwd, role_spec["write"]))
-        anchor_surface = first_ref(
+        workspace_name = args.name or f"superpowers-{session_id}"
+        workspace_id = first_ref(
             cmux_text(
-                "new-split",
-                "right" if index == 1 else "down",
-                "--workspace",
-                workspace_id,
-                "--surface",
-                anchor_surface,
+                "new-workspace",
+                "--name",
+                workspace_name,
+                "--cwd",
+                cwd,
+                "--command",
+                main_command,
             ),
-            "surface:",
+            "workspace:",
         )
-        focused = caller_context(workspace_id, anchor_surface)
-        run(
-            [
-                resolve_cmux_bin(),
-                "rename-tab",
-                "--workspace",
-                workspace_id,
-                "--surface",
-                anchor_surface,
-                worker_id,
-            ]
-        )
-        run(
-            [
-                resolve_cmux_bin(),
-                "send",
-                "--workspace",
-                workspace_id,
-                "--surface",
-                anchor_surface,
-                codex_command(cwd, packet_path, role, role_spec["profile"], session_id) + "\n",
-            ]
-        )
-        planned_workers.append(
-            WorkerPlan(
-                worker_id=worker_id,
-                role=role,
-                write_capable=bool(role_spec["write"]),
-                profile=role_spec["profile"],
-                cwd=cwd,
-                packet_path=str(packet_path),
-                pane_ref=str(focused["pane_ref"]),
-                surface_ref=str(focused["surface_ref"]),
-            )
-        )
+        main_pane = cmux_selected_pane(workspace_id)
+        main_surface = cmux_selected_surface(workspace_id, main_pane)
+        main_context = caller_context(workspace_id, main_surface)
+        main_surface = str(main_context["surface_ref"])
+        main_pane = str(main_context["pane_ref"])
 
-    manifest = {
-        "session_id": session_id,
-        "created_at": datetime.now(UTC).isoformat(),
-        "workspace_id": workspace_id,
-        "session_root": str(session_root),
-        "main": {
-            "pane_ref": main_pane,
-            "surface_ref": main_surface,
-            "packet_path": str(main_packet),
-            "cwd": cwd,
-        },
-        "workers": [asdict(worker) for worker in planned_workers],
-        "hud": None,
-        "cleanup": {"status": "active"},
-    }
-    manifest_path = session_root / "manifest.json"
-    write_json(manifest_path, manifest)
-    for worker in planned_workers:
-        write_json(session_root / "workers" / f"{worker.worker_id}.json", asdict(worker))
-
-    if args.json:
-        print(
-            json.dumps(
-                {
-                    "session_id": session_id,
-                    "workspace_id": workspace_id,
-                    "manifest_path": str(manifest_path),
-                }
+        planned_workers: list[WorkerPlan] = []
+        anchor_surface = main_surface
+        for index, role in enumerate(workers, start=1):
+            worker_id = f"worker-{index}"
+            role_spec = ROLE_SPECS[role]
+            packet_path = session_root / "packets" / f"{worker_id}.md"
+            write_packet(packet_path, build_packet(role, task, cwd, role_spec["write"]))
+            anchor_surface = first_ref(
+                cmux_text(
+                    "new-split",
+                    "right" if index == 1 else "down",
+                    "--workspace",
+                    workspace_id,
+                    "--surface",
+                    anchor_surface,
+                ),
+                "surface:",
             )
-        )
-    else:
-        print(f"Created {session_id} in {workspace_id}")
-    return 0
+            focused = caller_context(workspace_id, anchor_surface)
+            run(
+                [
+                    resolve_cmux_bin(),
+                    "rename-tab",
+                    "--workspace",
+                    workspace_id,
+                    "--surface",
+                    anchor_surface,
+                    worker_id,
+                ]
+            )
+            run(
+                [
+                    resolve_cmux_bin(),
+                    "send",
+                    "--workspace",
+                    workspace_id,
+                    "--surface",
+                    anchor_surface,
+                    codex_command(cwd, packet_path, role, role_spec["profile"], session_id)
+                    + "\n",
+                ]
+            )
+            planned_workers.append(
+                WorkerPlan(
+                    worker_id=worker_id,
+                    role=role,
+                    write_capable=bool(role_spec["write"]),
+                    profile=role_spec["profile"],
+                    cwd=cwd,
+                    packet_path=str(packet_path),
+                    pane_ref=str(focused["pane_ref"]),
+                    surface_ref=str(focused["surface_ref"]),
+                )
+            )
+
+        manifest = {
+            "session_id": session_id,
+            "created_at": datetime.now(UTC).isoformat(),
+            "workspace_id": workspace_id,
+            "session_root": str(session_root),
+            "main": {
+                "pane_ref": main_pane,
+                "surface_ref": main_surface,
+                "packet_path": str(main_packet),
+                "cwd": cwd,
+            },
+            "workers": [asdict(worker) for worker in planned_workers],
+            "hud": None,
+            "cleanup": {"status": "active"},
+        }
+        manifest_path = session_root / "manifest.json"
+        write_json(manifest_path, manifest)
+        for worker in planned_workers:
+            write_json(session_root / "workers" / f"{worker.worker_id}.json", asdict(worker))
+
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "session_id": session_id,
+                        "workspace_id": workspace_id,
+                        "manifest_path": str(manifest_path),
+                    }
+                )
+            )
+        else:
+            print(f"Created {session_id} in {workspace_id}")
+        return 0
+    except subprocess.CalledProcessError as exc:
+        if workspace_id:
+            subprocess.run(
+                [resolve_cmux_bin(), "close-workspace", "--workspace", workspace_id],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+        shutil.rmtree(session_root, ignore_errors=True)
+        detail = (exc.stderr or "").strip() or (exc.stdout or "").strip()
+        if detail:
+            raise SystemExit(f"team launch failed: {detail}") from None
+        raise SystemExit(f"team launch failed: exit {exc.returncode}") from None
 
 
 def main() -> int:
