@@ -67,5 +67,23 @@ assert packet.exists(), packet
 assert manifest["workers"][0]["role"] == "review"
 PY
 
-log_count="$(find "$logs" -type f | wc -l | tr -d ' ')"
+log_count=0
+for _ in $(seq 1 20); do
+  log_count="$(find "$logs" -type f | wc -l | tr -d ' ')"
+  if [[ "$log_count" -ge 2 ]]; then
+    break
+  fi
+  sleep 0.25
+done
 test "$log_count" -ge 2 || fail "expected main + review codex launches, saw $log_count"
+
+implement_output="$tmp/implement-output.log"
+assert_command_fails_with_output \
+  "$implement_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+    CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+    CMUX_SUPERPOWERS_STUB_LOG_DIR="$logs" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$state" \
+    python3 "$TEAM" team --json --cwd "$ROOT" --worker implement --no-hud "Implement the approved change"
+assert_contains "$implement_output" "write-capable workers are not implemented yet"
