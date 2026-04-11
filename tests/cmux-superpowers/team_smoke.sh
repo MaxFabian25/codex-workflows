@@ -16,9 +16,12 @@ mkdir -p "$logs" "$state"
 owned_workspaces=()
 
 cleanup() {
-  for workspace_id in "${owned_workspaces[@]}"; do
-    "$CMUX_BIN" close-workspace --workspace "$workspace_id" >/dev/null 2>&1 || true
-  done
+  local workspace_id
+  if [[ "${#owned_workspaces[@]}" -gt 0 ]]; then
+    for workspace_id in "${owned_workspaces[@]}"; do
+      "$CMUX_BIN" close-workspace --workspace "$workspace_id" >/dev/null 2>&1 || true
+    done
+  fi
   rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -74,11 +77,16 @@ from pathlib import Path
 
 manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert manifest["workspace_id"]
+assert manifest["main"]["pane_ref"]
 assert manifest["main"]["surface_ref"]
 assert len(manifest["workers"]) == 1
 packet = Path(manifest["workers"][0]["packet_path"])
 assert packet.exists(), packet
 assert manifest["workers"][0]["role"] == "review"
+assert manifest["workers"][0]["pane_ref"]
+assert manifest["workers"][0]["surface_ref"]
+worker_json = Path(manifest["session_root"]) / "workers" / "worker-1.json"
+assert worker_json.exists(), worker_json
 PY
 
 log_count=0
@@ -122,6 +130,13 @@ from pathlib import Path
 manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert len(manifest["workers"]) == 2
 assert [worker["role"] for worker in manifest["workers"]] == ["review", "general"]
+assert manifest["main"]["pane_ref"]
+assert manifest["main"]["surface_ref"]
+for index, worker in enumerate(manifest["workers"], start=1):
+    assert worker["pane_ref"]
+    assert worker["surface_ref"]
+    worker_json = Path(manifest["session_root"]) / "workers" / f"worker-{index}.json"
+    assert worker_json.exists(), worker_json
 PY
 
 default_log_count=0
