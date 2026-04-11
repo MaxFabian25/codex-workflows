@@ -4,7 +4,7 @@
 
 **Goal:** Refresh the Vercel plugin's `agent-browser` skill to the current official upstream package shape and rebuild `agent-browser-verify` as a slim local overlay with deterministic session hygiene, official-doc routing, and repeatable validation.
 
-**Architecture:** Work in the git-backed plugin source repo at `/Users/maxibon/.codex/.tmp/plugins`, not the generated cache. Add one deterministic validation harness at repo root, sync the core `plugins/vercel/skills/agent-browser/` package from upstream with local frontmatter and session-policy overrides, then rebuild `plugins/vercel/skills/agent-browser-verify/` as a small local package with focused references and templates. Finish by syncing the edited source plugin into the installed cache and proving parity with structural checks plus `agent-browser` smoke commands.
+**Architecture:** Work in the git-backed plugin source repo at `~/.codex/.tmp/plugins`, not the generated cache. Add one deterministic validation harness at repo root, sync the core `plugins/vercel/skills/agent-browser/` package from upstream with local frontmatter and session-policy overrides, then rebuild `plugins/vercel/skills/agent-browser-verify/` as a small local package with focused references and templates. Finish by syncing the edited source plugin into the installed cache and proving parity with structural checks plus `agent-browser` smoke commands.
 
 **Tech Stack:** Markdown skill packages, Python 3 standard library, shell scripts, `curl`, `rsync`, `diff`, official `agent-browser` CLI
 
@@ -29,12 +29,12 @@
 - `plugins/vercel/skills/agent-browser-verify/references/dev-server-smoke.md`: canonical smoke-check workflow.
 - `plugins/vercel/skills/agent-browser-verify/references/framework-overlays.md`: framework overlay detection selectors and fallback checks.
 - `plugins/vercel/skills/agent-browser-verify/references/console-network-diagnostics.md`: official `console`, `errors`, and `network` diagnostic lane.
-- `plugins/vercel/skills/agent-browser-verify/references/session-hygiene.md`: deterministic owned-session policy from `/Users/maxibon/AGENTS.md`.
+- `plugins/vercel/skills/agent-browser-verify/references/session-hygiene.md`: deterministic owned-session policy from `~/AGENTS.md`.
 - `plugins/vercel/skills/agent-browser-verify/references/vercel-sandbox-smoke.md`: deployed/Vercel-specific smoke guidance when localhost is not the right surface.
 - `plugins/vercel/skills/agent-browser-verify/templates/dev-server-smoke.sh`: reusable one-URL smoke-check shell template.
 - `plugins/vercel/skills/agent-browser-verify/templates/route-matrix-smoke.sh`: reusable multi-route smoke-check shell template.
 
-Implementation repo root for all commands below: `/Users/maxibon/.codex/.tmp/plugins`
+Implementation repo root for all commands below: `~/.codex/.tmp/plugins`
 
 ## Task 1: Add the Validation Harness
 
@@ -148,7 +148,7 @@ def validate_core() -> None:
     require_contains(
         session_ref,
         [
-            "Local override: on this workstation, keep the owned session open by default.",
+            "Local override: keep the owned session open by default.",
             "Do not use `close --all` unless the user explicitly asks for global teardown.",
         ],
     )
@@ -332,7 +332,7 @@ if len(parts) != 3:
 body = parts[2]
 body = body.replace(
     "Always close your browser session when done to avoid leaked processes:\n",
-    "On this workstation, keep the owned session open by default. Close only when cleanup is explicit, the session is stale or failed, or the user asks for cleanup:\n",
+    "Keep the owned session open by default. Close only when cleanup is explicit, the session is stale or failed, or the user asks for cleanup:\n",
 )
 body = body.replace(
     "If a previous session was not closed properly, the daemon may still be running. Use `agent-browser close` to clean it up, or `agent-browser close --all` to shut down every session at once.\n",
@@ -344,7 +344,7 @@ body = body.replace(
 
 ## Local Session Contract
 
-Follow `/Users/maxibon/AGENTS.md` when using this skill locally:
+Follow `~/AGENTS.md` when using this skill locally:
 
 - Use one deterministic `--session <name>` per task.
 - Run `agent-browser session list` before any new `open` or `connect`.
@@ -445,7 +445,7 @@ session_ref = root / "references/session-management.md"
 session_text = session_ref.read_text(encoding="utf-8")
 session_text = session_text.replace(
     "# Session Management\n\nMultiple isolated browser sessions with state persistence and concurrent browsing.\n",
-    "# Session Management\n\nMultiple isolated browser sessions with state persistence and concurrent browsing.\n\n> Local override: on this workstation, keep the owned session open by default. Close only the owned named session when cleanup is explicit, the user asks for cleanup, or the session is stale or failed. Do not use `close --all` unless the user explicitly asks for global teardown.\n",
+    "# Session Management\n\nMultiple isolated browser sessions with state persistence and concurrent browsing.\n\n> Local override: keep the owned session open by default. Close only the owned named session when cleanup is explicit, the user asks for cleanup, or the session is stale or failed. Do not use `close --all` unless the user explicitly asks for global teardown.\n",
 )
 session_text = session_text.replace(
     "# Cleanup\nagent-browser --session site1 close\nagent-browser --session site2 close\nagent-browser --session site3 close\n",
@@ -467,13 +467,13 @@ template_rewrites = {
     root / "templates/capture-workflow.sh": [
         (
             "# Cleanup\nagent-browser close\n\necho \"\"\necho \"Capture complete:\"\n",
-            "# Cleanup is explicit on this workstation; keep the owned session open by default.\necho \"\"\necho \"Capture complete:\"\n",
+            "# Cleanup is explicit; keep the owned session open by default.\necho \"\"\necho \"Capture complete:\"\n",
         ),
     ],
     root / "templates/form-automation.sh": [
         (
             "# Cleanup\nagent-browser close\necho \"Done\"\n",
-            "# Cleanup is explicit on this workstation; keep the owned session open by default.\necho \"Done\"\n",
+            "# Cleanup is explicit; keep the owned session open by default.\necho \"Done\"\n",
         ),
     ],
 }
@@ -625,7 +625,7 @@ agent-browser network har stop ./agent-browser-smoke.har
 """,
     "references/session-hygiene.md": """# Session Hygiene
 
-Follow `/Users/maxibon/AGENTS.md` for local browser ownership.
+Follow `~/AGENTS.md` for local browser ownership.
 
 ## Rules
 
