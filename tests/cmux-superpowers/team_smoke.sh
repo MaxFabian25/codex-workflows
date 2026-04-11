@@ -79,6 +79,7 @@ manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert manifest["workspace_id"]
 assert manifest["main"]["pane_ref"]
 assert manifest["main"]["surface_ref"]
+assert manifest["hud"] is None
 assert len(manifest["workers"]) == 1
 packet = Path(manifest["workers"][0]["packet_path"])
 assert packet.exists(), packet
@@ -87,6 +88,11 @@ assert manifest["workers"][0]["pane_ref"]
 assert manifest["workers"][0]["surface_ref"]
 worker_json = Path(manifest["session_root"]) / "workers" / "worker-1.json"
 assert worker_json.exists(), worker_json
+main_packet = Path(manifest["main"]["packet_path"]).read_text(encoding="utf-8")
+assert "Pane lifecycle is owned by the external cmux-superpowers conductor." in main_packet
+worker_packet = packet.read_text(encoding="utf-8")
+assert "Reporting contract: report status and blockers back through the main pane." in worker_packet
+assert "Direct user input: do not ask the user directly; route clarification through the main pane." in worker_packet
 PY
 
 log_count=0
@@ -145,6 +151,7 @@ assert len(manifest["workers"]) == 2
 assert [worker["role"] for worker in manifest["workers"]] == ["review", "general"]
 assert manifest["main"]["pane_ref"]
 assert manifest["main"]["surface_ref"]
+assert manifest["hud"] is None
 for index, worker in enumerate(manifest["workers"], start=1):
     assert worker["pane_ref"]
     assert worker["surface_ref"]
@@ -211,8 +218,12 @@ case "$cmd" in
 JSON
     ;;
   new-split)
-    echo "forced split failure" >&2
-    exit 9
+    if [[ "${CMUX_SUPERPOWERS_FAIL_MODE:-exit}" == "malformed" ]]; then
+      echo "not-a-surface-ref"
+    else
+      echo "forced split failure" >&2
+      exit 9
+    fi
     ;;
   close-workspace)
     exit 0
@@ -238,3 +249,18 @@ assert_command_fails_with_output \
     python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Fail during split"
 assert_contains "$failed_launch_output" "team launch failed"
 test -z "$(find "$failed_launch_state" -mindepth 1 -print -quit)" || fail "expected failed launch to leave no state behind"
+
+malformed_state="$tmp/malformed-state"
+mkdir -p "$malformed_state"
+malformed_output="$tmp/malformed-output.log"
+assert_command_fails_with_output \
+  "$malformed_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$failing_cmux" \
+    CMUX_SUPERPOWERS_FAIL_MODE="malformed" \
+    CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+    CMUX_SUPERPOWERS_STUB_LOG_DIR="$tmp/malformed-logs" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$malformed_state" \
+    python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Fail on malformed split output"
+assert_contains "$malformed_output" "team launch failed"
+test -z "$(find "$malformed_state" -mindepth 1 -print -quit)" || fail "expected malformed launch to leave no state behind"

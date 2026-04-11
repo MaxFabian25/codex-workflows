@@ -48,6 +48,10 @@ class WorkerPlan:
     worktree_path: str | None = None
 
 
+class TeamLaunchError(RuntimeError):
+    pass
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cmux-superpowers",
@@ -552,7 +556,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def cmux_json(*args: str) -> dict:
     proc = run([resolve_cmux_bin(), *args])
-    return json.loads(proc.stdout)
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise TeamLaunchError(f"invalid cmux JSON: {exc}") from exc
 
 
 def cmux_text(*args: str) -> str:
@@ -567,7 +574,7 @@ def first_ref(text: str, prefix: str) -> str:
     for token in text.split():
         if token.startswith(prefix):
             return token
-    raise SystemExit(f"team not implemented yet: missing {prefix} ref in cmux output: {text}")
+    raise TeamLaunchError(f"missing {prefix} ref in cmux output: {text}")
 
 
 def cmux_selected_pane(workspace_id: str) -> str:
@@ -585,12 +592,24 @@ def caller_context(workspace_id: str, surface_ref: str) -> dict[str, object]:
     payload = cmux_json("identify", "--workspace", workspace_id, "--surface", surface_ref)
     caller = payload.get("caller")
     if not isinstance(caller, dict):
-        raise SystemExit("team not implemented yet: cmux identify missing caller context")
+        raise TeamLaunchError("cmux identify missing caller context")
     if not isinstance(caller.get("surface_ref"), str) or not isinstance(
         caller.get("pane_ref"), str
     ):
-        raise SystemExit("team not implemented yet: cmux identify missing pane or surface ref")
+        raise TeamLaunchError("cmux identify missing pane or surface ref")
     return caller
+
+
+def launch_failure_detail(exc: BaseException) -> str:
+    if isinstance(exc, subprocess.CalledProcessError):
+        detail = (exc.stderr or "").strip() or (exc.stdout or "").strip()
+        return detail or f"exit {exc.returncode}"
+    detail = str(exc).strip()
+    if detail:
+        return detail
+    if isinstance(exc, SystemExit):
+        return f"exit {exc.code}"
+    return exc.__class__.__name__
 
 
 def codex_command(
@@ -738,7 +757,9 @@ def cmd_team(args: argparse.Namespace) -> int:
         else:
             print(f"Created {session_id} in {workspace_id}")
         return 0
-    except subprocess.CalledProcessError as exc:
+    except BaseException as exc:
+        if isinstance(exc, KeyboardInterrupt):
+            raise
         if workspace_id:
             subprocess.run(
                 [resolve_cmux_bin(), "close-workspace", "--workspace", workspace_id],
@@ -747,10 +768,7 @@ def cmd_team(args: argparse.Namespace) -> int:
                 capture_output=True,
             )
         shutil.rmtree(session_root, ignore_errors=True)
-        detail = (exc.stderr or "").strip() or (exc.stdout or "").strip()
-        if detail:
-            raise SystemExit(f"team launch failed: {detail}") from None
-        raise SystemExit(f"team launch failed: exit {exc.returncode}") from None
+        raise SystemExit(f"team launch failed: {launch_failure_detail(exc)}") from None
 
 
 def main() -> int:
