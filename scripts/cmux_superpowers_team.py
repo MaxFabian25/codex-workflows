@@ -129,21 +129,11 @@ def load_hooks_json(codex_home: Path) -> dict:
                         f"{hooks_path} hook '{event_name}' group {index} hook {hook_index} field 'command' must be a JSON string"
                     )
                 command = hook.get("command")
-                if (
-                    event_name == "SessionStart"
-                    and group.get("matcher") == "startup|resume|clear"
-                    and hook_type == "command"
-                    and isinstance(command, str)
-                    and is_real_superpowers_session_start_command(command)
-                    and "statusMessage" not in hook
-                ):
-                    raise ValueError(
-                        f"{hooks_path} hook '{event_name}' group {index} hook {hook_index} field 'statusMessage' is required"
-                    )
                 if "statusMessage" in hook and not isinstance(hook.get("statusMessage"), str):
                     raise ValueError(
                         f"{hooks_path} hook '{event_name}' group {index} hook {hook_index} field 'statusMessage' must be a JSON string"
                     )
+    validate_superpowers_session_start_hooks(payload, hooks_path)
     return payload
 
 
@@ -193,27 +183,45 @@ def is_real_superpowers_session_start_command(command: object) -> bool:
     return isinstance(script_target, str) and is_hooks_session_start_path(script_target)
 
 
-def has_superpowers_group(payload: dict) -> bool:
+def iter_session_start_command_hooks(payload: dict):
     session_start = payload.get("hooks", {}).get("SessionStart", [])
     if not isinstance(session_start, list):
-        return False
-    for group in session_start:
+        return
+    for group_index, group in enumerate(session_start):
         if not isinstance(group, dict) or group.get("matcher") != "startup|resume|clear":
             continue
         hooks = group.get("hooks", [])
         if not isinstance(hooks, list):
             continue
-        for hook in hooks:
-            if not isinstance(hook, dict):
-                continue
-            if hook.get("type") != "command":
-                continue
-            if hook.get("statusMessage") != "loading superpowers":
+        for hook_index, hook in enumerate(hooks):
+            if not isinstance(hook, dict) or hook.get("type") != "command":
                 continue
             command = hook.get("command")
-            if not is_real_superpowers_session_start_command(command):
-                continue
-            return True
+            if is_real_superpowers_session_start_command(command):
+                yield group_index, hook_index, hook
+
+
+def validate_superpowers_session_start_hooks(payload: dict, hooks_path: Path) -> None:
+    candidates = list(iter_session_start_command_hooks(payload))
+    if not candidates:
+        return
+    if any(hook.get("statusMessage") == "loading superpowers" for _, _, hook in candidates):
+        return
+    for group_index, hook_index, hook in candidates:
+        if "statusMessage" not in hook:
+            raise ValueError(
+                f"{hooks_path} hook 'SessionStart' group {group_index} hook {hook_index} field 'statusMessage' is required"
+            )
+
+
+def has_superpowers_group(payload: dict) -> bool:
+    for _, _, hook in iter_session_start_command_hooks(payload):
+        if hook.get("statusMessage") != "loading superpowers":
+            continue
+        command = hook.get("command")
+        if not is_real_superpowers_session_start_command(command):
+            continue
+        return True
     return False
 
 
@@ -234,7 +242,10 @@ def contains_command_invocation(command: object, executable: str, expected_args:
     for index, token in enumerate(normalized_tokens):
         if Path(token).name != executable:
             continue
-        if index > 0 and normalized_tokens[index - 1] not in SHELL_COMMAND_BOUNDARIES:
+        invocation_index = index
+        if index > 0 and normalized_tokens[index - 1] == "command":
+            invocation_index = index - 1
+        if invocation_index > 0 and normalized_tokens[invocation_index - 1] not in SHELL_COMMAND_BOUNDARIES:
             continue
         if normalized_tokens[index + 1 : index + 1 + len(expected_args)] == expected_args:
             return True

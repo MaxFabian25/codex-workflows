@@ -358,6 +358,36 @@ PY
   assert_status "$status" 0 "sidecar-session-start"
 }
 
+scenario_unrelated_hooks_sidecar() {
+  begin_scenario "unrelated-hooks-sidecar"
+  write_healthy_hooks_fixture "$codex_home"
+  write_enabled_config "$codex_home"
+  python3 - <<'PY' "$codex_home/hooks.json"
+import json
+import sys
+from pathlib import Path
+
+hooks_path = Path(sys.argv[1])
+payload = json.loads(hooks_path.read_text(encoding="utf-8"))
+payload["hooks"]["SessionStart"].append(
+    {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+            {
+                "type": "command",
+                "command": "/tmp/another-plugin/hooks/session-start",
+            }
+        ],
+    }
+)
+hooks_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+  local status
+  status="$(run_current_doctor)"
+  assert_full_healthy_payload "$output"
+  assert_status "$status" 0 "unrelated-hooks-sidecar"
+}
+
 scenario_python_c_mode() {
   begin_scenario "python-c-mode"
   write_healthy_hooks_fixture "$codex_home" "$python_bin -c 'print(123)' /tmp/superpowers/hooks/session-start"
@@ -432,6 +462,24 @@ scenario_if_then_cmux() {
   status="$(run_current_doctor)"
   assert_full_healthy_payload "$output"
   assert_status "$status" 0 "if-then-cmux"
+}
+
+scenario_command_prefixed_cmux() {
+  begin_scenario "command-prefixed-cmux"
+  write_healthy_hooks_fixture \
+    "$codex_home" \
+    "/opt/team/hooks/session-start" \
+    "startup|resume|clear" \
+    "command" \
+    "loading superpowers" \
+    "command cmux codex-hook session-start" \
+    "command cmux codex-hook prompt-submit" \
+    "command cmux codex-hook stop"
+  write_enabled_config "$codex_home"
+  local status
+  status="$(run_current_doctor)"
+  assert_full_healthy_payload "$output"
+  assert_status "$status" 0 "command-prefixed-cmux"
 }
 
 scenario_wrong_matcher() {
@@ -969,12 +1017,14 @@ run_hook_detection_scenarios() {
   scenario_neutral_command
   scenario_interpreter_command
   scenario_sidecar_session_start
+  scenario_unrelated_hooks_sidecar
   scenario_python_c_mode
   scenario_python_module_mode
   scenario_non_executed_session_start
   scenario_wrong_target_interpreter
   scenario_guarded_cmux
   scenario_if_then_cmux
+  scenario_command_prefixed_cmux
   scenario_wrong_matcher
   scenario_wrong_type
   scenario_inert_cmux
