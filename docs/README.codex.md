@@ -112,7 +112,7 @@ codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
 codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'
 ```
 
-`cmux-superpowers doctor` only goes green when the launcher is on `PATH`, the Superpowers SessionStart hook is installed, the cmux Codex hooks are installed, and `codex_hooks` is enabled. Start new sessions with:
+`cmux-superpowers doctor` only goes green when the launcher is on `PATH`, the `cmux` binary and live runtime are reachable, the Superpowers SessionStart hook is installed, the cmux Codex hooks are installed, and `codex_hooks` is enabled. Start new sessions with:
 
 ```text
 Use superpowers:using-superpowers before we start.

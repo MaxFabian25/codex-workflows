@@ -9,6 +9,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER_PATH = REPO_ROOT / "scripts" / "cmux_superpowers_team.py"
+WRAPPER_MARKER = "# cmux-superpowers-managed: superpowers-codex"
+WRAPPER_LAUNCHER_MARKER = f"# cmux-superpowers-launcher: {LAUNCHER_PATH}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,8 +32,18 @@ def render_wrapper() -> str:
     return (
         "#!/usr/bin/env bash\n"
         "set -euo pipefail\n"
+        f"{WRAPPER_MARKER}\n"
+        f"{WRAPPER_LAUNCHER_MARKER}\n"
         f'exec {python_executable} {launcher} "$@"\n'
     )
+
+
+def is_managed_wrapper(path: Path) -> bool:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return False
+    return WRAPPER_MARKER in text and WRAPPER_LAUNCHER_MARKER in text
 
 
 def install(bin_dir: Path) -> int:
@@ -40,6 +52,9 @@ def install(bin_dir: Path) -> int:
         return 1
 
     wrapper = bin_dir / "cmux-superpowers"
+    if wrapper.exists() and not is_managed_wrapper(wrapper):
+        print(f"Refusing to overwrite unmanaged wrapper: {wrapper}", file=sys.stderr)
+        return 1
     bin_dir.mkdir(parents=True, exist_ok=True)
     wrapper.write_text(render_wrapper(), encoding="utf-8")
     wrapper.chmod(0o755)
@@ -50,6 +65,9 @@ def install(bin_dir: Path) -> int:
 def remove(bin_dir: Path) -> int:
     wrapper = bin_dir / "cmux-superpowers"
     if wrapper.exists():
+        if not is_managed_wrapper(wrapper):
+            print(f"Refusing to remove unmanaged wrapper: {wrapper}", file=sys.stderr)
+            return 1
         wrapper.unlink()
         print(f"Removed {wrapper}")
     else:

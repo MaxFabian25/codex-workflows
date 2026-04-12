@@ -427,6 +427,7 @@ def session_manifest(
     main_packet: Path,
     cwd: str,
     workers: list[WorkerPlan],
+    repo_root: str | None,
     *,
     main_pane: str | None = None,
     main_surface: str | None = None,
@@ -436,6 +437,7 @@ def session_manifest(
         "created_at": created_at,
         "workspace_id": workspace_id,
         "session_root": str(session_root),
+        "repo_root": repo_root,
         "main": {
             "pane_ref": main_pane,
             "surface_ref": main_surface,
@@ -774,6 +776,18 @@ def probe_binary(
 
 def probe_codex_binary(binary: str | None) -> tuple[bool, str | None]:
     return probe_binary(binary, ["--version"], CODEX_PROBE_TIMEOUT_SECONDS)
+
+
+def probe_cmux_binary(binary: str | None) -> tuple[bool, str | None]:
+    version_ok, version_error = probe_binary(binary, ["version"], CMUX_PROBE_TIMEOUT_SECONDS)
+    if version_error or not version_ok:
+        return version_ok, version_error
+    runtime_ok, runtime_error = probe_binary(
+        binary, ["list-workspaces"], CMUX_PROBE_TIMEOUT_SECONDS
+    )
+    if runtime_error:
+        return False, f"list-workspaces probe failed: {runtime_error}"
+    return runtime_ok, None
 
 
 def probe_codex_features(binary: str | None) -> tuple[bool, bool, str | None]:
@@ -1341,7 +1355,7 @@ def doctor_payload() -> dict:
     if codex_resolve_error:
         errors["codex"] = codex_resolve_error
 
-    cmux_ok, cmux_error = probe_binary(cmux_bin, ["version"], CMUX_PROBE_TIMEOUT_SECONDS)
+    cmux_ok, cmux_error = probe_cmux_binary(cmux_bin)
     codex_ok, codex_error = probe_codex_binary(codex_bin)
     if cmux_error:
         errors["cmux"] = cmux_error
@@ -1411,11 +1425,27 @@ def git_text(*args: str, cwd: str) -> str:
     return run(["git", "-C", cwd, *args]).stdout.strip()
 
 
+def optional_repo_root_for(cwd: str) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    repo_root = proc.stdout.strip()
+    return repo_root or None
+
+
 def repo_root_for(cwd: str) -> str:
-    return git_text("rev-parse", "--show-toplevel", cwd=cwd)
+    repo_root = optional_repo_root_for(cwd)
+    if repo_root:
+        return repo_root
+    raise SystemExit("Write-capable workers require a git repo.")
 
 
-def choose_worktree_root(repo_root: str) -> Path:
+def resolve_worktree_root(repo_root: str, *, create: bool) -> Path:
     for rel in [".worktrees/", "worktrees/"]:
         probe = subprocess.run(
             ["git", "-C", repo_root, "check-ignore", "-q", rel],
@@ -1425,9 +1455,14 @@ def choose_worktree_root(repo_root: str) -> Path:
         )
         if probe.returncode == 0:
             root = Path(repo_root) / rel.removesuffix("/") / "cmux-superpowers"
-            root.mkdir(parents=True, exist_ok=True)
+            if create:
+                root.mkdir(parents=True, exist_ok=True)
             return root
     raise SystemExit("Write-capable workers require an ignored .worktrees/ or worktrees/ directory.")
+
+
+def choose_worktree_root(repo_root: str) -> Path:
+    return resolve_worktree_root(repo_root, create=True)
 
 
 def map_worktree_cwd(base_cwd: str, repo_root: str, worktree_path: Path) -> str:
@@ -1467,6 +1502,14 @@ def prepare_worker_root(
     path = worktree_root / f"{session_id}-{worker_id}"
     run(["git", "-C", repo_root, "worktree", "add", "-b", branch, str(path)])
     return map_worktree_cwd(base_cwd, repo_root, path), str(path), branch
+
+
+def preflight_repo_root(base_cwd: str, workers: list[str]) -> str | None:
+    if not any(bool(ROLE_SPECS[role]["write"]) for role in workers):
+        return optional_repo_root_for(base_cwd)
+    repo_root = repo_root_for(base_cwd)
+    resolve_worktree_root(repo_root, create=False)
+    return repo_root
 
 
 def shell_join(parts: list[str]) -> str:
@@ -1861,11 +1904,9 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                 persist_manifest(manifest_path, manifest)
 
         if args.remove_worktrees and worktree_entries:
-            main = manifest.get("main")
-            main_cwd = main.get("cwd") if isinstance(main, dict) else None
-            if not isinstance(main_cwd, str) or not main_cwd:
-                raise SystemExit("cleanup failed: session manifest missing main.cwd")
-            repo_root = repo_root_for(main_cwd)
+            repo_root = manifest.get("repo_root")
+            if not isinstance(repo_root, str) or not repo_root:
+                raise SystemExit("cleanup failed: session manifest missing repo_root")
             for worktree_path, worktree_branch in worktree_entries:
                 branch_error = branch_checked_out_elsewhere_error(
                     repo_root, worktree_path, worktree_branch
@@ -1941,11 +1982,12 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
 
 def cmd_team(args: argparse.Namespace) -> int:
     workers = args.worker or ["review", "general"]
+    task = args.task
+    cwd = str(Path(args.cwd).expanduser().resolve())
+    repo_root = preflight_repo_root(cwd, workers)
     session_id = f"session-{uuid.uuid4().hex[:8]}"
     session_root = session_dir(session_id)
     session_root.mkdir(parents=True, exist_ok=True)
-    task = args.task
-    cwd = str(Path(args.cwd).expanduser().resolve())
     session_marker = workspace_session_marker(session_id)
     workspace_name = workspace_name_for_session(session_marker, args.name)
     workspace_id: str | None = None
@@ -1966,6 +2008,7 @@ def cmd_team(args: argparse.Namespace) -> int:
             main_packet,
             cwd,
             planned_workers,
+            repo_root,
         )
         persist_manifest(manifest_path, manifest)
         main_command = codex_command(
@@ -2157,7 +2200,8 @@ def cmd_team(args: argparse.Namespace) -> int:
         if close_error or preserve_session_state:
             rollback_cleanup_errors = []
         elif created_worktrees:
-            repo_root = repo_root_for(cwd)
+            if not repo_root:
+                repo_root = repo_root_for(cwd)
             for worktree_path, worktree_branch in created_worktrees:
                 branch_error = branch_checked_out_elsewhere_error(
                     repo_root, worktree_path, worktree_branch

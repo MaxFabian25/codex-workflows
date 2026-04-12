@@ -175,6 +175,20 @@ assert payload["ok"] is False
 PY
 }
 
+assert_runtime_unreachable_payload() {
+  python3 - <<'PY' "$1"
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+assert payload["cmux"]["ok"] is False
+assert payload["codex"]["ok"] is True
+assert "list-workspaces" in payload["errors"]["cmux"]
+assert "runtime unavailable" in payload["errors"]["cmux"]
+assert payload["ok"] is False
+PY
+}
+
 assert_commented_config_payload() {
   python3 - <<'PY' "$1"
 import json
@@ -635,6 +649,32 @@ EOF
   assert_status "$status" 1 "unusable"
 }
 
+scenario_runtime_unreachable() {
+  begin_scenario "runtime-unreachable"
+  write_healthy_hooks_fixture "$codex_home"
+  write_enabled_config "$codex_home"
+
+  local bad_cmux="$scenario/runtime-unreachable-cmux"
+  write_executable "$bad_cmux" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == "version" ]]; then
+  echo "cmux 0.test"
+  exit 0
+fi
+if [[ "${1:-}" == "list-workspaces" ]]; then
+  echo "runtime unavailable" >&2
+  exit 7
+fi
+echo "{}"
+EOF
+
+  local status
+  status="$(run_current_doctor "CMUX_SUPERPOWERS_CMUX_BIN=$bad_cmux")"
+  assert_runtime_unreachable_payload "$output"
+  assert_status "$status" 1 "runtime-unreachable"
+}
+
 scenario_commented_config() {
   begin_scenario "commented-config"
   write_healthy_hooks_fixture "$codex_home"
@@ -1069,6 +1109,7 @@ run_probe_behavior_scenarios() {
   scenario_false_green
   scenario_invalid_override
   scenario_unusable
+  scenario_runtime_unreachable
   scenario_commented_config
 }
 

@@ -103,8 +103,11 @@ REQUIRED_PACKAGE_FILE_ENTRIES = [
 ]
 
 REQUIRED_PACKAGED_PATHS = [
+    "hooks/hooks.json",
+    "hooks/session-start",
     "scripts/cmux_superpowers_team.py",
     "scripts/install_cmux_superpowers_launcher.py",
+    "scripts/install_codex_hooks.py",
     "tests/cmux-superpowers/install.sh",
     "tests/cmux-superpowers/doctor.sh",
     "tests/cmux-superpowers/team_smoke.sh",

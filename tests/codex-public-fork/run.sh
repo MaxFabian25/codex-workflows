@@ -991,6 +991,33 @@ EOF
     "$tmpdir/package-cmux-pack-surface" \
     '`npm pack --dry-run --json` must include `tests/cmux-superpowers/team_smoke.sh`'
 
+  expect_fixture_passes "$tmpdir/package-hook-installer-pack-surface"
+  mkdir -p "$tmpdir/package-hook-installer-pack-surface/scripts"
+  cat >"$tmpdir/package-hook-installer-pack-surface/scripts/.npmignore" <<'EOF'
+install_codex_hooks.py
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-hook-installer-pack-surface" \
+    '`npm pack --dry-run --json` must include `scripts/install_codex_hooks.py`'
+
+  expect_fixture_passes "$tmpdir/package-hooks-json-pack-surface"
+  mkdir -p "$tmpdir/package-hooks-json-pack-surface/hooks"
+  cat >"$tmpdir/package-hooks-json-pack-surface/hooks/.npmignore" <<'EOF'
+hooks.json
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-hooks-json-pack-surface" \
+    '`npm pack --dry-run --json` must include `hooks/hooks.json`'
+
+  expect_fixture_passes "$tmpdir/package-session-start-pack-surface"
+  mkdir -p "$tmpdir/package-session-start-pack-surface/hooks"
+  cat >"$tmpdir/package-session-start-pack-surface/hooks/.npmignore" <<'EOF'
+session-start
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-session-start-pack-surface" \
+    '`npm pack --dry-run --json` must include `hooks/session-start`'
+
   expect_fixture_passes "$tmpdir/launcher-script-required"
   rm "$tmpdir/launcher-script-required/scripts/install_cmux_superpowers_launcher.py"
   expect_fixture_fails_with \

@@ -34,6 +34,31 @@ run_wrapper_parser_rejection_smoke() {
   assert_contains "$invalid_worker_output" "invalid choice: 'invalid'"
 }
 
+run_foreign_wrapper_guard_smoke() {
+  local bin_dir="$1"
+  local wrapper="$bin_dir/cmux-superpowers"
+  mkdir -p "$bin_dir"
+  cat >"$wrapper" <<'EOF'
+#!/usr/bin/env bash
+echo "foreign wrapper"
+EOF
+  chmod +x "$wrapper"
+
+  local install_output="$bin_dir/foreign-install.log"
+  assert_command_fails_with_output \
+    "$install_output" \
+    python3 "$INSTALLER" --bin-dir "$bin_dir"
+  assert_contains "$install_output" "Refusing to overwrite unmanaged wrapper"
+  assert_contains "$wrapper" "foreign wrapper"
+
+  local remove_output="$bin_dir/foreign-remove.log"
+  assert_command_fails_with_output \
+    "$remove_output" \
+    python3 "$INSTALLER" --bin-dir "$bin_dir" --remove
+  assert_contains "$remove_output" "Refusing to remove unmanaged wrapper"
+  assert_contains "$wrapper" "foreign wrapper"
+}
+
 write_wrapper_smoke_cmux() {
   local bin_dir="$1"
   write_cmux_executable "$bin_dir" <<'EOF'
@@ -221,6 +246,121 @@ PY
   test ! -e "$state_root/$session_id" || fail "session state still exists after purge: $state_root/$session_id"
 }
 
+run_wrapper_cleanup_from_removed_launch_subdir_smoke() {
+  local wrapper="$1"
+  local output_dir="$2"
+  local wrapper_dir
+  wrapper_dir="$(cd "$(dirname "$wrapper")" && pwd -P)"
+  local repo="$output_dir/wrapper-subdir-repo"
+  local launch_cwd="$repo/tasks/launch"
+  local state_root="$output_dir/wrapper-subdir-state"
+
+  mkdir -p "$launch_cwd" "$state_root"
+  git -C "$repo" init -q
+  cat >"$repo/README.md" <<'EOF'
+temp repo
+EOF
+  cat >"$repo/tasks/launch/.keep" <<'EOF'
+keep
+EOF
+  cat >"$repo/.gitignore" <<'EOF'
+.worktrees/
+EOF
+  git -C "$repo" add README.md .gitignore tasks/launch/.keep
+  git -C "$repo" -c user.name="Smoke Test" -c user.email="smoke@example.com" commit -qm "init"
+
+  local team_output="$output_dir/team-subdir-output.json"
+  env \
+    PATH="$wrapper_dir:$PATH" \
+    CMUX_SUPERPOWERS_INSTALL_FAKE_CMUX_STATE_ROOT="$output_dir/wrapper-subdir-cmux-state" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$state_root" \
+    "$wrapper" \
+    team \
+    --json \
+    --cwd "$launch_cwd" \
+    --worker implement \
+    --no-hud \
+    "task text" >"$team_output"
+
+  local session_id
+  session_id="$(python3 - <<'PY' "$team_output"
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+print(payload["session_id"])
+PY
+)"
+  local manifest_path
+  manifest_path="$(python3 - <<'PY' "$team_output"
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+print(payload["manifest_path"])
+PY
+)"
+  local worktree_path
+  worktree_path="$(python3 - <<'PY' "$manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert len(manifest["workers"]) == 1, manifest
+print(manifest["workers"][0]["worktree_path"])
+PY
+)"
+
+  test -d "$worktree_path" || fail "missing worktree: $worktree_path"
+  rm -rf "$repo/tasks"
+
+  env \
+    PATH="$wrapper_dir:$PATH" \
+    CMUX_SUPERPOWERS_INSTALL_FAKE_CMUX_STATE_ROOT="$output_dir/wrapper-subdir-cmux-state" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$state_root" \
+    "$wrapper" \
+    cleanup \
+    --session "$session_id" \
+    --close-workers \
+    --remove-worktrees \
+    --purge-state
+
+  test ! -d "$worktree_path" || fail "worktree still exists after cleanup: $worktree_path"
+  test ! -e "$state_root/$session_id" || fail "session state still exists after purge: $state_root/$session_id"
+}
+
+run_wrapper_write_lane_preflight_smoke() {
+  local wrapper="$1"
+  local output_dir="$2"
+  local wrapper_dir
+  wrapper_dir="$(cd "$(dirname "$wrapper")" && pwd -P)"
+  local cwd="$output_dir/non-git"
+  local state_root="$output_dir/non-git-state"
+  local cmux_state_root="$output_dir/non-git-cmux-state"
+  local failed_output="$output_dir/non-git-team.log"
+
+  mkdir -p "$cwd"
+  assert_command_fails_with_output \
+    "$failed_output" \
+    env \
+      PATH="$wrapper_dir:$PATH" \
+      CMUX_SUPERPOWERS_INSTALL_FAKE_CMUX_STATE_ROOT="$cmux_state_root" \
+      CMUX_SUPERPOWERS_STATE_ROOT="$state_root" \
+      "$wrapper" \
+      team \
+      --json \
+      --cwd "$cwd" \
+      --worker implement \
+      --no-hud \
+      "task text"
+  assert_contains "$failed_output" "Write-capable workers require a git repo."
+  assert_not_exists "$cmux_state_root/workspace-name"
+  if [[ -d "$state_root" ]] && find "$state_root" -mindepth 1 -print -quit | grep -q .; then
+    fail "write-lane preflight should not create session state in $state_root"
+  fi
+}
+
 run_wrapper_parser_smoke() {
   local wrapper="$1"
   local output_dir="$2"
@@ -240,6 +380,8 @@ run_wrapper_parser_smoke() {
     "$wrapper" \
     doctor --json >/dev/null
   run_wrapper_team_cleanup_smoke "$wrapper" "$output_dir"
+  run_wrapper_cleanup_from_removed_launch_subdir_smoke "$wrapper" "$output_dir"
+  run_wrapper_write_lane_preflight_smoke "$wrapper" "$output_dir"
   run_wrapper_parser_rejection_smoke "$wrapper" "$output_dir"
 }
 
@@ -315,6 +457,10 @@ if [[ "${CMUX_SUPERPOWERS_SKIP_NEGATIVE_CHECK:-0}" != "1" ]]; then
       CMUX_SUPERPOWERS_SKIP_DEFAULT_PATH_CHECK=1 \
       bash "$broken_root/tests/cmux-superpowers/install.sh"
   assert_contains "$negative_output" "$broken_root/scripts/install_cmux_superpowers_launcher.py"
+fi
+
+if [[ -f "$INSTALLER" ]]; then
+  run_foreign_wrapper_guard_smoke "$tmp/foreign-bin"
 fi
 
 bin_dir="$tmp/bin"

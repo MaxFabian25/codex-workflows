@@ -95,6 +95,8 @@ command -v cmux-superpowers
 cmux-superpowers doctor
 ```
 
+`cmux-superpowers doctor` verifies both the `cmux` binary and a live `cmux list-workspaces` runtime probe, not just PATH discovery.
+
 Run:
 
 ```bash
