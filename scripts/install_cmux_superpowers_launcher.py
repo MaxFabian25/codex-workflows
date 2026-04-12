@@ -10,7 +10,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER_PATH = REPO_ROOT / "scripts" / "cmux_superpowers_team.py"
 WRAPPER_MARKER = "# cmux-superpowers-managed: superpowers-codex"
-WRAPPER_LAUNCHER_MARKER = f"# cmux-superpowers-launcher: {LAUNCHER_PATH}"
+WRAPPER_LAUNCHER_MARKER_PREFIX = "# cmux-superpowers-launcher: "
+WRAPPER_LAUNCHER_MARKER = f"{WRAPPER_LAUNCHER_MARKER_PREFIX}{LAUNCHER_PATH}"
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,7 +44,23 @@ def is_managed_wrapper(path: Path) -> bool:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return False
-    return WRAPPER_MARKER in text and WRAPPER_LAUNCHER_MARKER in text
+    if WRAPPER_MARKER not in text:
+        return False
+
+    launcher_path: str | None = None
+    for line in text.splitlines():
+        if line.startswith(WRAPPER_LAUNCHER_MARKER_PREFIX):
+            launcher_path = line.removeprefix(WRAPPER_LAUNCHER_MARKER_PREFIX).strip()
+            break
+    if not launcher_path:
+        return False
+
+    launcher = Path(launcher_path)
+    if launcher.name != "cmux_superpowers_team.py" or launcher.parent.name != "scripts":
+        return False
+
+    exec_fragment = f" {shlex.quote(launcher_path)} \"$@\""
+    return "set -euo pipefail" in text and exec_fragment in text
 
 
 def install(bin_dir: Path) -> int:

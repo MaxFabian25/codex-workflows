@@ -59,6 +59,48 @@ EOF
   assert_contains "$wrapper" "foreign wrapper"
 }
 
+run_cross_checkout_reinstall_smoke() {
+  local output_dir="$1"
+  local checkout_a="$output_dir/checkout-a"
+  local checkout_b="$output_dir/checkout-b"
+  local bin_dir="$output_dir/cross-checkout-bin"
+  local wrapper="$bin_dir/cmux-superpowers"
+  local launcher_a
+  local launcher_b
+
+  copy_scaffold_checkout "$checkout_a"
+  copy_scaffold_checkout "$checkout_b"
+  launcher_a="$(cd "$checkout_a" && pwd -P)/scripts/cmux_superpowers_team.py"
+  launcher_b="$(cd "$checkout_b" && pwd -P)/scripts/cmux_superpowers_team.py"
+
+  python3 "$checkout_a/scripts/install_cmux_superpowers_launcher.py" --bin-dir "$bin_dir"
+  assert_file "$wrapper"
+  assert_contains "$wrapper" "$launcher_a"
+
+  python3 "$checkout_b/scripts/install_cmux_superpowers_launcher.py" --bin-dir "$bin_dir"
+  assert_contains "$wrapper" "$launcher_b"
+  if rg -Fq -- "$launcher_a" "$wrapper"; then
+    fail "wrapper still points at checkout A after reinstall: $wrapper"
+  fi
+}
+
+run_cross_checkout_remove_smoke() {
+  local output_dir="$1"
+  local checkout_a="$output_dir/remove-checkout-a"
+  local checkout_b="$output_dir/remove-checkout-b"
+  local bin_dir="$output_dir/remove-cross-checkout-bin"
+  local wrapper="$bin_dir/cmux-superpowers"
+
+  copy_scaffold_checkout "$checkout_a"
+  copy_scaffold_checkout "$checkout_b"
+
+  python3 "$checkout_a/scripts/install_cmux_superpowers_launcher.py" --bin-dir "$bin_dir"
+  assert_file "$wrapper"
+
+  python3 "$checkout_b/scripts/install_cmux_superpowers_launcher.py" --bin-dir "$bin_dir" --remove
+  assert_not_exists "$wrapper"
+}
+
 write_wrapper_smoke_cmux() {
   local bin_dir="$1"
   write_cmux_executable "$bin_dir" <<'EOF'
@@ -461,6 +503,8 @@ fi
 
 if [[ -f "$INSTALLER" ]]; then
   run_foreign_wrapper_guard_smoke "$tmp/foreign-bin"
+  run_cross_checkout_reinstall_smoke "$tmp"
+  run_cross_checkout_remove_smoke "$tmp"
 fi
 
 bin_dir="$tmp/bin"
