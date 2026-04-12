@@ -87,6 +87,26 @@ reject_pattern() {
   fi
 }
 
+require_fixed() {
+  local needle="$1"
+  shift
+
+  if ! rg -F -n -- "$needle" "$@" >/dev/null; then
+    printf 'Expected literal %s in: %s\n' "$needle" "$*" >&2
+    return 1
+  fi
+}
+
+reject_fixed() {
+  local needle="$1"
+  shift
+
+  if rg -F -n -- "$needle" "$@" >/dev/null; then
+    printf 'Forbidden literal %s found in: %s\n' "$needle" "$*" >&2
+    return 1
+  fi
+}
+
 prepare_fixture() {
   local fixture_root="$1"
 
@@ -116,9 +136,11 @@ Install with:
 - python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
 - python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
 - cmux codex install-hooks
+- Set `[features].codex_hooks = true` in ~/.codex/config.toml
 - cmux-superpowers doctor
 
 Uninstall with:
+- Remove the `superpowers-codex` entry from ~/.agents/plugins/marketplace.json
 - python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
 - cmux codex uninstall-hooks
 - python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
@@ -128,9 +150,11 @@ Install with:
 - python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
 - python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
 - cmux codex install-hooks
+- Set `[features].codex_hooks = true` in ~/.codex/config.toml
 - cmux-superpowers doctor
 
 Uninstall with:
+- Remove the `superpowers-codex` entry from ~/.agents/plugins/marketplace.json
 - python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
 - cmux codex uninstall-hooks
 - python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
@@ -140,9 +164,11 @@ Install with:
 - python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
 - python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
 - cmux codex install-hooks
+- Set `[features].codex_hooks = true` in ~/.codex/config.toml
 - cmux-superpowers doctor
 
 Uninstall with:
+- Remove the `superpowers-codex` entry from ~/.agents/plugins/marketplace.json
 - python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
 - cmux codex uninstall-hooks
 - python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
@@ -324,6 +350,16 @@ run_fixture_hook_installer() {
   )
 }
 
+run_fixture_hook_remover() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  (
+    cd "$fixture_root"
+    python3 scripts/install_codex_hooks.py --codex-home "$codex_home" --remove
+  )
+}
+
 expect_fixture_hook_installer_writes_codex_hooks() {
   local fixture_root="$1"
   local codex_home="$2"
@@ -355,6 +391,87 @@ command = handler["command"]
 expected_script = str(fixture_root / "hooks" / "session-start")
 if expected_script not in command:
     raise SystemExit(f"hooks.json command does not point at {expected_script}: {command}")
+PY
+}
+
+expect_fixture_hook_installer_preserves_unrelated_sessionstart_hooks() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  prepare_fixture "$fixture_root"
+  mkdir -p "$codex_home"
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "/tmp/another-plugin/hooks/session-start",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+  if ! output="$(run_fixture_hook_installer "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to preserve unrelated hooks, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+hooks_path = codex_home / "hooks.json"
+data = json.loads(hooks_path.read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 2, session_groups
+
+commands = [group["hooks"][0]["command"] for group in session_groups]
+assert "/tmp/another-plugin/hooks/session-start" in commands
+
+expected_script = str(fixture_root / "hooks" / "session-start")
+matching = [
+    group
+    for group in session_groups
+    if expected_script in group["hooks"][0]["command"]
+]
+assert len(matching) == 1, session_groups
+assert matching[0]["hooks"][0]["statusMessage"] == "loading superpowers"
+PY
+
+  if ! output="$(run_fixture_hook_remover "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to preserve unrelated hooks, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+handler = session_groups[0]["hooks"][0]
+assert handler["command"] == "/tmp/another-plugin/hooks/session-start"
+assert handler["statusMessage"] == "loading superpowers"
 PY
 }
 
@@ -586,6 +703,9 @@ EOF
     'README.md must mention `cmux codex uninstall-hooks`'
 
   expect_fixture_hook_installer_writes_codex_hooks "$tmpdir/hook-installer" "$tmpdir/hook-installer-home"
+  expect_fixture_hook_installer_preserves_unrelated_sessionstart_hooks \
+    "$tmpdir/hook-installer-preserves-sidecar" \
+    "$tmpdir/hook-installer-preserves-sidecar-home"
 
   expect_fixture_passes "$tmpdir/published-validator-scan"
   append_text \
@@ -932,7 +1052,10 @@ run_repo_contract_checks() {
   require_pattern 'cmux codex install-hooks' README.md docs/README.codex.md .codex/INSTALL.md
   require_pattern 'cmux codex uninstall-hooks' README.md docs/README.codex.md .codex/INSTALL.md
   require_pattern 'cmux-superpowers doctor' README.md docs/README.codex.md .codex/INSTALL.md
+  require_fixed "codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'" README.md docs/README.codex.md .codex/INSTALL.md
+  require_fixed 'the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`' README.md docs/README.codex.md .codex/INSTALL.md
   reject_pattern 'does not depend on (Codex )?hook bootstrap' README.md docs/README.codex.md .codex/INSTALL.md
+  reject_fixed 'codex --enable codex_hooks' README.md docs/README.codex.md .codex/INSTALL.md
 }
 
 if [[ "${1:-}" == "self-test" ]]; then

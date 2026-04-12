@@ -17,6 +17,8 @@ HOOK_SCRIPT_PATH = REPO_ROOT / "hooks" / "session-start"
 SESSION_START_COMMAND_PLACEHOLDER = "__SUPERPOWERS_SESSION_START_COMMAND__"
 SESSION_START_MATCHER = "startup|resume|clear"
 SESSION_START_STATUS_MESSAGE = "loading superpowers"
+PYTHON_OPTIONS_WITH_VALUES = {"-W", "-X"}
+PYTHON_REJECTED_SCRIPT_MODES = {"-c", "-m", "-"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,6 +45,51 @@ def shell_command(parts: list[str]) -> str:
 def build_session_start_command() -> str:
     python_executable = str(Path(sys.executable).resolve())
     return shell_command([python_executable, str(HOOK_SCRIPT_PATH)])
+
+
+def is_hooks_session_start_path(token: str) -> bool:
+    path = Path(token)
+    return path.name == "session-start" and path.parent.name == "hooks"
+
+
+def python_script_target(tokens: list[str]) -> str | None:
+    index = 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in PYTHON_REJECTED_SCRIPT_MODES:
+            return None
+        if token in PYTHON_OPTIONS_WITH_VALUES:
+            index += 2
+            continue
+        if token.startswith("-W") or token.startswith("-X"):
+            index += 1
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return token
+    return None
+
+
+def session_start_target_path(command: object) -> Path | None:
+    if not isinstance(command, str):
+        return None
+    if "__SUPERPOWERS_" in command.upper():
+        return None
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        return None
+    if not tokens:
+        return None
+    if is_hooks_session_start_path(tokens[0]):
+        return Path(tokens[0]).expanduser().resolve(strict=False)
+    if not Path(tokens[0]).name.startswith("python"):
+        return None
+    script_target = python_script_target(tokens)
+    if isinstance(script_target, str) and is_hooks_session_start_path(script_target):
+        return Path(script_target).expanduser().resolve(strict=False)
+    return None
 
 
 def load_json_file(path: Path) -> dict:
@@ -89,23 +136,31 @@ def is_superpowers_handler(handler: object) -> bool:
         return False
     if handler.get("type") != "command":
         return False
-
-    command = handler.get("command")
-    status_message = handler.get("statusMessage")
-    if status_message == SESSION_START_STATUS_MESSAGE:
-        return True
-    if not isinstance(command, str):
-        return False
-    return "session-start" in command and "superpowers" in command
+    target_path = session_start_target_path(handler.get("command"))
+    return target_path == HOOK_SCRIPT_PATH.resolve()
 
 
-def is_superpowers_group(group: object) -> bool:
-    if not isinstance(group, dict):
-        return False
-    hooks = group.get("hooks")
-    if not isinstance(hooks, list):
-        return False
-    return any(is_superpowers_handler(handler) for handler in hooks)
+def remove_owned_handlers(session_groups: list[object]) -> tuple[list[object], bool]:
+    filtered_groups: list[object] = []
+    removed_any = False
+    for group in session_groups:
+        if not isinstance(group, dict):
+            filtered_groups.append(group)
+            continue
+        hooks = group.get("hooks")
+        if not isinstance(hooks, list):
+            filtered_groups.append(group)
+            continue
+        remaining_hooks = [handler for handler in hooks if not is_superpowers_handler(handler)]
+        if len(remaining_hooks) == len(hooks):
+            filtered_groups.append(group)
+            continue
+        removed_any = True
+        if remaining_hooks:
+            group_copy = dict(group)
+            group_copy["hooks"] = remaining_hooks
+            filtered_groups.append(group_copy)
+    return filtered_groups, removed_any
 
 
 def write_hooks_file(path: Path, payload: dict) -> None:
@@ -127,7 +182,7 @@ def install(codex_home: Path) -> int:
 
     desired_payload = load_template(build_session_start_command())
     desired_group = desired_payload["hooks"]["SessionStart"][0]
-    filtered_groups = [group for group in session_groups if not is_superpowers_group(group)]
+    filtered_groups, _ = remove_owned_handlers(session_groups)
     filtered_groups.append(desired_group)
     hooks["SessionStart"] = filtered_groups
 
@@ -145,8 +200,8 @@ def remove(codex_home: Path) -> int:
     if not isinstance(session_groups, list):
         raise SystemExit(f"{hooks_path} field `hooks.SessionStart` must be an array when present")
 
-    filtered_groups = [group for group in session_groups if not is_superpowers_group(group)]
-    if len(filtered_groups) == len(session_groups):
+    filtered_groups, removed_any = remove_owned_handlers(session_groups)
+    if not removed_any:
         print(f"No Superpowers SessionStart hook found in {hooks_path}")
         return 0
 

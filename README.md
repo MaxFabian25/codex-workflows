@@ -85,19 +85,15 @@ Superpowers for Codex is a Codex-only fork of `obra/superpowers`. It packages th
    cmux codex install-hooks
    ```
 
-6. Enable Codex hooks.
+6. Enable Codex hooks in persistent config.
+
+   The launcher and `cmux-superpowers doctor` read the persisted setting from `~/.codex/config.toml`, so set it there instead of relying on a one-shot flag.
 
    Persistent config:
 
    ```toml
    [features]
    codex_hooks = true
-   ```
-
-   One-shot launch:
-
-   ```bash
-   codex --enable codex_hooks
    ```
 
 7. Restart Codex.
@@ -131,7 +127,7 @@ Confirm Codex plugin and hook support is enabled:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
-codex features list | rg '^codex_hooks[[:space:]]+under development'
+codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'
 ```
 
 ## Updating
@@ -151,7 +147,9 @@ python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
 
 ## Uninstalling
 
-Remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, then delete the local clone and plugin entry:
+First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
+
+Then remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, and delete the local clone:
 
 ```bash
 python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove

@@ -425,26 +425,37 @@ def python_script_target(tokens: list[str]) -> str | None:
     return None
 
 
-def is_real_superpowers_session_start_command(command: object) -> bool:
+def session_start_target_path(command: object) -> Path | None:
     if not isinstance(command, str):
-        return False
+        return None
     if "__SUPERPOWERS_" in command.upper():
-        return False
+        return None
     try:
         tokens = shlex.split(command)
     except ValueError:
-        return False
+        return None
     if not tokens:
-        return False
+        return None
     executable = Path(tokens[0]).name
     if executable in NOOP_EXECUTABLES:
-        return False
+        return None
     if is_hooks_session_start_path(tokens[0]):
-        return True
+        return Path(tokens[0]).expanduser()
     if not executable.startswith("python"):
-        return False
+        return None
     script_target = python_script_target(tokens)
-    return isinstance(script_target, str) and is_hooks_session_start_path(script_target)
+    if not isinstance(script_target, str) or not is_hooks_session_start_path(script_target):
+        return None
+    return Path(script_target).expanduser()
+
+
+def is_real_superpowers_session_start_command(command: object) -> bool:
+    return session_start_target_path(command) is not None
+
+
+def has_existing_superpowers_session_start_target(command: object) -> bool:
+    target_path = session_start_target_path(command)
+    return isinstance(target_path, Path) and target_path.is_file()
 
 
 def iter_session_start_command_hooks(payload: dict):
@@ -483,7 +494,7 @@ def has_superpowers_group(payload: dict) -> bool:
         if hook.get("statusMessage") != "loading superpowers":
             continue
         command = hook.get("command")
-        if not is_real_superpowers_session_start_command(command):
+        if not has_existing_superpowers_session_start_target(command):
             continue
         return True
     return False

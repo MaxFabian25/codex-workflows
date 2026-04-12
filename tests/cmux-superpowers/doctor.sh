@@ -310,7 +310,8 @@ scenario_launcher_missing_on_path() {
 
 scenario_neutral_command() {
   begin_scenario "neutral-command"
-  write_healthy_hooks_fixture "$codex_home" "/opt/team/hooks/session-start"
+  local session_start_target="$scenario/plugin/hooks/session-start"
+  write_healthy_hooks_fixture "$codex_home" "$session_start_target"
   write_enabled_config "$codex_home"
   local status
   status="$(run_current_doctor)"
@@ -430,9 +431,10 @@ scenario_wrong_target_interpreter() {
 
 scenario_guarded_cmux() {
   begin_scenario "guarded-cmux"
+  local session_start_target="$scenario/plugin/hooks/session-start"
   write_healthy_hooks_fixture \
     "$codex_home" \
-    "/opt/team/hooks/session-start" \
+    "$session_start_target" \
     "startup|resume|clear" \
     "command" \
     "loading superpowers" \
@@ -448,9 +450,10 @@ scenario_guarded_cmux() {
 
 scenario_if_then_cmux() {
   begin_scenario "if-then-cmux"
+  local session_start_target="$scenario/plugin/hooks/session-start"
   write_healthy_hooks_fixture \
     "$codex_home" \
-    "/opt/team/hooks/session-start" \
+    "$session_start_target" \
     "startup|resume|clear" \
     "command" \
     "loading superpowers" \
@@ -466,9 +469,10 @@ scenario_if_then_cmux() {
 
 scenario_command_prefixed_cmux() {
   begin_scenario "command-prefixed-cmux"
+  local session_start_target="$scenario/plugin/hooks/session-start"
   write_healthy_hooks_fixture \
     "$codex_home" \
-    "/opt/team/hooks/session-start" \
+    "$session_start_target" \
     "startup|resume|clear" \
     "command" \
     "loading superpowers" \
@@ -484,7 +488,8 @@ scenario_command_prefixed_cmux() {
 
 scenario_wrong_matcher() {
   begin_scenario "wrong-matcher"
-  write_healthy_hooks_fixture "$codex_home" "/opt/team/hooks/session-start" "startup|resume"
+  local session_start_target="$scenario/plugin/hooks/session-start"
+  write_healthy_hooks_fixture "$codex_home" "$session_start_target" "startup|resume"
   write_enabled_config "$codex_home"
   local status
   status="$(run_current_doctor)"
@@ -494,7 +499,8 @@ scenario_wrong_matcher() {
 
 scenario_wrong_type() {
   begin_scenario "wrong-type"
-  write_healthy_hooks_fixture "$codex_home" "/opt/team/hooks/session-start" "startup|resume|clear" "log"
+  local session_start_target="$scenario/plugin/hooks/session-start"
+  write_healthy_hooks_fixture "$codex_home" "$session_start_target" "startup|resume|clear" "log"
   write_enabled_config "$codex_home"
   local status
   status="$(run_current_doctor)"
@@ -504,9 +510,10 @@ scenario_wrong_type() {
 
 scenario_inert_cmux() {
   begin_scenario "inert-cmux"
+  local session_start_target="$scenario/plugin/hooks/session-start"
   write_healthy_hooks_fixture \
     "$codex_home" \
-    "/opt/team/hooks/session-start" \
+    "$session_start_target" \
     "startup|resume|clear" \
     "command" \
     "loading superpowers" \
@@ -528,6 +535,19 @@ scenario_placeholder() {
   status="$(run_current_doctor)"
   assert_superpowers_missing_payload "$output"
   assert_status "$status" 1 "placeholder"
+}
+
+scenario_deleted_session_start_target() {
+  begin_scenario "deleted-session-start-target"
+  local session_start_target="$scenario/plugin/hooks/session-start"
+  write_healthy_hooks_fixture "$codex_home" "$session_start_target"
+  write_enabled_config "$codex_home"
+  rm -f "$session_start_target"
+  assert_not_exists "$session_start_target"
+  local status
+  status="$(run_current_doctor)"
+  assert_superpowers_missing_payload "$output"
+  assert_status "$status" 1 "deleted-session-start-target"
 }
 
 scenario_false_green() {
@@ -1029,6 +1049,7 @@ run_hook_detection_scenarios() {
   scenario_wrong_type
   scenario_inert_cmux
   scenario_placeholder
+  scenario_deleted_session_start_target
 }
 
 run_probe_behavior_scenarios() {

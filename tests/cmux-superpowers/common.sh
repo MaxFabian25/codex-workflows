@@ -50,6 +50,82 @@ write_executable() {
   chmod +x "$path"
 }
 
+extract_session_start_target() {
+  local command="$1"
+
+  python3 - <<'PY' "$command"
+from pathlib import Path
+import shlex
+import sys
+
+PYTHON_OPTIONS_WITH_VALUES = {"-W", "-X"}
+PYTHON_REJECTED_SCRIPT_MODES = {"-c", "-m", "-"}
+
+
+def is_hooks_session_start_path(token: str) -> bool:
+    path = Path(token)
+    return path.name == "session-start" and path.parent.name == "hooks"
+
+
+def python_script_target(tokens: list[str]) -> str | None:
+    index = 1
+    while index < len(tokens):
+        token = tokens[index]
+        if token in PYTHON_REJECTED_SCRIPT_MODES:
+            return None
+        if token in PYTHON_OPTIONS_WITH_VALUES:
+            index += 2
+            continue
+        if token.startswith("-W") or token.startswith("-X"):
+            index += 1
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return token
+    return None
+
+
+command = sys.argv[1]
+if "__SUPERPOWERS_" in command.upper():
+    raise SystemExit(0)
+
+try:
+    tokens = shlex.split(command)
+except ValueError:
+    raise SystemExit(0)
+
+if not tokens:
+    raise SystemExit(0)
+
+if is_hooks_session_start_path(tokens[0]):
+    print(tokens[0])
+    raise SystemExit(0)
+
+if not Path(tokens[0]).name.startswith("python"):
+    raise SystemExit(0)
+
+target = python_script_target(tokens)
+if isinstance(target, str) and is_hooks_session_start_path(target):
+    print(target)
+PY
+}
+
+ensure_session_start_target_exists() {
+  local command="$1"
+  local target
+  target="$(extract_session_start_target "$command")"
+  if [[ -z "$target" || -e "$target" ]]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$target")"
+  write_executable "$target" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+echo '{}'
+EOF
+}
+
 write_cmux_executable() {
   local bin_dir="$1"
   write_executable "$bin_dir/cmux"
@@ -187,7 +263,7 @@ EOF
 
 write_healthy_hooks_fixture() {
   local codex_home="$1"
-  local session_start_command="${2:-/tmp/superpowers/hooks/session-start}"
+  local session_start_command="${2:-$codex_home/superpowers/hooks/session-start}"
   local matcher="${3:-startup|resume|clear}"
   local session_start_type="${4:-command}"
   local status_message="${5:-loading superpowers}"
@@ -259,6 +335,7 @@ payload = {
 json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")
 PY
+  ensure_session_start_target_exists "$session_start_command"
 }
 
 setup_doctor_scenario() {
