@@ -1027,7 +1027,7 @@ EOF
     "$tmpdir/hook-installer-deleted-remove-home"
   expect_fixture_hook_installer_preserves_deleted_unrelated_missing_sessionstart_sidecar \
     "$tmpdir/hook-installer-preserves-deleted-sidecar" \
-    "$tmpdir/superpowers-ancestor/missing-sidecar-root" \
+    "$tmpdir/my-superpowers-sidecar" \
     "$tmpdir/hook-installer-preserves-deleted-sidecar-home"
 
   expect_fixture_passes "$tmpdir/published-validator-scan"
