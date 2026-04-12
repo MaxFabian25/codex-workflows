@@ -29,6 +29,10 @@ forbidden_stale_hooks_path() {
   join_fragments "~/.config/" "superpowers/hooks/"
 }
 
+forbidden_no_hook_bootstrap_wording() {
+  join_fragments "does not depend on " "Codex hook bootstrap"
+}
+
 expected_release_version() {
   printf '%s' '5.0.6-codex.1'
 }
@@ -54,6 +58,35 @@ expected_issue() {
   join_fragments "$rel_path" " contains forbidden snippet: " "$snippet"
 }
 
+require_path() {
+  local rel_path="$1"
+
+  if [[ ! -e "$ROOT/$rel_path" ]]; then
+    printf 'Expected required path %s to exist.\n' "$rel_path" >&2
+    return 1
+  fi
+}
+
+require_pattern() {
+  local pattern="$1"
+  shift
+
+  if ! rg -n "$pattern" "$@" >/dev/null; then
+    printf 'Expected pattern %s in: %s\n' "$pattern" "$*" >&2
+    return 1
+  fi
+}
+
+reject_pattern() {
+  local pattern="$1"
+  shift
+
+  if rg -n "$pattern" "$@" >/dev/null; then
+    printf 'Forbidden pattern %s found in: %s\n' "$pattern" "$*" >&2
+    return 1
+  fi
+}
+
 prepare_fixture() {
   local fixture_root="$1"
 
@@ -67,21 +100,52 @@ prepare_fixture() {
     "$fixture_root/.codex" \
     "$fixture_root/.github/ISSUE_TEMPLATE" \
     "$fixture_root/docs" \
+    "$fixture_root/hooks" \
     "$fixture_root/skills/sample" \
     "$fixture_root/contract" \
     "$fixture_root/_shared/validators" \
     "$fixture_root/tests/codex-public-fork"
 
   cp "$ROOT/scripts/validate_codex_public_fork.py" "$fixture_root/scripts/validate_codex_public_fork.py"
+  cp "$ROOT/scripts/install_codex_hooks.py" "$fixture_root/scripts/install_codex_hooks.py"
+  cp "$ROOT/hooks/hooks.json" "$fixture_root/hooks/hooks.json"
+  cp "$ROOT/hooks/session-start" "$fixture_root/hooks/session-start"
 
   cat >"$fixture_root/README.md" <<'EOF'
-Codex-only package README.
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- cmux-superpowers doctor
+
+Uninstall with:
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+- cmux codex uninstall-hooks
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 EOF
   cat >"$fixture_root/.codex/INSTALL.md" <<'EOF'
-Install docs for Codex users.
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- cmux-superpowers doctor
+
+Uninstall with:
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+- cmux codex uninstall-hooks
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 EOF
   cat >"$fixture_root/docs/README.codex.md" <<'EOF'
-Codex docs surface.
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- cmux-superpowers doctor
+
+Uninstall with:
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+- cmux codex uninstall-hooks
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 EOF
   cat >"$fixture_root/SECURITY.md" <<'EOF'
 Security policy.
@@ -189,6 +253,7 @@ EOF
     "skills",
     "contract",
     "_shared",
+    "hooks",
     "scripts",
     "tests",
     "README.md",
@@ -247,6 +312,50 @@ expect_fixture_fails_with() {
     printf 'Expected validator output to contain %q, but saw:\n%s\n' "$expected_fragment" "$output" >&2
     return 1
   fi
+}
+
+run_fixture_hook_installer() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  (
+    cd "$fixture_root"
+    python3 scripts/install_codex_hooks.py --codex-home "$codex_home"
+  )
+}
+
+expect_fixture_hook_installer_writes_codex_hooks() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  prepare_fixture "$fixture_root"
+  mkdir -p "$codex_home"
+  if ! output="$(run_fixture_hook_installer "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to succeed, but it failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+hooks_path = codex_home / "hooks.json"
+data = json.loads(hooks_path.read_text(encoding="utf-8"))
+group = data["hooks"]["SessionStart"][0]
+handler = group["hooks"][0]
+
+assert group["matcher"] == "startup|resume|clear"
+assert handler["type"] == "command"
+assert handler["statusMessage"] == "loading superpowers"
+
+command = handler["command"]
+expected_script = str(fixture_root / "hooks" / "session-start")
+if expected_script not in command:
+    raise SystemExit(f"hooks.json command does not point at {expected_script}: {command}")
+PY
 }
 
 prepare_process_family_fixture() {
@@ -440,8 +549,43 @@ run_self_tests() {
   expect_fixture_passes "$tmpdir/no-hook-doc-wording"
   append_text \
     "$tmpdir/no-hook-doc-wording/docs/README.codex.md" \
-    $'\nThis package does not depend on hook bootstrap.\n'
-  expect_fixture_passes "$tmpdir/no-hook-doc-wording"
+    "$(printf '\nThis public fork %s.\n' "$(forbidden_no_hook_bootstrap_wording)")"
+  expect_fixture_fails_with \
+    "$tmpdir/no-hook-doc-wording" \
+    "$(expected_issue "docs/README.codex.md" "$(forbidden_no_hook_bootstrap_wording)")"
+
+  expect_fixture_passes "$tmpdir/hook-template-required"
+  rm "$tmpdir/hook-template-required/hooks/hooks.json"
+  expect_fixture_fails_with "$tmpdir/hook-template-required" 'Missing required path: hooks/hooks.json'
+
+  expect_fixture_passes "$tmpdir/package-hook-surface"
+  python3 - <<'PY' "$tmpdir/package-hook-surface/package.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["files"] = [item for item in data["files"] if item != "hooks"]
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  expect_fixture_fails_with \
+    "$tmpdir/package-hook-surface" \
+    'package.json `files` must include `hooks`'
+
+  expect_fixture_passes "$tmpdir/doc-contract"
+  cat >"$tmpdir/doc-contract/README.md" <<'EOF'
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- cmux-superpowers doctor
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/doc-contract" \
+    'README.md must mention `cmux codex uninstall-hooks`'
+
+  expect_fixture_hook_installer_writes_codex_hooks "$tmpdir/hook-installer" "$tmpdir/hook-installer-home"
 
   expect_fixture_passes "$tmpdir/published-validator-scan"
   append_text \
@@ -767,6 +911,30 @@ EOF
   echo "PASS: codex public fork self-tests"
 }
 
+run_repo_contract_checks() {
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  trap 'rm -rf "$tmpdir"' RETURN
+
+  require_path "hooks/hooks.json"
+  require_path "hooks/session-start"
+  require_path "scripts/install_codex_hooks.py"
+
+  python3 scripts/install_codex_hooks.py --codex-home "$tmpdir/codex-home" >/dev/null
+  test -f "$tmpdir/codex-home/hooks.json"
+
+  python3 scripts/install_codex_hooks.py --codex-home "$tmpdir/codex-home" --remove >/dev/null
+
+  require_pattern 'install_cmux_superpowers_launcher\.py' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'install_cmux_superpowers_launcher\.py --remove' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'install_codex_hooks\.py' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'install_codex_hooks\.py --remove' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'cmux codex install-hooks' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'cmux codex uninstall-hooks' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'cmux-superpowers doctor' README.md docs/README.codex.md .codex/INSTALL.md
+  reject_pattern 'does not depend on (Codex )?hook bootstrap' README.md docs/README.codex.md .codex/INSTALL.md
+}
+
 if [[ "${1:-}" == "self-test" ]]; then
   run_self_tests
   exit 0
@@ -775,6 +943,7 @@ fi
 cd "$ROOT"
 
 run_self_tests
+run_repo_contract_checks
 
 python3 scripts/validate_codex_public_fork.py
 python3 _shared/validators/validate_skill_library.py --root "$ROOT" --family process

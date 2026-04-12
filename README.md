@@ -67,15 +67,72 @@ Superpowers for Codex is a Codex-only fork of `obra/superpowers`. It packages th
    }
    ```
 
-3. Restart Codex.
+3. Install the local cmux launcher:
 
-4. Start a new session with:
+   ```bash
+   python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+   ```
+
+4. Install the Superpowers SessionStart hook:
+
+   ```bash
+   python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+   ```
+
+5. Install the cmux Codex hooks:
+
+   ```bash
+   cmux codex install-hooks
+   ```
+
+6. Enable Codex hooks.
+
+   Persistent config:
+
+   ```toml
+   [features]
+   codex_hooks = true
+   ```
+
+   One-shot launch:
+
+   ```bash
+   codex --enable codex_hooks
+   ```
+
+7. Restart Codex.
+
+8. Start a new session with:
 
    ```text
    Use superpowers:using-superpowers before we start.
    ```
 
 Detailed Codex setup and workflow guidance lives in [docs/README.codex.md](docs/README.codex.md).
+
+## Verify
+
+Confirm the local launcher is installed and the workstation is ready:
+
+```bash
+command -v cmux-superpowers
+cmux-superpowers doctor
+```
+
+Confirm the plugin and hook surfaces exist:
+
+```bash
+test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
+test -f ~/.codex/hooks.json
+rg 'loading superpowers|session-start' ~/.codex/hooks.json
+```
+
+Confirm Codex plugin and hook support is enabled:
+
+```bash
+codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
+codex features list | rg '^codex_hooks[[:space:]]+under development'
+```
 
 ## Updating
 
@@ -85,11 +142,21 @@ Pull the local plugin clone, then restart Codex:
 git -C ~/plugins/superpowers-codex pull
 ```
 
-## Uninstalling
-
-Remove the `superpowers-codex` plugin entry from `~/.agents/plugins/marketplace.json`, then delete the local clone:
+If you moved the clone to a different path, rerun:
 
 ```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+```
+
+## Uninstalling
+
+Remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, then delete the local clone and plugin entry:
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+cmux codex uninstall-hooks
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 rm -rf ~/plugins/superpowers-codex
 ```
 

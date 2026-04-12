@@ -15,6 +15,9 @@ REQUIRED_PATHS = [
     "README.md",
     ".codex/INSTALL.md",
     "docs/README.codex.md",
+    "hooks/hooks.json",
+    "hooks/session-start",
+    "scripts/install_codex_hooks.py",
     "SECURITY.md",
     "CODE_OF_CONDUCT.md",
     "package.json",
@@ -25,7 +28,8 @@ REMOVED_PATHS = [
     ".claude-plugin",
     ".cursor-plugin",
     ".opencode",
-    "hooks",
+    "hooks/hooks-cursor.json",
+    "hooks/run-hook.cmd",
     ".github/ISSUE_TEMPLATE/platform_support.md",
     "docs/README.opencode.md",
     "GEMINI.md",
@@ -44,13 +48,14 @@ FORBIDDEN_SNIPPETS = [
     join_fragments("github.com/sponsors/", "obra"),
     join_fragments("/Users/", "maxibon"),
     join_fragments("max", "fa-"),
-    join_fragments(".work", "trees/"),
     join_fragments("~/.claude/", "skills"),
     join_fragments("Claude", " Code"),
     join_fragments("CLAUDE", ".md"),
     join_fragments("~/.config/", "superpowers/hooks/"),
     join_fragments("~/.config/", "opencode"),
     join_fragments("CLAUDE_", "PLUGIN_ROOT"),
+    join_fragments("does not depend on ", "Codex hook bootstrap"),
+    join_fragments("does not depend on hook ", "bootstrap"),
     join_fragments("Open", "Code"),
     join_fragments("Gemini", " CLI"),
 ]
@@ -76,6 +81,7 @@ REQUIRED_PACKAGE_FILE_ENTRIES = [
     "skills",
     "contract",
     "_shared",
+    "hooks",
     "scripts",
     "tests",
     "README.md",
@@ -112,6 +118,22 @@ REQUIRED_INTERFACE_FIELDS = [
     "developerName",
     "category",
     "capabilities",
+]
+
+DOC_CONTRACT_PATHS = [
+    Path("README.md"),
+    Path("docs/README.codex.md"),
+    Path(".codex/INSTALL.md"),
+]
+
+REQUIRED_DOC_SNIPPETS = [
+    "install_cmux_superpowers_launcher.py",
+    "install_cmux_superpowers_launcher.py --remove",
+    "install_codex_hooks.py",
+    "install_codex_hooks.py --remove",
+    "cmux codex install-hooks",
+    "cmux codex uninstall-hooks",
+    "cmux-superpowers doctor",
 ]
 
 
@@ -379,11 +401,67 @@ def validate_package_contract() -> list[str]:
     return issues
 
 
+def validate_hook_bootstrap_contract() -> list[str]:
+    issues: list[str] = []
+
+    hooks_path = ROOT / "hooks" / "hooks.json"
+    if hooks_path.exists():
+        try:
+            payload = read_json(hooks_path)
+        except json.JSONDecodeError as exc:
+            return [f"hooks/hooks.json is invalid JSON: {exc.msg}"]
+
+        if not isinstance(payload, dict):
+            issues.append("hooks/hooks.json must contain a JSON object")
+        else:
+            try:
+                session_start_group = payload["hooks"]["SessionStart"][0]
+                handler = session_start_group["hooks"][0]
+            except (KeyError, IndexError, TypeError):
+                issues.append("hooks/hooks.json must define a SessionStart command template")
+            else:
+                if session_start_group.get("matcher") != "startup|resume|clear":
+                    issues.append("hooks/hooks.json must match startup|resume|clear for SessionStart")
+                if handler.get("type") != "command":
+                    issues.append("hooks/hooks.json SessionStart handler must use type `command`")
+                if handler.get("command") != "__SUPERPOWERS_SESSION_START_COMMAND__":
+                    issues.append("hooks/hooks.json must use the SessionStart command placeholder")
+                if handler.get("statusMessage") != "loading superpowers":
+                    issues.append("hooks/hooks.json must use `loading superpowers` as the SessionStart statusMessage")
+
+    session_start_path = ROOT / "hooks" / "session-start"
+    if session_start_path.exists():
+        session_start_text = read_text(session_start_path)
+        if "using-superpowers" not in session_start_text:
+            issues.append("hooks/session-start must load the using-superpowers skill")
+        if "additionalContext" not in session_start_text:
+            issues.append("hooks/session-start must emit SessionStart additionalContext")
+
+    return issues
+
+
+def validate_doc_contract() -> list[str]:
+    issues: list[str] = []
+    for rel_path in DOC_CONTRACT_PATHS:
+        path = ROOT / rel_path
+        if not path.exists():
+            continue
+
+        text = read_text(path)
+        for snippet in REQUIRED_DOC_SNIPPETS:
+            if snippet not in text:
+                issues.append(f"{rel_path.as_posix()} must mention `{snippet}`")
+
+    return issues
+
+
 def main() -> int:
     issues = [
         *validate_required_paths(),
         *validate_removed_paths(),
         *validate_package_contract(),
+        *validate_hook_bootstrap_contract(),
+        *validate_doc_contract(),
         *validate_forbidden_snippets(),
         *validate_manifest(),
         *validate_release_docs(),

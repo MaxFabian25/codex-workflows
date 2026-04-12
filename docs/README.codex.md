@@ -61,9 +61,36 @@ If `~/.agents/plugins/marketplace.json` already exists, append this object insid
 python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
 ```
 
-### 4. Restart Codex
+### 4. Install the Superpowers SessionStart hook
 
-Quit and relaunch Codex after the plugin registration change.
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+```
+
+### 5. Install the cmux Codex hooks
+
+```bash
+cmux codex install-hooks
+```
+
+### 6. Enable Codex hooks
+
+Persistent config:
+
+```toml
+[features]
+codex_hooks = true
+```
+
+One-shot launch:
+
+```bash
+codex --enable codex_hooks
+```
+
+### 7. Restart Codex
+
+Quit and relaunch Codex after the plugin registration or hook change.
 
 ## Verify
 
@@ -78,15 +105,18 @@ Confirm the plugin manifest exists:
 
 ```bash
 test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
+test -f ~/.codex/hooks.json
+rg 'loading superpowers|session-start' ~/.codex/hooks.json
 ```
 
-Confirm plugin support is enabled:
+Confirm plugin and hook support is enabled:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
+codex features list | rg '^codex_hooks[[:space:]]+under development'
 ```
 
-This public fork does not depend on Codex hook bootstrap. Start new sessions with:
+`cmux-superpowers doctor` only goes green when the launcher is on `PATH`, the Superpowers SessionStart hook is installed, the cmux Codex hooks are installed, and `codex_hooks` is enabled. Start new sessions with:
 
 ```text
 Use superpowers:using-superpowers before we start.
@@ -118,11 +148,21 @@ git -C ~/plugins/superpowers-codex pull
 
 Restart Codex after updating so the refreshed plugin and skill content are loaded into new sessions.
 
-## Uninstalling
-
-Remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`, then delete the local clone:
+If you moved the clone to a different path, rerun:
 
 ```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+```
+
+## Uninstalling
+
+Remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, then delete the local clone and plugin entry:
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+cmux codex uninstall-hooks
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 rm -rf ~/plugins/superpowers-codex
 ```
 
@@ -148,6 +188,24 @@ codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
 ```
 
 If that command prints nothing, update Codex to a build with stable plugin support before relying on the plugin install.
+
+### SessionStart or doctor still failing
+
+Check that `~/.codex/hooks.json` exists and still points at your current plugin clone:
+
+```bash
+test -f ~/.codex/hooks.json
+rg 'loading superpowers|session-start' ~/.codex/hooks.json
+```
+
+Then rerun the three install steps and re-check the doctor output:
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+cmux codex install-hooks
+cmux-superpowers doctor
+```
 
 ### Skills not routing as expected
 

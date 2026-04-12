@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+import json
+import sys
+from pathlib import Path
+
+
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+USING_SUPERPOWERS_PATH = PLUGIN_ROOT / "skills" / "using-superpowers" / "SKILL.md"
+
+
+def build_session_context(skill_text: str) -> str:
+    return (
+        "<EXTREMELY_IMPORTANT>\n"
+        "You have superpowers.\n\n"
+        "Below is the full content of your `superpowers-codex:using-superpowers` skill. "
+        "Use it to route this session before responding.\n\n"
+        f"{skill_text}\n"
+        "</EXTREMELY_IMPORTANT>"
+    )
+
+
+def main() -> int:
+    try:
+        skill_text = USING_SUPERPOWERS_PATH.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        payload = {
+            "systemMessage": f"Superpowers SessionStart hook could not read {USING_SUPERPOWERS_PATH}: {exc}"
+        }
+    else:
+        payload = {
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": build_session_context(skill_text),
+            }
+        }
+
+    json.dump(payload, sys.stdout)
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
