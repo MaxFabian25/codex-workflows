@@ -187,6 +187,17 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def worker_state_path(session_root: str | Path, worker_id: str) -> Path:
+    return Path(session_root) / "workers" / f"{worker_id}.json"
+
+
+def write_worker_state_json(session_root: str | Path, worker_payload: dict) -> None:
+    worker_id = worker_payload.get("worker_id")
+    if not isinstance(worker_id, str) or not worker_id:
+        raise ValueError("worker payload missing worker_id")
+    write_json(worker_state_path(session_root, worker_id), worker_payload)
+
+
 def session_manifest(
     session_id: str,
     created_at: str,
@@ -221,6 +232,23 @@ def persist_manifest_workers(
 ) -> None:
     manifest["workers"] = [asdict(worker) for worker in workers]
     write_json(manifest_path, manifest)
+    session_root = manifest.get("session_root")
+    if not isinstance(session_root, str) or not session_root:
+        raise ValueError("manifest missing session_root")
+    for worker_payload in manifest["workers"]:
+        if not isinstance(worker_payload, dict):
+            raise ValueError("manifest workers must be JSON objects")
+        write_worker_state_json(session_root, worker_payload)
+
+
+def persist_manifest_worker(
+    manifest_path: Path, manifest: dict, worker_payload: dict
+) -> None:
+    write_json(manifest_path, manifest)
+    session_root = manifest.get("session_root")
+    if not isinstance(session_root, str) or not session_root:
+        raise ValueError("manifest missing session_root")
+    write_worker_state_json(session_root, worker_payload)
 
 
 def matching_worker_plan(
@@ -1440,6 +1468,24 @@ def owned_worktree_entries(workers: list[dict[str, object]]) -> list[tuple[str |
     return entries
 
 
+def owned_worktree_descriptions(workers: list[dict[str, object]]) -> list[str]:
+    descriptions: list[str] = []
+    for worker in workers:
+        details: list[str] = []
+        worktree_path = worker.get("worktree_path")
+        worktree_branch = worker.get("worktree_branch")
+        if worktree_path:
+            details.append("worktree")
+        if worktree_branch:
+            details.append("branch")
+        if not details:
+            continue
+        worker_id = worker.get("worker_id")
+        label = str(worker_id) if isinstance(worker_id, str) and worker_id else "worker"
+        descriptions.append(f"{label} ({', '.join(details)})")
+    return descriptions
+
+
 def branch_checked_out_elsewhere_error(
     repo_root: str, owned_worktree_path: str | None, worktree_branch: str | None
 ) -> str | None:
@@ -1523,6 +1569,8 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                     )
                     if error:
                         raise SystemExit(f"cleanup failed: {error}")
+                    worker["surface_ref"] = None
+                    persist_manifest_worker(manifest_path, manifest, worker)
 
         hud = manifest.get("hud")
         if args.close_hud and isinstance(hud, dict):
@@ -1545,6 +1593,8 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                 )
                 if error:
                     raise SystemExit(f"cleanup failed: {error}")
+                hud["surface_ref"] = None
+                write_json(manifest_path, manifest)
 
         if args.remove_worktrees and worktree_entries:
             main = manifest.get("main")
@@ -1571,7 +1621,7 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                     if error:
                         raise SystemExit(f"cleanup failed: {error}")
                     worker["worktree_path"] = None
-                    write_json(manifest_path, manifest)
+                    persist_manifest_worker(manifest_path, manifest, worker)
                 if worktree_branch:
                     error = cleanup_step_error(
                         ["git", "-C", repo_root, "branch", "-D", worktree_branch],
@@ -1580,7 +1630,14 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                     if error:
                         raise SystemExit(f"cleanup failed: {error}")
                     worker["worktree_branch"] = None
-                    write_json(manifest_path, manifest)
+                    persist_manifest_worker(manifest_path, manifest, worker)
+        remaining_owned_resources = owned_worktree_descriptions(manifest.get("workers", []))
+        if args.purge_state and remaining_owned_resources:
+            raise SystemExit(
+                "cleanup failed: cannot purge session state while owned worktree resources remain: "
+                + ", ".join(remaining_owned_resources)
+                + "; rerun cleanup with --remove-worktrees"
+            )
     except SystemExit as exc:
         detail = launch_failure_detail(exc)
         if detail.startswith("cleanup failed: "):

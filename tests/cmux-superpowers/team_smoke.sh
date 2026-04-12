@@ -560,10 +560,92 @@ manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert manifest["cleanup"]["status"] == "active", manifest
 PY
 
+purge_owned_logs="$tmp/purge-owned-logs"
+purge_owned_state="$tmp/purge-owned-state"
+mkdir -p "$purge_owned_logs" "$purge_owned_state"
+purge_owned_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$purge_owned_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$purge_owned_state" \
+  python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement --no-hud "Purge should fail closed while owned worktrees remain"
+)"
+purge_owned_session_id="$(python3 - <<'PY' "$purge_owned_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+purge_owned_workspace_id="$(python3 - <<'PY' "$purge_owned_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$purge_owned_workspace_id")
+purge_owned_manifest_path="$(python3 - <<'PY' "$purge_owned_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+purge_owned_worktree_path="$(python3 - <<'PY' "$purge_owned_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+worker = manifest["workers"][0]
+print(worker["worktree_path"])
+PY
+)"
+purge_owned_worktree_branch="$(python3 - <<'PY' "$purge_owned_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(manifest["workers"][0]["worktree_branch"])
+PY
+)"
+purge_owned_output="$tmp/purge-owned-output.log"
+assert_command_fails_with_output \
+  "$purge_owned_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$purge_owned_state" \
+    python3 "$TEAM" cleanup --session "$purge_owned_session_id" --close-workers --purge-state
+assert_contains "$purge_owned_output" "cannot purge session state while owned worktree resources remain"
+test -e "$purge_owned_state/$purge_owned_session_id" || fail "expected owned-worktree purge failure to preserve session state"
+test -d "$purge_owned_worktree_path" || fail "expected owned-worktree purge failure to preserve worktree: $purge_owned_worktree_path"
+git -C "$write_repo" show-ref --verify --quiet "refs/heads/$purge_owned_worktree_branch" || fail "expected owned-worktree purge failure to preserve branch: $purge_owned_worktree_branch"
+python3 - <<'PY' "$purge_owned_manifest_path" "$purge_owned_worktree_path" "$purge_owned_worktree_branch"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert manifest["cleanup"]["status"] == "active", manifest
+worker = manifest["workers"][0]
+assert worker["surface_ref"] is None, worker
+assert worker["worktree_path"] == sys.argv[2], worker
+assert worker["worktree_branch"] == sys.argv[3], worker
+worker_json = json.loads((Path(manifest["session_root"]) / "workers" / "worker-1.json").read_text(encoding="utf-8"))
+assert worker_json["surface_ref"] is None, worker_json
+assert worker_json["worktree_path"] == worker["worktree_path"], worker_json
+assert worker_json["worktree_branch"] == worker["worktree_branch"], worker_json
+PY
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$purge_owned_state" \
+python3 "$TEAM" cleanup --session "$purge_owned_session_id" --close-workers --remove-worktrees --purge-state
+test ! -e "$purge_owned_state/$purge_owned_session_id" || fail "expected owned-worktree purge retry to purge session state"
+test ! -d "$purge_owned_worktree_path" || fail "expected owned-worktree purge retry to remove worktree: $purge_owned_worktree_path"
+if git -C "$write_repo" show-ref --verify --quiet "refs/heads/$purge_owned_worktree_branch"; then
+  fail "expected owned-worktree purge retry to delete branch: $purge_owned_worktree_branch"
+fi
+
 multi_cleanup_logs="$tmp/multi-cleanup-logs"
 multi_cleanup_state="$tmp/multi-cleanup-state"
 multi_cleanup_fake_git_dir="$tmp/multi-cleanup-fake-git"
-mkdir -p "$multi_cleanup_logs" "$multi_cleanup_state" "$multi_cleanup_fake_git_dir"
+multi_cleanup_fake_cmux_dir="$tmp/multi-cleanup-fake-cmux"
+mkdir -p "$multi_cleanup_logs" "$multi_cleanup_state" "$multi_cleanup_fake_git_dir" "$multi_cleanup_fake_cmux_dir"
 multi_cleanup_payload="$(
   CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
   CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
@@ -625,6 +707,7 @@ print(manifest["workers"][1]["worktree_branch"])
 PY
 )"
 real_git="$(command -v git)"
+real_cmux="$CMUX_BIN"
 cat >"$multi_cleanup_fake_git_dir/git" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -641,6 +724,17 @@ fi
 exec "$real_git" "${orig[@]}"
 EOF
 chmod +x "$multi_cleanup_fake_git_dir/git"
+cat >"$multi_cleanup_fake_cmux_dir/cmux" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+real_cmux="${CMUX_SUPERPOWERS_REAL_CMUX:?}"
+if [[ "${1:-}" == "close-surface" && "${CMUX_SUPERPOWERS_FAIL_CLOSE_SURFACE:-0}" == "1" ]]; then
+  echo "forced retry close-surface failure" >&2
+  exit 74
+fi
+exec "$real_cmux" "$@"
+EOF
+chmod +x "$multi_cleanup_fake_cmux_dir/cmux"
 multi_cleanup_output="$tmp/multi-cleanup-output.log"
 assert_command_fails_with_output \
   "$multi_cleanup_output" \
@@ -648,7 +742,8 @@ assert_command_fails_with_output \
     PATH="$multi_cleanup_fake_git_dir:$PATH" \
     CMUX_SUPERPOWERS_REAL_GIT="$real_git" \
     CMUX_SUPERPOWERS_FAIL_BRANCH_DELETE="$multi_cleanup_worker_2_branch" \
-    CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+    CMUX_SUPERPOWERS_REAL_CMUX="$real_cmux" \
+    CMUX_SUPERPOWERS_CMUX_BIN="$multi_cleanup_fake_cmux_dir/cmux" \
     CMUX_SUPERPOWERS_STATE_ROOT="$multi_cleanup_state" \
     python3 "$TEAM" cleanup --session "$multi_cleanup_session_id" --close-workers --remove-worktrees --purge-state
 assert_contains "$multi_cleanup_output" "forced late branch delete failure"
@@ -667,14 +762,26 @@ from pathlib import Path
 manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert manifest["cleanup"]["status"] == "active", manifest
 worker_1, worker_2 = manifest["workers"]
+assert worker_1["surface_ref"] is None, worker_1
+assert worker_2["surface_ref"] is None, worker_2
 assert worker_1["worktree_path"] is None, worker_1
 assert worker_1["worktree_branch"] is None, worker_1
 assert worker_2["worktree_path"] is None, worker_2
 assert worker_2["worktree_branch"] == sys.argv[2], worker_2
+worker_1_json = json.loads((Path(manifest["session_root"]) / "workers" / "worker-1.json").read_text(encoding="utf-8"))
+worker_2_json = json.loads((Path(manifest["session_root"]) / "workers" / "worker-2.json").read_text(encoding="utf-8"))
+assert worker_1_json["surface_ref"] == worker_1["surface_ref"], worker_1_json
+assert worker_1_json["worktree_path"] == worker_1["worktree_path"], worker_1_json
+assert worker_1_json["worktree_branch"] == worker_1["worktree_branch"], worker_1_json
+assert worker_2_json["surface_ref"] == worker_2["surface_ref"], worker_2_json
+assert worker_2_json["worktree_path"] == worker_2["worktree_path"], worker_2_json
+assert worker_2_json["worktree_branch"] == worker_2["worktree_branch"], worker_2_json
 PY
-CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_REAL_CMUX="$real_cmux" \
+CMUX_SUPERPOWERS_FAIL_CLOSE_SURFACE="1" \
+CMUX_SUPERPOWERS_CMUX_BIN="$multi_cleanup_fake_cmux_dir/cmux" \
 CMUX_SUPERPOWERS_STATE_ROOT="$multi_cleanup_state" \
-python3 "$TEAM" cleanup --session "$multi_cleanup_session_id" --remove-worktrees --purge-state
+python3 "$TEAM" cleanup --session "$multi_cleanup_session_id" --close-workers --remove-worktrees --purge-state
 test ! -e "$multi_cleanup_state/$multi_cleanup_session_id" || fail "expected retry-safe multi-worker cleanup to purge session state"
 if git -C "$write_repo" show-ref --verify --quiet "refs/heads/$multi_cleanup_worker_2_branch"; then
   fail "expected retry-safe multi-worker cleanup to delete second branch: $multi_cleanup_worker_2_branch"
