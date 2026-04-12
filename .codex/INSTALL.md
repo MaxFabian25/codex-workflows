@@ -55,9 +55,22 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
    }
    ```
 
-3. Restart Codex.
+3. Install the local cmux launcher.
+
+   ```bash
+   python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+   ```
+
+4. Restart Codex.
 
 ## Verify
+
+Confirm the local launcher is installed and the workstation is ready:
+
+```bash
+command -v cmux-superpowers
+cmux-superpowers doctor
+```
 
 Run:
 

@@ -55,11 +55,24 @@ If `~/.agents/plugins/marketplace.json` already exists, append this object insid
 }
 ```
 
-### 3. Restart Codex
+### 3. Install the local cmux launcher
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+```
+
+### 4. Restart Codex
 
 Quit and relaunch Codex after the plugin registration change.
 
 ## Verify
+
+Confirm the local launcher is installed and the workstation is ready:
+
+```bash
+command -v cmux-superpowers
+cmux-superpowers doctor
+```
 
 Confirm the plugin manifest exists:
 
@@ -88,6 +101,12 @@ Use superpowers:using-superpowers before we start.
 5. `subagent-driven-development` or `executing-plans`
 
 Use `subagent-driven-development` when the task benefits from bounded implementation slices with review gates. Use `executing-plans` when you want the same plan executed sequentially in one session.
+
+For a pane-based local team session in cmux, use:
+
+```bash
+cmux-superpowers team --worker review --worker implement "Implement the approved plan in this repository"
+```
 
 ## Updating
 
