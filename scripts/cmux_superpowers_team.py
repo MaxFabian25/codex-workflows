@@ -4,16 +4,20 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import sys
 import uuid
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -33,6 +37,18 @@ ROLE_SPECS = {
     "general": {"write": False, "profile": "workflow_fidelity"},
     "implement": {"write": True, "profile": "workflow_fidelity"},
 }
+TOML_INTEGER_RE = re.compile(
+    r"^[+-]?(?:0|[1-9](?:_?\d)*|0x[0-9A-Fa-f](?:_?[0-9A-Fa-f])*|0o[0-7](?:_?[0-7])*|0b[01](?:_?[01])*)$"
+)
+TOML_FLOAT_RE = re.compile(
+    r"^[+-]?(?:(?:\d(?:_?\d)*)\.\d(?:_?\d)*(?:[eE][+-]?\d(?:_?\d)*)?|(?:\d(?:_?\d)*)(?:[eE][+-]?\d(?:_?\d)*)|inf|nan)$"
+)
+TOML_LOCAL_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+TOML_LOCAL_TIME_RE = re.compile(r"^\d{2}:\d{2}:\d{2}(?:\.\d+)?$")
+TOML_LOCAL_DATETIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}:\d{2}(?:\.\d+)?$")
+TOML_OFFSET_DATETIME_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 
 @dataclass
@@ -463,10 +479,44 @@ def config_codex_hooks_setting(codex_home: Path) -> tuple[bool | None, str | Non
     except OSError as exc:
         return None, f"{config_path}: {exc}"
 
+    if os.environ.get("CMUX_SUPERPOWERS_FORCE_MANUAL_CONFIG_PARSER") == "1":
+        return config_codex_hooks_setting_manual(config_path, text)
+
+    if tomllib is not None:
+        return config_codex_hooks_setting_from_payload(
+            config_path,
+            load_toml_payload(config_path, text),
+        )
+
+    helper_result = config_codex_hooks_setting_via_helper(config_path)
+    if helper_result is not None:
+        return helper_result
+
+    return config_codex_hooks_setting_manual(config_path, text)
+
+
+def load_toml_payload(
+    config_path: Path, text: str
+) -> tuple[dict[str, object] | None, str | None]:
+    if tomllib is None:
+        return None, "tomllib unavailable"
     try:
         payload = tomllib.loads(text)
     except tomllib.TOMLDecodeError as exc:
         return None, f"{config_path}: {exc}"
+    if not isinstance(payload, dict):
+        return None, f"{config_path}: top-level TOML payload must be a table"
+    return payload, None
+
+
+def config_codex_hooks_setting_from_payload(
+    config_path: Path, payload_result: tuple[dict[str, object] | None, str | None]
+) -> tuple[bool | None, str | None]:
+    payload, error = payload_result
+    if error:
+        return None, error
+    if payload is None:
+        return None, f"{config_path}: top-level TOML payload must be a table"
     features = payload.get("features")
     if isinstance(features, dict):
         value = features.get("codex_hooks")
@@ -477,6 +527,471 @@ def config_codex_hooks_setting(codex_home: Path) -> tuple[bool | None, str | Non
     elif features is not None:
         return None, f"{config_path}: 'features' must be a table"
     return None, None
+
+
+def helper_python_binaries() -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for candidate in (shutil.which("python3"), shutil.which("python"), sys.executable):
+        if not candidate:
+            continue
+        resolved = str(Path(candidate).expanduser())
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        candidates.append(resolved)
+    return candidates
+
+
+def config_codex_hooks_setting_via_helper(
+    config_path: Path,
+) -> tuple[bool | None, str | None] | None:
+    if os.environ.get("CMUX_SUPERPOWERS_DISABLE_CONFIG_HELPER") == "1":
+        return None
+    helper_script = """
+import json
+import sys
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    print(json.dumps({"status": "no_tomllib"}))
+    raise SystemExit(3)
+
+config_path = sys.argv[1]
+text = open(config_path, encoding="utf-8").read()
+try:
+    payload = tomllib.loads(text)
+except tomllib.TOMLDecodeError as exc:
+    print(json.dumps({"status": "parse_error", "error": str(exc)}))
+    raise SystemExit(2)
+
+features = payload.get("features")
+if isinstance(features, dict):
+    value = features.get("codex_hooks")
+    if isinstance(value, bool):
+        print(json.dumps({"status": "ok", "value": value}))
+        raise SystemExit(0)
+    if value is not None:
+        print(json.dumps({"status": "type_error", "error": "[features].codex_hooks must be a boolean"}))
+        raise SystemExit(4)
+elif features is not None:
+    print(json.dumps({"status": "type_error", "error": "'features' must be a table"}))
+    raise SystemExit(4)
+
+print(json.dumps({"status": "ok", "value": None}))
+"""
+    for helper_bin in helper_python_binaries():
+        proc, error = run_command([helper_bin, "-c", helper_script, str(config_path)], 2.0)
+        if error or proc is None:
+            continue
+        try:
+            payload = json.loads(proc.stdout or "{}")
+        except json.JSONDecodeError:
+            continue
+        status = payload.get("status")
+        if proc.returncode == 0 and status == "ok":
+            value = payload.get("value")
+            if isinstance(value, bool):
+                return value, None
+            if value is None:
+                return None, None
+            continue
+        if proc.returncode == 2 and status == "parse_error":
+            detail = payload.get("error")
+            return None, f"{config_path}: {detail or 'invalid TOML'}"
+        if proc.returncode == 4 and status == "type_error":
+            detail = payload.get("error")
+            return None, f"{config_path}: {detail or 'invalid features table'}"
+        if proc.returncode == 3 and status == "no_tomllib":
+            continue
+    return None
+
+
+def config_codex_hooks_setting_manual(
+    config_path: Path, text: str
+) -> tuple[bool | None, str | None]:
+    current_section: str | None = None
+    parsed_value: bool | None = None
+    pending_lines: list[str] = []
+    multiline_quote: str | None = None
+    seen_sections: set[str] = set()
+    seen_tables: set[str] = set()
+    seen_keys: set[tuple[str, str]] = set()
+    for raw_line in text.splitlines():
+        line, multiline_quote, line_error = strip_toml_comment(raw_line, multiline_quote)
+        if line_error:
+            return None, f"{config_path}: {line_error}"
+        if not line:
+            if pending_lines:
+                pending_lines.append("")
+            continue
+        if not pending_lines and line.startswith("["):
+            if not line.endswith("]"):
+                return None, f"{config_path}: invalid table header"
+            current_section = line[1:-1].strip()
+            if current_section in seen_tables:
+                return None, f"{config_path}: duplicate table [{current_section}]"
+            seen_tables.add(current_section)
+            seen_sections.add(current_section)
+            continue
+        candidate_lines = [*pending_lines, line]
+        candidate = "\n".join(candidate_lines)
+        fragment_complete, fragment_error = toml_fragment_complete(candidate)
+        if fragment_error:
+            return None, f"{config_path}: {fragment_error}"
+        if not fragment_complete:
+            pending_lines = candidate_lines
+            continue
+        pending_lines = []
+        if "=" not in candidate:
+            return None, f"{config_path}: invalid TOML statement"
+        key, raw_value = (part.strip() for part in candidate.split("=", 1))
+        value_error = validate_toml_value(raw_value)
+        if value_error:
+            return None, f"{config_path}: {value_error}"
+        if current_section is None and key.startswith("features."):
+            if "features" in seen_sections:
+                return None, f"{config_path}: duplicate table [features]"
+            seen_tables.add("features")
+            normalized_key = key.removeprefix("features.")
+            key_ref = ("features", normalized_key)
+            if key_ref in seen_keys:
+                return None, f"{config_path}: duplicate key features.{normalized_key}"
+            seen_keys.add(key_ref)
+            if normalized_key == "codex_hooks":
+                if raw_value == "true":
+                    parsed_value = True
+                    continue
+                if raw_value == "false":
+                    parsed_value = False
+                    continue
+                return None, f"{config_path}: [features].codex_hooks must be a boolean"
+            continue
+        if current_section is None and key == "features":
+            if "features" in seen_tables:
+                return None, f"{config_path}: duplicate table [features]"
+            seen_tables.add("features")
+            seen_sections.add("features")
+            if raw_value.startswith("{") and raw_value.endswith("}"):
+                inline_result, inline_error = inline_features_codex_hooks(raw_value, config_path)
+                if inline_error:
+                    return None, inline_error
+                if inline_result is not None:
+                    key_ref = ("features", "codex_hooks")
+                    if key_ref in seen_keys:
+                        return None, f"{config_path}: duplicate key features.codex_hooks"
+                    seen_keys.add(key_ref)
+                    parsed_value = inline_result
+                continue
+            return None, f"{config_path}: 'features' must be a table"
+        scope = current_section or ""
+        key_ref = (scope, key)
+        if key_ref in seen_keys:
+            qualified_key = f"{scope}.{key}" if scope else key
+            return None, f"{config_path}: duplicate key {qualified_key}"
+        seen_keys.add(key_ref)
+        if current_section == "features" and key == "codex_hooks":
+            if raw_value == "true":
+                parsed_value = True
+                continue
+            if raw_value == "false":
+                parsed_value = False
+                continue
+            return None, f"{config_path}: [features].codex_hooks must be a boolean"
+    if multiline_quote is not None:
+        return None, f"{config_path}: unterminated string"
+    if pending_lines:
+        return None, f"{config_path}: unbalanced delimiters"
+    return parsed_value, None
+
+
+def inline_features_codex_hooks(
+    raw_value: str, config_path: Path
+) -> tuple[bool | None, str | None]:
+    body = raw_value[1:-1].strip()
+    if not body:
+        return None, None
+    entries, split_error = split_toml_top_level(body)
+    if split_error:
+        return None, f"{config_path}: {split_error}"
+    for entry in entries:
+        item = entry.strip()
+        if not item:
+            return None, f"{config_path}: invalid inline table"
+        if "=" not in item:
+            return None, f"{config_path}: invalid inline table"
+        key, value = (part.strip() for part in item.split("=", 1))
+        if key != "codex_hooks":
+            continue
+        if value == "true":
+            return True, None
+        if value == "false":
+            return False, None
+        return None, f"{config_path}: [features].codex_hooks must be a boolean"
+    return None, None
+
+
+def strip_toml_comment(
+    raw_line: str, multiline_quote: str | None = None
+) -> tuple[str, str | None, str | None]:
+    tokens: list[str] = []
+    in_single = False
+    in_double = False
+    escaped = False
+    index = 0
+    while index < len(raw_line):
+        if multiline_quote is not None:
+            if raw_line.startswith(multiline_quote, index):
+                tokens.append(multiline_quote)
+                index += 3
+                multiline_quote = None
+                continue
+            tokens.append(raw_line[index])
+            index += 1
+            continue
+        if raw_line.startswith('"""', index) or raw_line.startswith("'''", index):
+            multiline_quote = raw_line[index : index + 3]
+            tokens.append(multiline_quote)
+            index += 3
+            continue
+        char = raw_line[index]
+        if escaped:
+            tokens.append(char)
+            escaped = False
+            index += 1
+            continue
+        if char == "\\" and in_double:
+            tokens.append(char)
+            escaped = True
+            index += 1
+            continue
+        if char == '"' and not in_single:
+            in_double = not in_double
+            tokens.append(char)
+            index += 1
+            continue
+        if char == "'" and not in_double:
+            in_single = not in_single
+            tokens.append(char)
+            index += 1
+            continue
+        if char == "#" and not in_single and not in_double:
+            break
+        tokens.append(char)
+        index += 1
+    if escaped or in_single or in_double:
+        return "", multiline_quote, "unterminated string"
+    return "".join(tokens).strip(), multiline_quote, None
+
+
+def split_toml_top_level(text: str) -> tuple[list[str], str | None]:
+    parts: list[str] = []
+    current: list[str] = []
+    in_single = False
+    in_double = False
+    escaped = False
+    brace_depth = 0
+    bracket_depth = 0
+    paren_depth = 0
+    for char in text:
+        if escaped:
+            current.append(char)
+            escaped = False
+            continue
+        if char == "\\" and in_double:
+            current.append(char)
+            escaped = True
+            continue
+        if char == '"' and not in_single:
+            in_double = not in_double
+            current.append(char)
+            continue
+        if char == "'" and not in_double:
+            in_single = not in_single
+            current.append(char)
+            continue
+        if not in_single and not in_double:
+            if char == "{":
+                brace_depth += 1
+            elif char == "}":
+                brace_depth -= 1
+            elif char == "[":
+                bracket_depth += 1
+            elif char == "]":
+                bracket_depth -= 1
+            elif char == "(":
+                paren_depth += 1
+            elif char == ")":
+                paren_depth -= 1
+            if brace_depth < 0 or bracket_depth < 0 or paren_depth < 0:
+                return [], "unbalanced delimiters"
+            elif (
+                char == ","
+                and brace_depth == 0
+                and bracket_depth == 0
+                and paren_depth == 0
+            ):
+                parts.append("".join(current))
+                current = []
+                continue
+        current.append(char)
+    if escaped or in_single or in_double:
+        return [], "unterminated string"
+    if brace_depth != 0 or bracket_depth != 0 or paren_depth != 0:
+        return [], "unbalanced delimiters"
+    parts.append("".join(current))
+    return parts, None
+
+
+def toml_fragment_complete(text: str) -> tuple[bool, str | None]:
+    in_single = False
+    in_double = False
+    multiline_quote: str | None = None
+    escaped = False
+    brace_depth = 0
+    bracket_depth = 0
+    paren_depth = 0
+    index = 0
+    while index < len(text):
+        if multiline_quote is not None:
+            if text.startswith(multiline_quote, index):
+                index += 3
+                multiline_quote = None
+                continue
+            index += 1
+            continue
+        if text.startswith('"""', index) or text.startswith("'''", index):
+            multiline_quote = text[index : index + 3]
+            index += 3
+            continue
+        char = text[index]
+        if escaped:
+            escaped = False
+            index += 1
+            continue
+        if char == "\\" and in_double:
+            escaped = True
+            index += 1
+            continue
+        if char == '"' and not in_single:
+            in_double = not in_double
+            index += 1
+            continue
+        if char == "'" and not in_double:
+            in_single = not in_single
+            index += 1
+            continue
+        if in_single or in_double:
+            index += 1
+            continue
+        if char == "{":
+            brace_depth += 1
+        elif char == "}":
+            brace_depth -= 1
+        elif char == "[":
+            bracket_depth += 1
+        elif char == "]":
+            bracket_depth -= 1
+        elif char == "(":
+            paren_depth += 1
+        elif char == ")":
+            paren_depth -= 1
+        if brace_depth < 0 or bracket_depth < 0 or paren_depth < 0:
+            return False, "unbalanced delimiters"
+        index += 1
+    if escaped or in_single or in_double:
+        return False, "unterminated string"
+    if multiline_quote is not None:
+        return False, None
+    return brace_depth == 0 and bracket_depth == 0 and paren_depth == 0, None
+
+
+def validate_toml_value(raw_value: str) -> str | None:
+    value = raw_value.strip()
+    if not value:
+        return "missing value"
+    complete, error = toml_fragment_complete(value)
+    if error:
+        return error
+    if not complete:
+        return None
+    if value.startswith("{") and value.endswith("}"):
+        entries, split_error = split_toml_top_level(value[1:-1].strip())
+        if split_error:
+            return split_error
+        if any(not entry.strip() for entry in entries):
+            return "invalid inline table"
+        return None
+    if value.startswith("[") and value.endswith("]"):
+        return None
+    string_end = toml_string_end(value)
+    if string_end is not None:
+        if value[string_end:].strip():
+            return "invalid TOML value"
+        return None
+    if value in {"true", "false", "inf", "+inf", "-inf", "nan", "+nan", "-nan"}:
+        return None
+    if is_toml_numeric_literal(value):
+        return None
+    if is_toml_datetime_literal(value):
+        return None
+    return "invalid TOML value"
+
+
+def toml_string_end(value: str) -> int | None:
+    if value.startswith('"""') or value.startswith("'''"):
+        delimiter = value[:3]
+        index = 3
+        while index < len(value):
+            if value.startswith(delimiter, index):
+                return index + 3
+            index += 1
+        return None
+    if value.startswith('"'):
+        index = 1
+        escaped = False
+        while index < len(value):
+            char = value[index]
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                return index + 1
+            index += 1
+        return None
+    if value.startswith("'"):
+        index = 1
+        while index < len(value):
+            if value[index] == "'":
+                return index + 1
+            index += 1
+        return None
+    return None
+
+
+def is_toml_numeric_literal(value: str) -> bool:
+    return bool(TOML_INTEGER_RE.fullmatch(value) or TOML_FLOAT_RE.fullmatch(value))
+
+
+def is_toml_datetime_literal(value: str) -> bool:
+    try:
+        if TOML_OFFSET_DATETIME_RE.fullmatch(value):
+            datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+            return True
+        if TOML_LOCAL_DATETIME_RE.fullmatch(value):
+            datetime.fromisoformat(value)
+            return True
+        if TOML_LOCAL_DATE_RE.fullmatch(value):
+            date.fromisoformat(value)
+            return True
+        if TOML_LOCAL_TIME_RE.fullmatch(value):
+            time.fromisoformat(value)
+            return True
+    except ValueError:
+        return False
+    return False
 
 
 def launcher_on_path() -> bool:
@@ -577,6 +1092,166 @@ def first_ref(text: str, prefix: str) -> str:
     raise TeamLaunchError(f"missing {prefix} ref in cmux output: {text}")
 
 
+def refs_from_text(text: str, prefix: str) -> list[str]:
+    refs: list[str] = []
+    seen: set[str] = set()
+    for token in text.split():
+        if not token.startswith(prefix):
+            continue
+        if token in seen:
+            continue
+        seen.add(token)
+        refs.append(token)
+    return refs
+
+
+def workspace_refs_from_listing(text: str) -> set[str]:
+    refs: set[str] = set()
+    for raw_line in text.splitlines():
+        try:
+            refs.add(first_ref(raw_line, "workspace:"))
+        except TeamLaunchError:
+            continue
+    return refs
+
+
+def workspace_lines_from_listing(text: str) -> dict[str, str]:
+    lines: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        try:
+            lines[first_ref(raw_line, "workspace:")] = raw_line
+        except TeamLaunchError:
+            continue
+    return lines
+
+
+def has_alnum_token(token: str) -> bool:
+    return any(char.isalnum() for char in token)
+
+
+def workspace_session_marker(session_id: str) -> str:
+    return f"sp-{session_id.removeprefix('session-')}"
+
+
+def workspace_name_for_session(session_marker: str, requested_label: str | None) -> str:
+    return session_marker
+
+
+def workspace_display_name(raw_line: str, workspace_ref: str) -> str:
+    _, suffix = raw_line.split(workspace_ref, 1)
+    tokens = suffix.split()
+    while tokens and tokens[-1] == "[selected]":
+        tokens.pop()
+    while tokens and not has_alnum_token(tokens[0]):
+        tokens.pop(0)
+    return " ".join(tokens)
+
+
+def workspace_display_matches_expected_name(display_name: str, expected_name: str) -> bool:
+    if not display_name:
+        return False
+    return display_name == expected_name
+
+
+def validate_workspace_ref_name(
+    workspace_ref: str, expected_workspace_name: str
+) -> str | None:
+    try:
+        listing = cmux_text("list-workspaces")
+    except BaseException as exc:
+        if isinstance(exc, KeyboardInterrupt):
+            raise
+        return launch_failure_detail(exc)
+    raw_line = workspace_lines_from_listing(listing).get(workspace_ref)
+    if raw_line is None:
+        return f"workspace {workspace_ref} not present in cmux list-workspaces"
+    display_name = workspace_display_name(raw_line, workspace_ref)
+    if workspace_display_matches_expected_name(display_name, expected_workspace_name):
+        return None
+    return (
+        "workspace display does not match expected session workspace name: "
+        f"recovered {workspace_ref} as {display_name!r} for expected {expected_workspace_name!r}"
+    )
+
+
+def snapshot_workspace_refs() -> tuple[set[str] | None, str | None]:
+    try:
+        return workspace_refs_from_listing(cmux_text("list-workspaces")), None
+    except BaseException as exc:
+        if isinstance(exc, KeyboardInterrupt):
+            raise
+        return None, launch_failure_detail(exc)
+
+
+def recover_workspace_ref_by_delta(
+    refs_before_launch: set[str] | None,
+    refs_before_error: str | None,
+    expected_workspace_name: str,
+) -> tuple[str | None, str | None]:
+    if refs_before_launch is None:
+        detail = refs_before_error or "pre-launch workspace snapshot unavailable"
+        return None, detail
+    try:
+        listing_after_launch = cmux_text("list-workspaces")
+    except BaseException as exc:
+        if isinstance(exc, KeyboardInterrupt):
+            raise
+        return None, launch_failure_detail(exc)
+    refs_after_launch = workspace_refs_from_listing(listing_after_launch)
+    workspace_lines = workspace_lines_from_listing(listing_after_launch)
+    recovered_refs = sorted(refs_after_launch - refs_before_launch)
+    if len(recovered_refs) == 1:
+        recovered_ref = recovered_refs[0]
+        raw_line = workspace_lines.get(recovered_ref)
+        display_name = workspace_display_name(raw_line, recovered_ref) if raw_line else ""
+        if not workspace_display_matches_expected_name(display_name, expected_workspace_name):
+            return None, (
+                "workspace display does not match expected session workspace name: "
+                f"recovered {recovered_ref} as {display_name!r} for expected {expected_workspace_name!r}"
+            )
+        return recovered_ref, None
+    if not recovered_refs:
+        return None, "no new workspace refs detected in cmux list-workspaces"
+    return None, (
+        "ambiguous workspace recovery: found "
+        f"{len(recovered_refs)} new workspace refs ({', '.join(recovered_refs)})"
+    )
+
+
+def resolve_workspace_ref_after_launch(
+    workspace_output: str,
+    refs_before_launch: set[str] | None,
+    refs_before_error: str | None,
+    expected_workspace_name: str,
+) -> tuple[str | None, str | None]:
+    output_refs = refs_from_text(workspace_output, "workspace:")
+    if refs_before_launch is not None:
+        if len(output_refs) != 1 or output_refs[0] in refs_before_launch:
+            return recover_workspace_ref_by_delta(
+                refs_before_launch,
+                refs_before_error,
+                expected_workspace_name,
+            )
+        validation_error = validate_workspace_ref_name(output_refs[0], expected_workspace_name)
+        if validation_error is None:
+            return output_refs[0], None
+        recovered_workspace_id, recovery_error = recover_workspace_ref_by_delta(
+            refs_before_launch,
+            refs_before_error,
+            expected_workspace_name,
+        )
+        if recovered_workspace_id is not None:
+            return recovered_workspace_id, None
+        return None, recovery_error or validation_error
+    if len(output_refs) != 1:
+        detail = refs_before_error or f"missing unique workspace ref in cmux output: {workspace_output}"
+        return None, detail
+    validation_error = validate_workspace_ref_name(output_refs[0], expected_workspace_name)
+    if validation_error:
+        return None, validation_error
+    return output_refs[0], None
+
+
 def cmux_selected_pane(workspace_id: str) -> str:
     return first_ref(cmux_text("list-panes", "--workspace", workspace_id), "pane:")
 
@@ -641,7 +1316,10 @@ def cmd_team(args: argparse.Namespace) -> int:
     session_root.mkdir(parents=True, exist_ok=True)
     task = args.task
     cwd = str(Path(args.cwd).expanduser().resolve())
+    session_marker = workspace_session_marker(session_id)
+    workspace_name = workspace_name_for_session(session_marker, args.name)
     workspace_id: str | None = None
+    preserve_session_state = False
 
     try:
         main_packet = session_root / "packets" / "main.md"
@@ -649,20 +1327,29 @@ def cmd_team(args: argparse.Namespace) -> int:
         main_command = codex_command(
             cwd, main_packet, "main", args.profile or "workflow_fidelity", session_id
         )
+        workspace_refs_before_launch, workspace_refs_before_error = snapshot_workspace_refs()
 
-        workspace_name = args.name or f"superpowers-{session_id}"
-        workspace_id = first_ref(
-            cmux_text(
-                "new-workspace",
-                "--name",
-                workspace_name,
-                "--cwd",
-                cwd,
-                "--command",
-                main_command,
-            ),
-            "workspace:",
+        workspace_output = cmux_text(
+            "new-workspace",
+            "--name",
+            workspace_name,
+            "--cwd",
+            cwd,
+            "--command",
+            main_command,
         )
+        workspace_id, workspace_error = resolve_workspace_ref_after_launch(
+            workspace_output,
+            workspace_refs_before_launch,
+            workspace_refs_before_error,
+            workspace_name,
+        )
+        if workspace_id is None:
+            preserve_session_state = True
+            detail = workspace_error or "workspace recovery failed"
+            raise TeamLaunchError(
+                f"unable to recover workspace ref after new-workspace output: {detail}"
+            )
         main_pane = cmux_selected_pane(workspace_id)
         main_surface = cmux_selected_surface(workspace_id, main_pane)
         main_context = caller_context(workspace_id, main_surface)
@@ -726,7 +1413,7 @@ def cmd_team(args: argparse.Namespace) -> int:
 
         manifest = {
             "session_id": session_id,
-            "created_at": datetime.now(UTC).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "workspace_id": workspace_id,
             "session_root": str(session_root),
             "main": {
@@ -772,9 +1459,13 @@ def cmd_team(args: argparse.Namespace) -> int:
             if close_proc.returncode != 0:
                 close_detail = probe_failure_detail(close_proc) or f"exit {close_proc.returncode}"
                 close_error = f"close-workspace failed: {close_detail}"
-        if close_error:
+        if close_error or preserve_session_state:
+            details = [f"team launch failed: {launch_detail}"]
+            if close_error:
+                details.append(close_error)
+            details.append(f"session state preserved at {session_root}")
             raise SystemExit(
-                f"team launch failed: {launch_detail}; {close_error}; session state preserved at {session_root}"
+                "; ".join(details)
             ) from None
         shutil.rmtree(session_root, ignore_errors=True)
         raise SystemExit(f"team launch failed: {launch_detail}") from None
