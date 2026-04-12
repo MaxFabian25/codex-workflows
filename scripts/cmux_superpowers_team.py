@@ -35,6 +35,11 @@ PYTHON_OPTIONS_WITH_VALUES = {"-W", "-X"}
 PYTHON_REJECTED_SCRIPT_MODES = {"-c", "-m", "-"}
 EXPECTED_PLUGIN_NAME = "superpowers-codex"
 PLUGIN_MANIFEST_RELATIVE_PATH = Path(".codex-plugin") / "plugin.json"
+CODEX_ENV_PASSTHROUGH = (
+    "CODEX_HOME",
+    "CMUX_SUPERPOWERS_HOOK_LOG_DIR",
+    "CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR",
+)
 ROLE_SPECS = {
     "review": {"write": False, "profile": "parallel_readonly"},
     "general": {"write": False, "profile": "workflow_fidelity"},
@@ -66,6 +71,9 @@ class WorkerPlan:
     surface_ref: str | None = None
     worktree_path: str | None = None
     worktree_branch: str | None = None
+    git_branch: str | None = None
+    launcher_state: str | None = None
+    cmux_state: str | None = None
 
 
 class TeamLaunchError(RuntimeError):
@@ -199,7 +207,70 @@ def manifest_hud_json_path(manifest: dict) -> Path | None:
     return Path(hud_json)
 
 
+def git_branch_for_cwd(cwd: object) -> str | None:
+    if not isinstance(cwd, str) or not cwd:
+        return None
+    try:
+        proc = subprocess.run(
+            ["git", "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
+    if proc.returncode != 0:
+        return None
+    branch = proc.stdout.strip()
+    return branch or None
+
+
+def main_launcher_state(main: dict[str, object]) -> str:
+    surface_ref = main.get("surface_ref")
+    if isinstance(surface_ref, str) and surface_ref:
+        return "active"
+    return "closed"
+
+
+def worker_launcher_state(worker: dict[str, object]) -> str:
+    surface_ref = worker.get("surface_ref")
+    if isinstance(surface_ref, str) and surface_ref:
+        return "active"
+    worktree_path = worker.get("worktree_path")
+    worktree_branch = worker.get("worktree_branch")
+    if isinstance(worktree_path, str) and worktree_path:
+        return "worktree_only"
+    if isinstance(worktree_branch, str) and worktree_branch:
+        return "branch_only"
+    return "closed"
+
+
+def refresh_manifest_runtime_fields(manifest: dict) -> None:
+    main = manifest.get("main")
+    if isinstance(main, dict):
+        main["git_branch"] = git_branch_for_cwd(main.get("cwd"))
+        main["launcher_state"] = main_launcher_state(main)
+        cmux_state = main.get("cmux_state")
+        main["cmux_state"] = cmux_state if isinstance(cmux_state, str) else None
+
+    workers = manifest.get("workers")
+    if not isinstance(workers, list):
+        return
+    for worker in workers:
+        if not isinstance(worker, dict):
+            continue
+        worktree_branch = worker.get("worktree_branch")
+        if isinstance(worktree_branch, str) and worktree_branch:
+            worker["git_branch"] = worktree_branch
+        else:
+            worker["git_branch"] = git_branch_for_cwd(worker.get("cwd"))
+        worker["launcher_state"] = worker_launcher_state(worker)
+        cmux_state = worker.get("cmux_state")
+        worker["cmux_state"] = cmux_state if isinstance(cmux_state, str) else None
+
+
 def persist_manifest(manifest_path: Path, manifest: dict) -> None:
+    refresh_manifest_runtime_fields(manifest)
     write_json(manifest_path, manifest)
     hud_json_path = manifest_hud_json_path(manifest)
     if hud_json_path is not None:
@@ -212,17 +283,7 @@ def build_hud_payload(manifest: dict) -> dict:
         "session_id": manifest["session_id"],
         "workspace_id": manifest["workspace_id"],
         "main": dict(main),
-        "workers": [
-            {
-                "worker_id": worker["worker_id"],
-                "role": worker["role"],
-                "cwd": worker["cwd"],
-                "worktree_path": worker.get("worktree_path"),
-                "pane_ref": worker.get("pane_ref"),
-                "surface_ref": worker.get("surface_ref"),
-            }
-            for worker in manifest["workers"]
-        ],
+        "workers": [dict(worker) for worker in manifest["workers"]],
     }
 
 
@@ -245,12 +306,16 @@ payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 print(f"Session: {payload['session_id']}")
 print(f"Workspace: {payload['workspace_id']}")
 main = payload.get("main", {})
-print(f"Main: pane={main.get('pane_ref')} surface={main.get('surface_ref')} cwd={main.get('cwd')}")
+print(
+    f"Main: pane={main.get('pane_ref')} surface={main.get('surface_ref')} cwd={main.get('cwd')} "
+    f"branch={main.get('git_branch')} state={main.get('launcher_state')} cmux={main.get('cmux_state')}"
+)
 print("")
 for worker in payload.get("workers", []):
     print(
         f"{worker['worker_id']}  role={worker['role']}  "
-        f"pane={worker.get('pane_ref')}  surface={worker.get('surface_ref')}"
+        f"pane={worker.get('pane_ref')}  surface={worker.get('surface_ref')}  "
+        f"branch={worker.get('git_branch')}  state={worker.get('launcher_state')}  cmux={worker.get('cmux_state')}"
     )
     print(f"  cwd={worker['cwd']}")
     print(f"  worktree={worker.get('worktree_path')}")
@@ -297,6 +362,9 @@ def session_manifest(
             "surface_ref": main_surface,
             "packet_path": str(main_packet),
             "cwd": cwd,
+            "git_branch": None,
+            "launcher_state": None,
+            "cmux_state": None,
         },
         "workers": [asdict(worker) for worker in workers],
         "hud": None,
@@ -1536,6 +1604,10 @@ def codex_command(
         f"CMUX_SUPERPOWERS_ROLE={shlex.quote(role)}",
         f"CMUX_SUPERPOWERS_SESSION_ID={shlex.quote(session_id)}",
     ]
+    for env_name in CODEX_ENV_PASSTHROUGH:
+        env_value = os.environ.get(env_name)
+        if env_value:
+            exports.append(f"{env_name}={shlex.quote(env_value)}")
     stub_log_dir = os.environ.get("CMUX_SUPERPOWERS_STUB_LOG_DIR")
     if stub_log_dir:
         exports.append(f"CMUX_SUPERPOWERS_STUB_LOG_DIR={shlex.quote(stub_log_dir)}")
@@ -1857,6 +1929,7 @@ def cmd_team(args: argparse.Namespace) -> int:
         for index, role in enumerate(workers, start=1):
             worker_id = f"worker-{index}"
             role_spec = ROLE_SPECS[role]
+            worker_profile = args.profile or role_spec["profile"]
             packet_path = session_root / "packets" / f"{worker_id}.md"
             worker_cwd, worktree_path, worktree_branch = prepare_worker_root(
                 cwd, session_id, worker_id, bool(role_spec["write"])
@@ -1871,7 +1944,7 @@ def cmd_team(args: argparse.Namespace) -> int:
                 worker_id=worker_id,
                 role=role,
                 write_capable=bool(role_spec["write"]),
-                profile=role_spec["profile"],
+                profile=worker_profile,
                 cwd=worker_cwd,
                 packet_path=str(packet_path),
                 worktree_path=worktree_path,
@@ -1915,7 +1988,7 @@ def cmd_team(args: argparse.Namespace) -> int:
                         worker_cwd,
                         packet_path,
                         role,
-                        role_spec["profile"],
+                        worker_profile,
                         session_id,
                     )
                     + "\n",

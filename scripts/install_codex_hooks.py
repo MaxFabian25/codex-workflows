@@ -94,10 +94,9 @@ def session_start_target_path(command: object) -> Path | None:
     return None
 
 
-def superpowers_plugin_root_for_target(target_path: Path | None) -> Path | None:
-    if not isinstance(target_path, Path) or not target_path.is_file():
+def superpowers_plugin_root_from_repo_root(repo_root: Path | None) -> Path | None:
+    if not isinstance(repo_root, Path):
         return None
-    repo_root = target_path.parent.parent.resolve(strict=False)
     manifest_path = repo_root / PLUGIN_MANIFEST_RELATIVE_PATH
     try:
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -108,6 +107,27 @@ def superpowers_plugin_root_for_target(target_path: Path | None) -> Path | None:
     if payload.get("name") != EXPECTED_PLUGIN_NAME:
         return None
     return repo_root
+
+
+def superpowers_plugin_root_for_target(target_path: Path | None) -> Path | None:
+    if not isinstance(target_path, Path) or not target_path.is_file():
+        return None
+    repo_root = target_path.parent.parent.resolve(strict=False)
+    return superpowers_plugin_root_from_repo_root(repo_root)
+
+
+def stale_superpowers_plugin_root_for_target(target_path: Path | None) -> Path | None:
+    if not isinstance(target_path, Path) or target_path.exists():
+        return None
+    repo_root = target_path.parent.parent.resolve(strict=False)
+    return superpowers_plugin_root_from_repo_root(repo_root)
+
+
+def stale_superpowers_path_hint(target_path: Path | None) -> bool:
+    if not isinstance(target_path, Path) or target_path.exists():
+        return False
+    repo_root = target_path.parent.parent
+    return any("superpowers" in part.lower() for part in repo_root.parts)
 
 
 def load_json_file(path: Path) -> dict:
@@ -155,7 +175,13 @@ def is_superpowers_handler(handler: object) -> bool:
     if handler.get("type") != "command":
         return False
     target_path = session_start_target_path(handler.get("command"))
-    return superpowers_plugin_root_for_target(target_path) is not None
+    if superpowers_plugin_root_for_target(target_path) is not None:
+        return True
+    if stale_superpowers_plugin_root_for_target(target_path) is not None:
+        return True
+    if handler.get("statusMessage") != SESSION_START_STATUS_MESSAGE:
+        return False
+    return stale_superpowers_path_hint(target_path)
 
 
 def remove_owned_handlers(session_groups: list[object]) -> tuple[list[object], bool]:

@@ -17,7 +17,12 @@ REQUIRED_PATHS = [
     "docs/README.codex.md",
     "hooks/hooks.json",
     "hooks/session-start",
+    "scripts/cmux_superpowers_team.py",
+    "scripts/install_cmux_superpowers_launcher.py",
     "scripts/install_codex_hooks.py",
+    "tests/cmux-superpowers/install.sh",
+    "tests/cmux-superpowers/doctor.sh",
+    "tests/cmux-superpowers/team_smoke.sh",
     "SECURITY.md",
     "CODE_OF_CONDUCT.md",
     "package.json",
@@ -75,6 +80,7 @@ EXPECTED_PACKAGE_BUGS_URL = "https://github.com/MaxFabian25/superpowers/issues"
 EXPECTED_PACKAGE_SCRIPTS = {
     "validate:public-fork": "bash tests/codex-public-fork/run.sh",
     "validate:process-family": "python3 _shared/validators/validate_skill_library.py --root . --family process",
+    "validate:cmux-superpowers": "bash tests/cmux-superpowers/install.sh && bash tests/cmux-superpowers/doctor.sh && bash tests/cmux-superpowers/team_smoke.sh",
 }
 
 REQUIRED_PACKAGE_FILE_ENTRIES = [

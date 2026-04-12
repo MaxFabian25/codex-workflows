@@ -33,8 +33,63 @@ mkdir -p "${CMUX_SUPERPOWERS_STUB_LOG_DIR:?}"
 python3 - "$@" <<'PY'
 import json
 import os
+import subprocess
 import time
 from pathlib import Path
+
+log_dir = Path(os.environ["CMUX_SUPERPOWERS_STUB_LOG_DIR"])
+hook_log_dir = os.environ.get("CMUX_SUPERPOWERS_HOOK_LOG_DIR")
+hook_log_path = Path(hook_log_dir) if hook_log_dir else None
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def write_hook_log(payload: dict) -> None:
+    if hook_log_path is None:
+        return
+    hook_log_path.mkdir(parents=True, exist_ok=True)
+    write_json(hook_log_path / f"{time.time_ns()}.json", payload)
+
+
+def run_hook_event(event_name: str) -> None:
+    codex_home = os.environ.get("CODEX_HOME")
+    if not codex_home:
+        return
+    hooks_path = Path(codex_home) / "hooks.json"
+    if not hooks_path.exists():
+        return
+    payload = json.loads(hooks_path.read_text(encoding="utf-8"))
+    groups = payload.get("hooks", {}).get(event_name, [])
+    for group_index, group in enumerate(groups):
+        hooks = group.get("hooks", []) if isinstance(group, dict) else []
+        for hook_index, hook in enumerate(hooks):
+            if not isinstance(hook, dict) or hook.get("type") != "command":
+                continue
+            command = hook.get("command")
+            if not isinstance(command, str):
+                continue
+            proc = subprocess.run(
+                command,
+                shell=True,
+                check=False,
+                capture_output=True,
+                text=True,
+                env=os.environ.copy(),
+            )
+            write_hook_log(
+                {
+                    "event": event_name,
+                    "group_index": group_index,
+                    "hook_index": hook_index,
+                    "command": command,
+                    "returncode": proc.returncode,
+                    "stdout": proc.stdout,
+                    "stderr": proc.stderr,
+                }
+            )
+
 
 payload = {
     "cwd": os.getcwd(),
@@ -43,8 +98,10 @@ payload = {
     "role": os.environ.get("CMUX_SUPERPOWERS_ROLE"),
     "session_id": os.environ.get("CMUX_SUPERPOWERS_SESSION_ID"),
 }
-path = Path(os.environ["CMUX_SUPERPOWERS_STUB_LOG_DIR"]) / f"{time.time_ns()}.json"
-path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+write_json(log_dir / f"{time.time_ns()}.json", payload)
+run_hook_event("SessionStart")
+run_hook_event("UserPromptSubmit")
+run_hook_event("Stop")
 PY
 sleep 1
 EOF
@@ -149,6 +206,7 @@ owned_workspaces+=("$hud_workspace_id")
 
 python3 - <<'PY' "$hud_manifest_path"
 import json, sys
+import subprocess
 from pathlib import Path
 
 manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
@@ -161,7 +219,30 @@ assert hud_json.exists(), hud_json
 hud_payload = json.loads(hud_json.read_text(encoding="utf-8"))
 assert hud_payload["session_id"] == manifest["session_id"], hud_payload
 assert hud_payload["workspace_id"] == manifest["workspace_id"], hud_payload
-assert hud_payload["main"] == manifest["main"], (hud_payload["main"], manifest["main"])
+main = hud_payload["main"]
+worker = hud_payload["workers"][0]
+expected_branch = subprocess.run(
+    ["git", "-C", manifest["main"]["cwd"], "rev-parse", "--abbrev-ref", "HEAD"],
+    check=True,
+    capture_output=True,
+    text=True,
+).stdout.strip()
+
+assert main["pane_ref"] == manifest["main"]["pane_ref"], (main, manifest["main"])
+assert main["surface_ref"] == manifest["main"]["surface_ref"], (main, manifest["main"])
+assert main["cwd"] == manifest["main"]["cwd"], (main, manifest["main"])
+assert main["git_branch"] == expected_branch, main
+assert main["launcher_state"] == "active", main
+assert "cmux_state" in main, main
+
+assert worker["worker_id"] == manifest["workers"][0]["worker_id"], worker
+assert worker["role"] == "review", worker
+assert worker["pane_ref"] == manifest["workers"][0]["pane_ref"], worker
+assert worker["surface_ref"] == manifest["workers"][0]["surface_ref"], worker
+assert worker["cwd"] == manifest["workers"][0]["cwd"], worker
+assert worker["git_branch"] == expected_branch, worker
+assert worker["launcher_state"] == "active", worker
+assert "cmux_state" in worker, worker
 PY
 
 hud_purge_output="$tmp/hud-purge-output.log"
@@ -243,12 +324,197 @@ from pathlib import Path
 
 entries = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(sys.argv[1]).glob("*.json"))]
 assert sorted(entry["role"] for entry in entries) == ["general", "main", "review"], entries
+expected_profiles = {
+    "general": "workflow_fidelity",
+    "main": "workflow_fidelity",
+    "review": "parallel_readonly",
+}
 for entry in entries:
     assert entry["argv"], entry
     assert entry["packet_path"], entry
     packet = Path(entry["packet_path"])
     assert packet.exists(), entry
     assert entry["argv"][-1] == packet.read_text(encoding="utf-8").rstrip("\n"), entry
+    profile_flag = entry["argv"].index("-p")
+    assert entry["argv"][profile_flag + 1] == expected_profiles[entry["role"]], entry
+PY
+
+override_logs="$tmp/override-logs"
+override_state="$tmp/override-state"
+mkdir -p "$override_logs" "$override_state"
+override_profile="high_signal_override"
+
+override_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$override_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$override_state" \
+  python3 "$TEAM" team --json --cwd "$ROOT" --profile "$override_profile" --worker review --worker general --no-hud "Audit the repo with an explicit profile override"
+)"
+
+override_workspace_id="$(python3 - <<'PY' "$override_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$override_workspace_id")
+
+override_log_count=0
+for _ in $(seq 1 20); do
+  override_log_count="$(find "$override_logs" -type f | wc -l | tr -d ' ')"
+  if [[ "$override_log_count" -ge 3 ]]; then
+    break
+  fi
+  sleep 0.25
+done
+test "$override_log_count" -ge 3 || fail "expected main + review + general codex launches with an override, saw $override_log_count"
+python3 - <<'PY' "$override_logs" "$override_profile"
+import json
+import sys
+from pathlib import Path
+
+entries = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(sys.argv[1]).glob("*.json"))]
+assert sorted(entry["role"] for entry in entries) == ["general", "main", "review"], entries
+for entry in entries:
+    profile_flag = entry["argv"].index("-p")
+    assert entry["argv"][profile_flag + 1] == sys.argv[2], entry
+PY
+
+hook_logs="$tmp/hook-logs"
+hook_state="$tmp/hook-state"
+hook_runtime="$tmp/hook-runtime"
+hook_codex_home="$hook_runtime/codex-home"
+hook_cmux_bin="$hook_runtime/bin"
+hook_cmux_calls="$hook_runtime/cmux-calls"
+mkdir -p "$hook_logs" "$hook_state" "$hook_codex_home" "$hook_cmux_bin" "$hook_cmux_calls"
+
+cat >"$hook_cmux_bin/cmux" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p "${CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR:?}"
+python3 - "$@" <<'PY'
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+payload = {"argv": sys.argv[1:]}
+path = Path(os.environ["CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR"]) / f"{time.time_ns()}.json"
+path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+print("{}")
+PY
+EOF
+chmod +x "$hook_cmux_bin/cmux"
+
+python3 - <<'PY' "$hook_codex_home" "$ROOT" "$hook_cmux_bin/cmux"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+root = Path(sys.argv[2])
+hook_cmux = Path(sys.argv[3])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            },
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"{hook_cmux} codex-hook session-start",
+                        "timeout": 10,
+                    }
+                ],
+            },
+        ],
+        "UserPromptSubmit": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"{hook_cmux} codex-hook prompt-submit",
+                        "timeout": 10,
+                    }
+                ],
+            }
+        ],
+        "Stop": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"{hook_cmux} codex-hook stop",
+                        "timeout": 10,
+                    }
+                ],
+            }
+        ],
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+hook_payload="$(
+  CODEX_HOME="$hook_codex_home" \
+  CMUX_SUPERPOWERS_HOOK_LOG_DIR="$hook_logs" \
+  CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR="$hook_cmux_calls" \
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$tmp/hook-launches" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$hook_state" \
+  python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Audit the repo while exercising hook composition"
+)"
+
+hook_workspace_id="$(python3 - <<'PY' "$hook_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$hook_workspace_id")
+
+hook_log_count=0
+for _ in $(seq 1 80); do
+  hook_log_count="$(find "$hook_logs" -type f | wc -l | tr -d ' ')"
+  if [[ "$hook_log_count" -ge 4 ]]; then
+    break
+  fi
+  sleep 0.25
+done
+test "$hook_log_count" -ge 4 || fail "expected fake Codex lifecycle hooks to run, saw $hook_log_count logs"
+python3 - <<'PY' "$hook_logs" "$hook_cmux_calls"
+import json
+import sys
+from pathlib import Path
+
+entries = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(sys.argv[1]).glob("*.json"))]
+session_start_payloads = []
+for entry in entries:
+    assert entry["returncode"] == 0, entry
+    if "hooks/session-start" in entry["command"]:
+        session_start_payloads.append(json.loads(entry["stdout"]))
+
+assert session_start_payloads, entries
+assert any(
+    payload["hookSpecificOutput"]["additionalContext"]
+    for payload in session_start_payloads
+), session_start_payloads
+
+cmux_entries = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(sys.argv[2]).glob("*.json"))]
+observed = {" ".join(entry["argv"]) for entry in cmux_entries}
+assert "codex-hook session-start" in observed, observed
+assert "codex-hook prompt-submit" in observed, observed
+assert "codex-hook stop" in observed, observed
 PY
 
 non_git_cwd="$tmp/non-git-cwd"
@@ -919,6 +1185,9 @@ assert worker_json["surface_ref"] == worker["surface_ref"], worker_json
 assert worker_json["worktree_path"] == worker["worktree_path"], worker_json
 assert hud_worker["surface_ref"] == worker["surface_ref"], (hud_worker, worker)
 assert hud_worker["worktree_path"] == worker["worktree_path"], (hud_worker, worker)
+assert hud_worker["launcher_state"] == "closed", hud_worker
+assert "cmux_state" in hud_worker, hud_worker
+assert hud_json["main"]["launcher_state"] == "active", hud_json["main"]
 PY
 CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
 CMUX_SUPERPOWERS_STATE_ROOT="$hud_cleanup_state" \

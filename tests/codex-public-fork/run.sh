@@ -121,6 +121,7 @@ prepare_fixture() {
     "$fixture_root/.github/ISSUE_TEMPLATE" \
     "$fixture_root/docs" \
     "$fixture_root/hooks" \
+    "$fixture_root/tests/cmux-superpowers" \
     "$fixture_root/skills/sample" \
     "$fixture_root/contract" \
     "$fixture_root/_shared/validators" \
@@ -128,6 +129,8 @@ prepare_fixture() {
 
   cp "$ROOT/scripts/validate_codex_public_fork.py" "$fixture_root/scripts/validate_codex_public_fork.py"
   cp "$ROOT/scripts/install_codex_hooks.py" "$fixture_root/scripts/install_codex_hooks.py"
+  cp "$ROOT/scripts/install_cmux_superpowers_launcher.py" "$fixture_root/scripts/install_cmux_superpowers_launcher.py"
+  cp "$ROOT/scripts/cmux_superpowers_team.py" "$fixture_root/scripts/cmux_superpowers_team.py"
   cp "$ROOT/hooks/hooks.json" "$fixture_root/hooks/hooks.json"
   cp "$ROOT/hooks/session-start" "$fixture_root/hooks/session-start"
 
@@ -228,6 +231,21 @@ EOF
 echo fixture
 EOF
   chmod +x "$fixture_root/tests/codex-public-fork/run.sh"
+  cat >"$fixture_root/tests/cmux-superpowers/install.sh" <<'EOF'
+#!/usr/bin/env bash
+echo fixture
+EOF
+  chmod +x "$fixture_root/tests/cmux-superpowers/install.sh"
+  cat >"$fixture_root/tests/cmux-superpowers/doctor.sh" <<'EOF'
+#!/usr/bin/env bash
+echo fixture
+EOF
+  chmod +x "$fixture_root/tests/cmux-superpowers/doctor.sh"
+  cat >"$fixture_root/tests/cmux-superpowers/team_smoke.sh" <<'EOF'
+#!/usr/bin/env bash
+echo fixture
+EOF
+  chmod +x "$fixture_root/tests/cmux-superpowers/team_smoke.sh"
   cat >"$fixture_root/skills/sample/SKILL.md" <<'EOF'
 # Sample skill
 EOF
@@ -295,7 +313,8 @@ EOF
   ],
   "scripts": {
     "validate:public-fork": "bash tests/codex-public-fork/run.sh",
-    "validate:process-family": "python3 _shared/validators/validate_skill_library.py --root . --family process"
+    "validate:process-family": "python3 _shared/validators/validate_skill_library.py --root . --family process",
+    "validate:cmux-superpowers": "bash tests/cmux-superpowers/install.sh && bash tests/cmux-superpowers/doctor.sh && bash tests/cmux-superpowers/team_smoke.sh"
   }
 }
 EOF
@@ -547,6 +566,116 @@ assert "SessionStart" not in data["hooks"], data
 PY
 }
 
+expect_fixture_hook_installer_replaces_deleted_prior_superpowers_clone_path() {
+  local current_fixture_root="$1"
+  local prior_fixture_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$current_fixture_root"
+  prepare_fixture "$prior_fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+prior_fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {prior_fixture_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+  rm -rf "$prior_fixture_root"
+
+  if ! output="$(run_fixture_hook_installer "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to replace a deleted prior Superpowers clone hook, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$current_fixture_root" "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+current_fixture_root = Path(sys.argv[1])
+prior_fixture_root = Path(sys.argv[2])
+codex_home = Path(sys.argv[3])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+command = session_groups[0]["hooks"][0]["command"]
+assert str(current_fixture_root / "hooks" / "session-start") in command, command
+assert str(prior_fixture_root / "hooks" / "session-start") not in command, command
+PY
+}
+
+expect_fixture_hook_remover_removes_deleted_prior_superpowers_clone_path() {
+  local current_fixture_root="$1"
+  local prior_fixture_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$current_fixture_root"
+  prepare_fixture "$prior_fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+prior_fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {prior_fixture_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+  rm -rf "$prior_fixture_root"
+
+  if ! output="$(run_fixture_hook_remover "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to remove a deleted prior Superpowers clone hook, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+assert "SessionStart" not in data["hooks"], data
+PY
+}
+
 prepare_process_family_fixture() {
   local fixture_root="$1"
 
@@ -762,6 +891,27 @@ PY
     "$tmpdir/package-hook-surface" \
     'package.json `files` must include `hooks`'
 
+  expect_fixture_passes "$tmpdir/package-cmux-script"
+  python3 - <<'PY' "$tmpdir/package-cmux-script/package.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["scripts"].pop("validate:cmux-superpowers", None)
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  expect_fixture_fails_with \
+    "$tmpdir/package-cmux-script" \
+    'package.json script `validate:cmux-superpowers` must be `bash tests/cmux-superpowers/install.sh && bash tests/cmux-superpowers/doctor.sh && bash tests/cmux-superpowers/team_smoke.sh`'
+
+  expect_fixture_passes "$tmpdir/launcher-script-required"
+  rm "$tmpdir/launcher-script-required/scripts/install_cmux_superpowers_launcher.py"
+  expect_fixture_fails_with \
+    "$tmpdir/launcher-script-required" \
+    'Missing required path: scripts/install_cmux_superpowers_launcher.py'
+
   expect_fixture_passes "$tmpdir/doc-contract"
   cat >"$tmpdir/doc-contract/README.md" <<'EOF'
 Install with:
@@ -782,6 +932,14 @@ EOF
     "$tmpdir/hook-installer-migration-current" \
     "$tmpdir/hook-installer-migration-prior" \
     "$tmpdir/hook-installer-migration-home"
+  expect_fixture_hook_installer_replaces_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-migration-current" \
+    "$tmpdir/superpowers-prior-clone" \
+    "$tmpdir/hook-installer-deleted-migration-home"
+  expect_fixture_hook_remover_removes_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-remove-current" \
+    "$tmpdir/superpowers-deleted-clone" \
+    "$tmpdir/hook-installer-deleted-remove-home"
 
   expect_fixture_passes "$tmpdir/published-validator-scan"
   append_text \
