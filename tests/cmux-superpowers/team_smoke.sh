@@ -118,6 +118,43 @@ for entry in entries:
     assert entry["argv"][-1] == packet.read_text(encoding="utf-8").rstrip("\n"), entry
 PY
 
+hud_logs="$tmp/hud-logs"
+hud_state="$tmp/hud-state"
+mkdir -p "$hud_logs" "$hud_state"
+
+hud_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$hud_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$hud_state" \
+  python3 "$TEAM" team --json --cwd "$ROOT" --worker review "Audit the repo with a HUD"
+)"
+
+hud_manifest_path="$(python3 - <<'PY' "$hud_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+hud_workspace_id="$(python3 - <<'PY' "$hud_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$hud_workspace_id")
+
+python3 - <<'PY' "$hud_manifest_path"
+import json, sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+hud = manifest["hud"]
+assert hud is not None
+assert hud["pane_ref"]
+assert hud["surface_ref"]
+hud_json = Path(manifest["session_root"]) / "hud.json"
+assert hud_json.exists(), hud_json
+PY
+
 default_logs="$tmp/default-logs"
 default_state="$tmp/default-state"
 mkdir -p "$default_logs" "$default_state"

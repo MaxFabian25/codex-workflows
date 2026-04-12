@@ -187,6 +187,68 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def build_hud_payload(manifest: dict) -> dict:
+    main = manifest["main"]
+    return {
+        "session_id": manifest["session_id"],
+        "workspace_id": manifest["workspace_id"],
+        "main": {
+            "cwd": main.get("cwd"),
+            "pane_ref": main.get("pane_ref"),
+            "surface_ref": main.get("surface_ref"),
+        },
+        "workers": [
+            {
+                "worker_id": worker["worker_id"],
+                "role": worker["role"],
+                "cwd": worker["cwd"],
+                "worktree_path": worker.get("worktree_path"),
+                "pane_ref": worker.get("pane_ref"),
+                "surface_ref": worker.get("surface_ref"),
+            }
+            for worker in manifest["workers"]
+        ],
+    }
+
+
+def write_hud_runner(session_root: Path) -> Path:
+    runner = session_root / "hud_runner.sh"
+    runner.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+
+HUD_JSON="${1:?hud json path is required}"
+
+while true; do
+  printf '\\033[2J\\033[H'
+  python3 - <<'PY' "$HUD_JSON"
+import json
+import sys
+from pathlib import Path
+
+payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(f"Session: {payload['session_id']}")
+print(f"Workspace: {payload['workspace_id']}")
+main = payload.get("main", {})
+print(f"Main: pane={main.get('pane_ref')} surface={main.get('surface_ref')} cwd={main.get('cwd')}")
+print("")
+for worker in payload.get("workers", []):
+    print(
+        f"{worker['worker_id']}  role={worker['role']}  "
+        f"pane={worker.get('pane_ref')}  surface={worker.get('surface_ref')}"
+    )
+    print(f"  cwd={worker['cwd']}")
+    print(f"  worktree={worker.get('worktree_path')}")
+PY
+  sleep 2
+done
+""",
+        encoding="utf-8",
+    )
+    runner.chmod(0o755)
+    return runner
+
+
 def worker_state_path(session_root: str | Path, worker_id: str) -> Path:
     return Path(session_root) / "workers" / f"{worker_id}.json"
 
@@ -1799,6 +1861,54 @@ def cmd_team(args: argparse.Namespace) -> int:
             worker_plan.surface_ref = str(focused["surface_ref"])
             write_json(session_root / "workers" / f"{worker_id}.json", asdict(worker_plan))
             persist_manifest_workers(manifest_path, manifest, planned_workers)
+
+        if not args.no_hud:
+            hud_json_path = session_root / "hud.json"
+            write_json(hud_json_path, build_hud_payload(manifest))
+            hud_runner = write_hud_runner(session_root)
+            hud_surface = first_ref(
+                cmux_text(
+                    "new-split",
+                    "down",
+                    "--workspace",
+                    workspace_id,
+                    "--surface",
+                    main_surface,
+                ),
+                "surface:",
+            )
+            hud_context = caller_context(workspace_id, hud_surface)
+            hud_surface = str(hud_context["surface_ref"])
+            hud_pane = str(hud_context["pane_ref"])
+            run(
+                [
+                    resolve_cmux_bin(),
+                    "rename-tab",
+                    "--workspace",
+                    workspace_id,
+                    "--surface",
+                    hud_surface,
+                    "hud",
+                ]
+            )
+            run(
+                [
+                    resolve_cmux_bin(),
+                    "send",
+                    "--workspace",
+                    workspace_id,
+                    "--surface",
+                    hud_surface,
+                    f"bash {shlex.quote(str(hud_runner))} {shlex.quote(str(hud_json_path))}\n",
+                ]
+            )
+            manifest["hud"] = {
+                "pane_ref": hud_pane,
+                "surface_ref": hud_surface,
+                "hud_json": str(hud_json_path),
+            }
+            write_json(manifest_path, manifest)
+            write_json(hud_json_path, build_hud_payload(manifest))
 
         if args.json:
             print(
