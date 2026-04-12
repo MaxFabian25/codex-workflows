@@ -44,23 +44,43 @@ def is_managed_wrapper(path: Path) -> bool:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return False
-    if WRAPPER_MARKER not in text:
+    lines = text.splitlines()
+    if len(lines) != 5:
+        return False
+    if lines[0] != "#!/usr/bin/env bash":
+        return False
+    if lines[1] != "set -euo pipefail":
+        return False
+    if lines[2] != WRAPPER_MARKER:
+        return False
+    if not lines[3].startswith(WRAPPER_LAUNCHER_MARKER_PREFIX):
         return False
 
-    launcher_path: str | None = None
-    for line in text.splitlines():
-        if line.startswith(WRAPPER_LAUNCHER_MARKER_PREFIX):
-            launcher_path = line.removeprefix(WRAPPER_LAUNCHER_MARKER_PREFIX).strip()
-            break
+    launcher_path = lines[3].removeprefix(WRAPPER_LAUNCHER_MARKER_PREFIX).strip()
     if not launcher_path:
         return False
-
     launcher = Path(launcher_path)
+    if not launcher.is_absolute():
+        return False
     if launcher.name != "cmux_superpowers_team.py" or launcher.parent.name != "scripts":
         return False
 
-    exec_fragment = f" {shlex.quote(launcher_path)} \"$@\""
-    return "set -euo pipefail" in text and exec_fragment in text
+    try:
+        exec_tokens = shlex.split(lines[4])
+    except ValueError:
+        return False
+    if len(exec_tokens) != 4:
+        return False
+    if exec_tokens[0] != "exec":
+        return False
+    python_path = exec_tokens[1]
+    if not python_path or not Path(python_path).is_absolute():
+        return False
+    if exec_tokens[2] != launcher_path or exec_tokens[3] != "$@":
+        return False
+
+    expected_exec_line = f'exec {shlex.quote(python_path)} {shlex.quote(launcher_path)} "$@"'
+    return lines[4] == expected_exec_line
 
 
 def install(bin_dir: Path) -> int:

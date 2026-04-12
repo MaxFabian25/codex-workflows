@@ -59,6 +59,37 @@ EOF
   assert_contains "$wrapper" "foreign wrapper"
 }
 
+run_marker_lookalike_guard_smoke() {
+  local bin_dir="$1"
+  local wrapper="$bin_dir/cmux-superpowers"
+  local fake_launcher="$bin_dir/fake-checkout/scripts/cmux_superpowers_team.py"
+
+  mkdir -p "$(dirname "$fake_launcher")" "$bin_dir"
+  cat >"$wrapper" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+# cmux-superpowers-managed: superpowers-codex
+# cmux-superpowers-launcher: $fake_launcher
+# comment-only mention: exec python3 $fake_launcher "\$@"
+exec /usr/bin/env bash -lc 'echo lookalike wrapper'
+EOF
+  chmod +x "$wrapper"
+
+  local install_output="$bin_dir/lookalike-install.log"
+  assert_command_fails_with_output \
+    "$install_output" \
+    python3 "$INSTALLER" --bin-dir "$bin_dir"
+  assert_contains "$install_output" "Refusing to overwrite unmanaged wrapper"
+  assert_contains "$wrapper" "lookalike wrapper"
+
+  local remove_output="$bin_dir/lookalike-remove.log"
+  assert_command_fails_with_output \
+    "$remove_output" \
+    python3 "$INSTALLER" --bin-dir "$bin_dir" --remove
+  assert_contains "$remove_output" "Refusing to remove unmanaged wrapper"
+  assert_contains "$wrapper" "lookalike wrapper"
+}
+
 run_cross_checkout_reinstall_smoke() {
   local output_dir="$1"
   local checkout_a="$output_dir/checkout-a"
@@ -503,6 +534,7 @@ fi
 
 if [[ -f "$INSTALLER" ]]; then
   run_foreign_wrapper_guard_smoke "$tmp/foreign-bin"
+  run_marker_lookalike_guard_smoke "$tmp/lookalike-bin"
   run_cross_checkout_reinstall_smoke "$tmp"
   run_cross_checkout_remove_smoke "$tmp"
 fi
