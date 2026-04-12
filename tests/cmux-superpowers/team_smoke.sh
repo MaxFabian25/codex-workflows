@@ -386,6 +386,7 @@ hook_runtime="$tmp/hook-runtime"
 hook_codex_home="$hook_runtime/codex-home"
 hook_cmux_bin="$hook_runtime/bin"
 hook_cmux_calls="$hook_runtime/cmux-calls"
+hook_sessions_path="$hook_runtime/codex-hook-sessions.json"
 mkdir -p "$hook_logs" "$hook_state" "$hook_codex_home" "$hook_cmux_bin" "$hook_cmux_calls"
 
 cat >"$hook_cmux_bin/cmux" <<'EOF'
@@ -393,6 +394,7 @@ cat >"$hook_cmux_bin/cmux" <<'EOF'
 set -euo pipefail
 mkdir -p "${CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR:?}"
 python3 - "$@" <<'PY'
+import fcntl
 import json
 import os
 import sys
@@ -401,6 +403,91 @@ from pathlib import Path
 
 payload = {"argv": sys.argv[1:]}
 path = Path(os.environ["CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR"]) / f"{time.time_ns()}.json"
+
+
+def normalized_ref(value: object, prefix: str) -> str | None:
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    if candidate.startswith(prefix):
+        candidate = candidate[len(prefix):]
+    return candidate or None
+
+
+def current_surface_binding() -> tuple[str | None, str | None]:
+    packet_path = Path(os.environ.get("CMUX_SUPERPOWERS_PACKET_PATH", ""))
+    role = os.environ.get("CMUX_SUPERPOWERS_ROLE")
+    if not packet_path:
+        return None, None
+    manifest_path = packet_path.parent.parent / "manifest.json"
+    worker_id = packet_path.stem if packet_path.stem != "main" else None
+    for _ in range(80):
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            time.sleep(0.05)
+            continue
+        workspace_id = normalized_ref(manifest.get("workspace_id"), "workspace:")
+        if role == "main":
+            surface_id = normalized_ref(
+                manifest.get("main", {}).get("surface_ref"),
+                "surface:",
+            )
+        else:
+            surface_id = None
+            for worker in manifest.get("workers", []):
+                if not isinstance(worker, dict):
+                    continue
+                if worker.get("worker_id") != worker_id:
+                    continue
+                surface_id = normalized_ref(worker.get("surface_ref"), "surface:")
+                break
+        if workspace_id and surface_id:
+            return workspace_id, surface_id
+        time.sleep(0.05)
+    return None, None
+
+
+def update_sessions(subtitle: str) -> None:
+    sessions_path_raw = os.environ.get("CMUX_SUPERPOWERS_HOOK_SESSIONS_PATH")
+    if not sessions_path_raw:
+        return
+    workspace_id, surface_id = current_surface_binding()
+    if not workspace_id or not surface_id:
+        return
+    sessions_path = Path(sessions_path_raw)
+    sessions_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = sessions_path.with_suffix(sessions_path.suffix + ".lock")
+    with lock_path.open("w", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            payload = json.loads(sessions_path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            payload = {"version": 1, "sessions": {}}
+        sessions = payload.get("sessions")
+        if not isinstance(sessions, dict):
+            sessions = {}
+            payload["sessions"] = sessions
+        sessions[surface_id] = {
+            "workspaceId": workspace_id,
+            "surfaceId": surface_id,
+            "lastSubtitle": subtitle,
+            "updatedAt": time.time(),
+        }
+        sessions_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+event = " ".join(sys.argv[1:])
+if event == "codex-hook session-start":
+    update_sessions("Running")
+elif event == "codex-hook prompt-submit":
+    update_sessions("Idle")
+elif event == "codex-hook stop":
+    update_sessions("Idle")
+
 path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 print("{}")
 PY
@@ -469,6 +556,7 @@ hook_payload="$(
   CODEX_HOME="$hook_codex_home" \
   CMUX_SUPERPOWERS_HOOK_LOG_DIR="$hook_logs" \
   CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR="$hook_cmux_calls" \
+  CMUX_SUPERPOWERS_HOOK_SESSIONS_PATH="$hook_sessions_path" \
   CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
   CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
   CMUX_SUPERPOWERS_STUB_LOG_DIR="$tmp/hook-launches" \
@@ -476,6 +564,11 @@ hook_payload="$(
   python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Audit the repo while exercising hook composition"
 )"
 
+hook_manifest_path="$(python3 - <<'PY' "$hook_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
 hook_workspace_id="$(python3 - <<'PY' "$hook_payload"
 import json, sys
 print(json.loads(sys.argv[1])["workspace_id"])
@@ -492,6 +585,50 @@ for _ in $(seq 1 80); do
   sleep 0.25
 done
 test "$hook_log_count" -ge 4 || fail "expected fake Codex lifecycle hooks to run, saw $hook_log_count logs"
+hook_session_count=0
+for _ in $(seq 1 80); do
+  hook_session_count="$(
+    python3 - <<'PY' "$hook_sessions_path"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+except (FileNotFoundError, json.JSONDecodeError):
+    print(0)
+else:
+    sessions = payload.get("sessions")
+    print(len(sessions) if isinstance(sessions, dict) else 0)
+PY
+  )"
+  if [[ "$hook_session_count" -ge 1 ]]; then
+    break
+  fi
+  sleep 0.25
+done
+test "$hook_session_count" -ge 1 || fail "expected fake hook read model to publish at least one session state"
+CMUX_SUPERPOWERS_HOOK_SESSIONS_PATH="$hook_sessions_path" \
+python3 - <<'PY' "$ROOT" "$hook_manifest_path"
+import importlib.util
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+manifest_path = Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location(
+    "cmux_superpowers_team",
+    root / "scripts" / "cmux_superpowers_team.py",
+)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+module.persist_manifest(manifest_path, manifest)
+PY
 python3 - <<'PY' "$hook_logs" "$hook_cmux_calls"
 import json
 import sys
@@ -515,6 +652,32 @@ observed = {" ".join(entry["argv"]) for entry in cmux_entries}
 assert "codex-hook session-start" in observed, observed
 assert "codex-hook prompt-submit" in observed, observed
 assert "codex-hook stop" in observed, observed
+PY
+python3 - <<'PY' "$hook_sessions_path" "$hook_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+sessions_payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+manifest = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+
+sessions = sessions_payload.get("sessions")
+assert isinstance(sessions, dict) and sessions, sessions_payload
+
+worker = manifest["workers"][0]
+workspace_id = manifest["workspace_id"].removeprefix("workspace:")
+idle_surfaces = {
+    surface_id: payload
+    for surface_id, payload in sessions.items()
+    if isinstance(payload, dict) and payload.get("lastSubtitle") == "Idle"
+}
+assert idle_surfaces, sessions
+
+worker_surface = worker["surface_ref"].removeprefix("surface:")
+assert worker["cmux_state"] == "Idle", worker
+assert worker_surface in idle_surfaces, (worker_surface, idle_surfaces)
+assert idle_surfaces[worker_surface]["workspaceId"] == workspace_id, idle_surfaces
+assert idle_surfaces[worker_surface]["surfaceId"] == worker_surface, idle_surfaces
 PY
 
 non_git_cwd="$tmp/non-git-cwd"

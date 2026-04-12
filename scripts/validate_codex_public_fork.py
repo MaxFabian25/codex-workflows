@@ -102,6 +102,14 @@ REQUIRED_PACKAGE_FILE_ENTRIES = [
     "docs/README.codex.md",
 ]
 
+REQUIRED_PACKAGED_PATHS = [
+    "scripts/cmux_superpowers_team.py",
+    "scripts/install_cmux_superpowers_launcher.py",
+    "tests/cmux-superpowers/install.sh",
+    "tests/cmux-superpowers/doctor.sh",
+    "tests/cmux-superpowers/team_smoke.sh",
+]
+
 REQUIRED_ISSUE_TEMPLATE_FILES = [
     ".github/ISSUE_TEMPLATE/config.yml",
     ".github/ISSUE_TEMPLATE/bug_report.md",
@@ -259,6 +267,17 @@ def validate_forbidden_snippets() -> list[str]:
             if snippet in text:
                 issues.append(f"{rel_path} contains forbidden snippet: {snippet}")
 
+    return issues
+
+
+def validate_packaged_launcher_surface() -> list[str]:
+    rel_paths, issues = load_pack_file_list()
+    if issues:
+        return issues
+    packaged_paths = set(rel_paths)
+    for rel_path in REQUIRED_PACKAGED_PATHS:
+        if rel_path not in packaged_paths:
+            issues.append(f"`npm pack --dry-run --json` must include `{rel_path}`")
     return issues
 
 
@@ -468,6 +487,7 @@ def main() -> int:
         *validate_package_contract(),
         *validate_hook_bootstrap_contract(),
         *validate_doc_contract(),
+        *validate_packaged_launcher_surface(),
         *validate_forbidden_snippets(),
         *validate_manifest(),
         *validate_release_docs(),

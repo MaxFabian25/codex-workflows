@@ -39,12 +39,14 @@ CODEX_ENV_PASSTHROUGH = (
     "CODEX_HOME",
     "CMUX_SUPERPOWERS_HOOK_LOG_DIR",
     "CMUX_SUPERPOWERS_HOOK_CMUX_LOG_DIR",
+    "CMUX_SUPERPOWERS_HOOK_SESSIONS_PATH",
 )
 ROLE_SPECS = {
     "review": {"write": False, "profile": "parallel_readonly"},
     "general": {"write": False, "profile": "workflow_fidelity"},
     "implement": {"write": True, "profile": "workflow_fidelity"},
 }
+CMUX_RUNNING_STATES = {"Running", "Idle"}
 TOML_INTEGER_RE = re.compile(
     r"^[+-]?(?:0|[1-9](?:_?\d)*|0x[0-9A-Fa-f](?:_?[0-9A-Fa-f])*|0o[0-7](?:_?[0-7])*|0b[01](?:_?[01])*)$"
 )
@@ -207,6 +209,73 @@ def manifest_hud_json_path(manifest: dict) -> Path | None:
     return Path(hud_json)
 
 
+def cmux_hook_sessions_path() -> Path:
+    override = os.environ.get("CMUX_SUPERPOWERS_HOOK_SESSIONS_PATH")
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / ".cmuxterm" / "codex-hook-sessions.json"
+
+
+def normalize_cmux_ref(value: object, prefix: str) -> str | None:
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if not candidate:
+        return None
+    if candidate.startswith(prefix):
+        candidate = candidate.removeprefix(prefix)
+    return candidate or None
+
+
+def meaningful_cmux_state(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if candidate in CMUX_RUNNING_STATES:
+        return candidate
+    return None
+
+
+def load_cmux_session_states() -> dict[tuple[str, str], str | None]:
+    path = cmux_hook_sessions_path()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    sessions = payload.get("sessions")
+    if not isinstance(sessions, dict):
+        return {}
+    states: dict[tuple[str, str], str | None] = {}
+    for session in sessions.values():
+        if not isinstance(session, dict):
+            continue
+        workspace_id = normalize_cmux_ref(session.get("workspaceId"), "workspace:")
+        surface_id = normalize_cmux_ref(session.get("surfaceId"), "surface:")
+        if not workspace_id or not surface_id:
+            continue
+        states[(workspace_id, surface_id)] = meaningful_cmux_state(
+            session.get("lastSubtitle")
+        )
+    return states
+
+
+def resolve_cmux_state(
+    workspace_id: object,
+    surface_ref: object,
+    existing_state: object,
+    cmux_states: dict[tuple[str, str], str | None],
+) -> str | None:
+    normalized_workspace_id = normalize_cmux_ref(workspace_id, "workspace:")
+    normalized_surface_id = normalize_cmux_ref(surface_ref, "surface:")
+    if not normalized_surface_id:
+        return existing_state if isinstance(existing_state, str) else None
+    if not normalized_workspace_id:
+        return None
+    return cmux_states.get((normalized_workspace_id, normalized_surface_id))
+
+
 def git_branch_for_cwd(cwd: object) -> str | None:
     if not isinstance(cwd, str) or not cwd:
         return None
@@ -246,12 +315,18 @@ def worker_launcher_state(worker: dict[str, object]) -> str:
 
 
 def refresh_manifest_runtime_fields(manifest: dict) -> None:
+    workspace_id = manifest.get("workspace_id")
+    cmux_states = load_cmux_session_states()
     main = manifest.get("main")
     if isinstance(main, dict):
         main["git_branch"] = git_branch_for_cwd(main.get("cwd"))
         main["launcher_state"] = main_launcher_state(main)
-        cmux_state = main.get("cmux_state")
-        main["cmux_state"] = cmux_state if isinstance(cmux_state, str) else None
+        main["cmux_state"] = resolve_cmux_state(
+            workspace_id,
+            main.get("surface_ref"),
+            main.get("cmux_state"),
+            cmux_states,
+        )
 
     workers = manifest.get("workers")
     if not isinstance(workers, list):
@@ -265,8 +340,12 @@ def refresh_manifest_runtime_fields(manifest: dict) -> None:
         else:
             worker["git_branch"] = git_branch_for_cwd(worker.get("cwd"))
         worker["launcher_state"] = worker_launcher_state(worker)
-        cmux_state = worker.get("cmux_state")
-        worker["cmux_state"] = cmux_state if isinstance(cmux_state, str) else None
+        worker["cmux_state"] = resolve_cmux_state(
+            workspace_id,
+            worker.get("surface_ref"),
+            worker.get("cmux_state"),
+            cmux_states,
+        )
 
 
 def persist_manifest(manifest_path: Path, manifest: dict) -> None:

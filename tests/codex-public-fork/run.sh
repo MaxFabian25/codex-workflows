@@ -676,6 +676,82 @@ assert "SessionStart" not in data["hooks"], data
 PY
 }
 
+expect_fixture_hook_installer_preserves_deleted_unrelated_missing_sessionstart_sidecar() {
+  local fixture_root="$1"
+  local deleted_sidecar_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$deleted_sidecar_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+deleted_sidecar_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {deleted_sidecar_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+  if ! output="$(run_fixture_hook_installer "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to preserve a deleted unrelated SessionStart sidecar, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$fixture_root" "$deleted_sidecar_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+fixture_root = Path(sys.argv[1])
+deleted_sidecar_root = Path(sys.argv[2])
+codex_home = Path(sys.argv[3])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 2, session_groups
+
+commands = [group["hooks"][0]["command"] for group in session_groups]
+assert f"python3 {deleted_sidecar_root / 'hooks' / 'session-start'}" in commands, commands
+assert any(str(fixture_root / "hooks" / "session-start") in command for command in commands), commands
+PY
+
+  if ! output="$(run_fixture_hook_remover "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to preserve a deleted unrelated SessionStart sidecar, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$deleted_sidecar_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+deleted_sidecar_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+command = session_groups[0]["hooks"][0]["command"]
+assert command == f"python3 {deleted_sidecar_root / 'hooks' / 'session-start'}", command
+PY
+}
+
 prepare_process_family_fixture() {
   local fixture_root="$1"
 
@@ -906,6 +982,15 @@ PY
     "$tmpdir/package-cmux-script" \
     'package.json script `validate:cmux-superpowers` must be `bash tests/cmux-superpowers/install.sh && bash tests/cmux-superpowers/doctor.sh && bash tests/cmux-superpowers/team_smoke.sh`'
 
+  expect_fixture_passes "$tmpdir/package-cmux-pack-surface"
+  mkdir -p "$tmpdir/package-cmux-pack-surface/tests"
+  cat >"$tmpdir/package-cmux-pack-surface/tests/.npmignore" <<'EOF'
+cmux-superpowers/team_smoke.sh
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-cmux-pack-surface" \
+    '`npm pack --dry-run --json` must include `tests/cmux-superpowers/team_smoke.sh`'
+
   expect_fixture_passes "$tmpdir/launcher-script-required"
   rm "$tmpdir/launcher-script-required/scripts/install_cmux_superpowers_launcher.py"
   expect_fixture_fails_with \
@@ -940,6 +1025,10 @@ EOF
     "$tmpdir/hook-installer-deleted-remove-current" \
     "$tmpdir/superpowers-deleted-clone" \
     "$tmpdir/hook-installer-deleted-remove-home"
+  expect_fixture_hook_installer_preserves_deleted_unrelated_missing_sessionstart_sidecar \
+    "$tmpdir/hook-installer-preserves-deleted-sidecar" \
+    "$tmpdir/superpowers-ancestor/missing-sidecar-root" \
+    "$tmpdir/hook-installer-preserves-deleted-sidecar-home"
 
   expect_fixture_passes "$tmpdir/published-validator-scan"
   append_text \

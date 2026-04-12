@@ -126,8 +126,8 @@ def stale_superpowers_plugin_root_for_target(target_path: Path | None) -> Path |
 def stale_superpowers_path_hint(target_path: Path | None) -> bool:
     if not isinstance(target_path, Path) or target_path.exists():
         return False
-    repo_root = target_path.parent.parent
-    return any("superpowers" in part.lower() for part in repo_root.parts)
+    repo_root = target_path.parent.parent.resolve(strict=False)
+    return "superpowers" in repo_root.name.lower()
 
 
 def load_json_file(path: Path) -> dict:
