@@ -1021,10 +1021,18 @@ EOF
     "$tmpdir/hook-installer-deleted-migration-current" \
     "$tmpdir/deleted-prior/superpowers" \
     "$tmpdir/hook-installer-deleted-migration-home"
+  expect_fixture_hook_installer_replaces_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-migration-current-codex" \
+    "$tmpdir/deleted-prior-codex/superpowers-codex" \
+    "$tmpdir/hook-installer-deleted-migration-home-codex"
   expect_fixture_hook_remover_removes_deleted_prior_superpowers_clone_path \
     "$tmpdir/hook-installer-deleted-remove-current" \
     "$tmpdir/deleted-remove/superpowers" \
     "$tmpdir/hook-installer-deleted-remove-home"
+  expect_fixture_hook_remover_removes_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-remove-current-codex" \
+    "$tmpdir/deleted-remove-codex/superpowers-codex" \
+    "$tmpdir/hook-installer-deleted-remove-home-codex"
   expect_fixture_hook_installer_preserves_deleted_unrelated_missing_sessionstart_sidecar \
     "$tmpdir/hook-installer-preserves-deleted-sidecar" \
     "$tmpdir/superpowers-sidecar" \
