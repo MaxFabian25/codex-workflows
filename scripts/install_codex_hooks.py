@@ -17,6 +17,8 @@ HOOK_SCRIPT_PATH = REPO_ROOT / "hooks" / "session-start"
 SESSION_START_COMMAND_PLACEHOLDER = "__SUPERPOWERS_SESSION_START_COMMAND__"
 SESSION_START_MATCHER = "startup|resume|clear"
 SESSION_START_STATUS_MESSAGE = "loading superpowers"
+EXPECTED_PLUGIN_NAME = "superpowers-codex"
+PLUGIN_MANIFEST_RELATIVE_PATH = Path(".codex-plugin") / "plugin.json"
 PYTHON_OPTIONS_WITH_VALUES = {"-W", "-X"}
 PYTHON_REJECTED_SCRIPT_MODES = {"-c", "-m", "-"}
 
@@ -92,6 +94,22 @@ def session_start_target_path(command: object) -> Path | None:
     return None
 
 
+def superpowers_plugin_root_for_target(target_path: Path | None) -> Path | None:
+    if not isinstance(target_path, Path) or not target_path.is_file():
+        return None
+    repo_root = target_path.parent.parent.resolve(strict=False)
+    manifest_path = repo_root / PLUGIN_MANIFEST_RELATIVE_PATH
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("name") != EXPECTED_PLUGIN_NAME:
+        return None
+    return repo_root
+
+
 def load_json_file(path: Path) -> dict:
     if not path.exists():
         return {"hooks": {}}
@@ -137,7 +155,7 @@ def is_superpowers_handler(handler: object) -> bool:
     if handler.get("type") != "command":
         return False
     target_path = session_start_target_path(handler.get("command"))
-    return target_path == HOOK_SCRIPT_PATH.resolve()
+    return superpowers_plugin_root_for_target(target_path) is not None
 
 
 def remove_owned_handlers(session_groups: list[object]) -> tuple[list[object], bool]:

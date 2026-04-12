@@ -475,6 +475,78 @@ assert handler["statusMessage"] == "loading superpowers"
 PY
 }
 
+expect_fixture_hook_installer_replaces_prior_superpowers_clone_path() {
+  local current_fixture_root="$1"
+  local prior_fixture_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$current_fixture_root"
+  prepare_fixture "$prior_fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+prior_fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {prior_fixture_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+  if ! output="$(run_fixture_hook_installer "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to replace a prior Superpowers clone hook, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$current_fixture_root" "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+current_fixture_root = Path(sys.argv[1])
+prior_fixture_root = Path(sys.argv[2])
+codex_home = Path(sys.argv[3])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+command = session_groups[0]["hooks"][0]["command"]
+assert str(current_fixture_root / "hooks" / "session-start") in command, command
+assert str(prior_fixture_root / "hooks" / "session-start") not in command, command
+PY
+
+  if ! output="$(run_fixture_hook_remover "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to remove the migrated Superpowers hook, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+assert "SessionStart" not in data["hooks"], data
+PY
+}
+
 prepare_process_family_fixture() {
   local fixture_root="$1"
 
@@ -706,6 +778,10 @@ EOF
   expect_fixture_hook_installer_preserves_unrelated_sessionstart_hooks \
     "$tmpdir/hook-installer-preserves-sidecar" \
     "$tmpdir/hook-installer-preserves-sidecar-home"
+  expect_fixture_hook_installer_replaces_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-migration-current" \
+    "$tmpdir/hook-installer-migration-prior" \
+    "$tmpdir/hook-installer-migration-home"
 
   expect_fixture_passes "$tmpdir/published-validator-scan"
   append_text \

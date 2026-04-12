@@ -33,6 +33,8 @@ NOOP_EXECUTABLES = {"echo", "printf", "true", "false"}
 SHELL_COMMAND_BOUNDARIES = {"&&", "||", ";", "then", "do", "elif"}
 PYTHON_OPTIONS_WITH_VALUES = {"-W", "-X"}
 PYTHON_REJECTED_SCRIPT_MODES = {"-c", "-m", "-"}
+EXPECTED_PLUGIN_NAME = "superpowers-codex"
+PLUGIN_MANIFEST_RELATIVE_PATH = Path(".codex-plugin") / "plugin.json"
 ROLE_SPECS = {
     "review": {"write": False, "profile": "parallel_readonly"},
     "general": {"write": False, "profile": "workflow_fidelity"},
@@ -453,9 +455,25 @@ def is_real_superpowers_session_start_command(command: object) -> bool:
     return session_start_target_path(command) is not None
 
 
-def has_existing_superpowers_session_start_target(command: object) -> bool:
+def superpowers_plugin_root_for_target(target_path: Path | None) -> Path | None:
+    if not isinstance(target_path, Path) or not target_path.is_file():
+        return None
+    repo_root = target_path.parent.parent.resolve(strict=False)
+    manifest_path = repo_root / PLUGIN_MANIFEST_RELATIVE_PATH
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("name") != EXPECTED_PLUGIN_NAME:
+        return None
+    return repo_root
+
+
+def is_owned_superpowers_session_start_command(command: object) -> bool:
     target_path = session_start_target_path(command)
-    return isinstance(target_path, Path) and target_path.is_file()
+    return superpowers_plugin_root_for_target(target_path) is not None
 
 
 def iter_session_start_command_hooks(payload: dict):
@@ -494,7 +512,7 @@ def has_superpowers_group(payload: dict) -> bool:
         if hook.get("statusMessage") != "loading superpowers":
             continue
         command = hook.get("command")
-        if not has_existing_superpowers_session_start_target(command):
+        if not is_owned_superpowers_session_start_command(command):
             continue
         return True
     return False

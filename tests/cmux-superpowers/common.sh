@@ -126,6 +126,24 @@ echo '{}'
 EOF
 }
 
+write_plugin_identity_for_session_start_command() {
+  local command="$1"
+  local plugin_name="${2:-superpowers-codex}"
+  local target
+  target="$(extract_session_start_target "$command")"
+  if [[ -z "$target" ]]; then
+    return 0
+  fi
+  local plugin_root
+  plugin_root="$(dirname "$(dirname "$target")")"
+  mkdir -p "$plugin_root/.codex-plugin"
+  cat >"$plugin_root/.codex-plugin/plugin.json" <<EOF
+{
+  "name": "$plugin_name"
+}
+EOF
+}
+
 write_cmux_executable() {
   local bin_dir="$1"
   write_executable "$bin_dir/cmux"
@@ -336,6 +354,7 @@ json.dump(payload, sys.stdout, indent=2)
 sys.stdout.write("\n")
 PY
   ensure_session_start_target_exists "$session_start_command"
+  write_plugin_identity_for_session_start_command "$session_start_command"
 }
 
 setup_doctor_scenario() {

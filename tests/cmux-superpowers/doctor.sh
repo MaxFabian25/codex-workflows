@@ -550,6 +550,18 @@ scenario_deleted_session_start_target() {
   assert_status "$status" 1 "deleted-session-start-target"
 }
 
+scenario_unrelated_only() {
+  begin_scenario "unrelated-only"
+  local session_start_target="$scenario/unrelated-plugin/hooks/session-start"
+  write_healthy_hooks_fixture "$codex_home" "$session_start_target"
+  write_plugin_identity_for_session_start_command "$session_start_target" "another-plugin"
+  write_enabled_config "$codex_home"
+  local status
+  status="$(run_current_doctor)"
+  assert_superpowers_missing_payload "$output"
+  assert_status "$status" 1 "unrelated-only"
+}
+
 scenario_false_green() {
   begin_scenario "false-green"
   write_healthy_hooks_fixture "$codex_home"
@@ -1050,6 +1062,7 @@ run_hook_detection_scenarios() {
   scenario_inert_cmux
   scenario_placeholder
   scenario_deleted_session_start_target
+  scenario_unrelated_only
 }
 
 run_probe_behavior_scenarios() {
