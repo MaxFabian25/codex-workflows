@@ -21,6 +21,7 @@ EXPECTED_PLUGIN_NAME = "superpowers-codex"
 PLUGIN_MANIFEST_RELATIVE_PATH = Path(".codex-plugin") / "plugin.json"
 PYTHON_OPTIONS_WITH_VALUES = {"-W", "-X"}
 PYTHON_REJECTED_SCRIPT_MODES = {"-c", "-m", "-"}
+CANONICAL_STALE_SUPERPOWERS_REPO_NAMES = {"superpowers", "superpowers-codex"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -127,7 +128,7 @@ def stale_superpowers_path_hint(target_path: Path | None) -> bool:
     if not isinstance(target_path, Path) or target_path.exists():
         return False
     repo_root = target_path.parent.parent.resolve(strict=False)
-    return repo_root.name.lower().startswith("superpowers")
+    return repo_root.name.lower() in CANONICAL_STALE_SUPERPOWERS_REPO_NAMES
 
 
 def load_json_file(path: Path) -> dict:
