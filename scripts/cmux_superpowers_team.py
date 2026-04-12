@@ -192,11 +192,7 @@ def build_hud_payload(manifest: dict) -> dict:
     return {
         "session_id": manifest["session_id"],
         "workspace_id": manifest["workspace_id"],
-        "main": {
-            "cwd": main.get("cwd"),
-            "pane_ref": main.get("pane_ref"),
-            "surface_ref": main.get("surface_ref"),
-        },
+        "main": dict(main),
         "workers": [
             {
                 "worker_id": worker["worker_id"],

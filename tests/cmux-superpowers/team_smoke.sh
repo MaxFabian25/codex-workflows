@@ -153,6 +153,10 @@ assert hud["pane_ref"]
 assert hud["surface_ref"]
 hud_json = Path(manifest["session_root"]) / "hud.json"
 assert hud_json.exists(), hud_json
+hud_payload = json.loads(hud_json.read_text(encoding="utf-8"))
+assert hud_payload["session_id"] == manifest["session_id"], hud_payload
+assert hud_payload["workspace_id"] == manifest["workspace_id"], hud_payload
+assert hud_payload["main"] == manifest["main"], (hud_payload["main"], manifest["main"])
 PY
 
 default_logs="$tmp/default-logs"
