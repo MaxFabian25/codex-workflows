@@ -876,6 +876,7 @@ Expected: commit succeeds with only the read-only launch changes.
 **Files:**
 - Modify: `/Users/maxibon/.codex/superpowers/scripts/cmux_superpowers_team.py`
 - Modify: `/Users/maxibon/.codex/superpowers/tests/cmux-superpowers/team_smoke.sh`
+- Modify: `/Users/maxibon/.codex/superpowers/tests/cmux-superpowers/install.sh`
 
 - [ ] **Step 1: Extend the smoke test with failing isolation and cleanup coverage**
 
@@ -1054,13 +1055,22 @@ bash tests/cmux-superpowers/team_smoke.sh
 
 Expected: the write-capable lane fails closed without ignored worktree storage, succeeds once `.worktrees/` is ignored, and cleanup removes the owned worktree and state directory.
 
+- [ ] **Step 4b: Align the installed-wrapper smoke with the new team and cleanup behavior**
+
+Update `/Users/maxibon/.codex/superpowers/tests/cmux-superpowers/install.sh` so the installed wrapper no longer asserts the old `team not implemented yet` and `cleanup not implemented yet` placeholders. Keep the parser rejection coverage, but replace the placeholder assertions with a deterministic fake-`cmux` wrapper smoke that verifies the installed `cmux-superpowers` command can:
+
+- pass `doctor --json` with the existing fake Codex and hook fixtures
+- launch a write-capable `team` session against a temp repo that ignores `.worktrees/`
+- run `cleanup --session ... --close-workers --remove-worktrees --purge-state`
+- remove the owned worktree and session state directory
+
 - [ ] **Step 5: Commit the isolation and cleanup changes**
 
 Run:
 
 ```bash
 cd /Users/maxibon/.codex/superpowers
-git add scripts/cmux_superpowers_team.py tests/cmux-superpowers/team_smoke.sh
+git add scripts/cmux_superpowers_team.py tests/cmux-superpowers/team_smoke.sh tests/cmux-superpowers/install.sh
 git commit -m "feat: add worktree isolation and cleanup"
 ```
 

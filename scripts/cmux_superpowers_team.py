@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import os
 import re
@@ -62,6 +63,7 @@ class WorkerPlan:
     pane_ref: str | None = None
     surface_ref: str | None = None
     worktree_path: str | None = None
+    worktree_branch: str | None = None
 
 
 class TeamLaunchError(RuntimeError):
@@ -183,6 +185,51 @@ def write_packet(path: Path, text: str) -> None:
 def write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def session_manifest(
+    session_id: str,
+    created_at: str,
+    session_root: Path,
+    workspace_id: str | None,
+    main_packet: Path,
+    cwd: str,
+    workers: list[WorkerPlan],
+    *,
+    main_pane: str | None = None,
+    main_surface: str | None = None,
+) -> dict:
+    return {
+        "session_id": session_id,
+        "created_at": created_at,
+        "workspace_id": workspace_id,
+        "session_root": str(session_root),
+        "main": {
+            "pane_ref": main_pane,
+            "surface_ref": main_surface,
+            "packet_path": str(main_packet),
+            "cwd": cwd,
+        },
+        "workers": [asdict(worker) for worker in workers],
+        "hud": None,
+        "cleanup": {"status": "active"},
+    }
+
+
+def persist_manifest_workers(
+    manifest_path: Path, manifest: dict, workers: list[WorkerPlan]
+) -> None:
+    manifest["workers"] = [asdict(worker) for worker in workers]
+    write_json(manifest_path, manifest)
+
+
+def matching_worker_plan(
+    workers: list[WorkerPlan], worktree_path: str, worktree_branch: str
+) -> WorkerPlan | None:
+    for worker in workers:
+        if worker.worktree_path == worktree_path and worker.worktree_branch == worktree_branch:
+            return worker
+    return None
 
 
 def load_hooks_json(codex_home: Path) -> dict:
@@ -1081,6 +1128,68 @@ def cmux_text(*args: str) -> str:
     return run([resolve_cmux_bin(), *args]).stdout.strip()
 
 
+def git_text(*args: str, cwd: str) -> str:
+    return run(["git", "-C", cwd, *args]).stdout.strip()
+
+
+def repo_root_for(cwd: str) -> str:
+    return git_text("rev-parse", "--show-toplevel", cwd=cwd)
+
+
+def choose_worktree_root(repo_root: str) -> Path:
+    for rel in [".worktrees/", "worktrees/"]:
+        probe = subprocess.run(
+            ["git", "-C", repo_root, "check-ignore", "-q", rel],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if probe.returncode == 0:
+            root = Path(repo_root) / rel.removesuffix("/") / "cmux-superpowers"
+            root.mkdir(parents=True, exist_ok=True)
+            return root
+    raise SystemExit("Write-capable workers require an ignored .worktrees/ or worktrees/ directory.")
+
+
+def map_worktree_cwd(base_cwd: str, repo_root: str, worktree_path: Path) -> str:
+    repo_root_path = Path(repo_root).resolve()
+    base_cwd_path = Path(base_cwd).resolve()
+    worktree_root = worktree_path.resolve()
+    try:
+        relative_cwd = base_cwd_path.relative_to(repo_root_path)
+    except ValueError as exc:
+        raise SystemExit(
+            "Write-capable worker cwd must stay within the repo root."
+        ) from exc
+    mapped_cwd = (worktree_root / relative_cwd).resolve()
+    try:
+        mapped_cwd.relative_to(worktree_root)
+    except ValueError as exc:
+        raise SystemExit(
+            "Write-capable worker cwd resolved outside the isolated worktree."
+        ) from exc
+    try:
+        mapped_cwd.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise SystemExit(f"Write-capable worker cwd could not be prepared: {exc}") from exc
+    if not mapped_cwd.is_dir():
+        raise SystemExit("Write-capable worker cwd is not a directory.")
+    return str(mapped_cwd)
+
+
+def prepare_worker_root(
+    base_cwd: str, session_id: str, worker_id: str, write_capable: bool
+) -> tuple[str, str | None, str | None]:
+    if not write_capable:
+        return base_cwd, None, None
+    repo_root = repo_root_for(base_cwd)
+    worktree_root = choose_worktree_root(repo_root)
+    branch = f"cmux-superpowers/{session_id}-{worker_id}"
+    path = worktree_root / f"{session_id}-{worker_id}"
+    run(["git", "-C", repo_root, "worktree", "add", "-b", branch, str(path)])
+    return map_worktree_cwd(base_cwd, repo_root, path), str(path), branch
+
+
 def shell_join(parts: list[str]) -> str:
     return " ".join(shlex.quote(part) for part in parts)
 
@@ -1307,10 +1416,197 @@ def codex_command(
     )
 
 
+def cleanup_step_error(command: list[str], description: str) -> str | None:
+    proc = subprocess.run(command, check=False, text=True, capture_output=True)
+    if proc.returncode == 0:
+        return None
+    detail = probe_failure_detail(proc) or f"exit {proc.returncode}"
+    return f"{description}: {detail}"
+
+
+def owned_worktree_entries(workers: list[dict[str, object]]) -> list[tuple[str | None, str | None]]:
+    entries: list[tuple[str | None, str | None]] = []
+    for worker in workers:
+        worktree_path = worker.get("worktree_path")
+        worktree_branch = worker.get("worktree_branch")
+        if not worktree_path and not worktree_branch:
+            continue
+        entries.append(
+            (
+                str(worktree_path) if isinstance(worktree_path, str) else None,
+                str(worktree_branch) if isinstance(worktree_branch, str) else None,
+            )
+        )
+    return entries
+
+
+def branch_checked_out_elsewhere_error(
+    repo_root: str, owned_worktree_path: str | None, worktree_branch: str | None
+) -> str | None:
+    if not worktree_branch:
+        return None
+    target_ref = f"refs/heads/{worktree_branch}"
+    owned_path = str(Path(owned_worktree_path).resolve()) if owned_worktree_path else None
+    other_paths: list[str] = []
+    current_path: str | None = None
+    current_branch: str | None = None
+    for raw_line in git_text("worktree", "list", "--porcelain", cwd=repo_root).splitlines():
+        if not raw_line:
+            if current_path and current_branch == target_ref:
+                resolved_path = str(Path(current_path).resolve())
+                if resolved_path != owned_path:
+                    other_paths.append(resolved_path)
+            current_path = None
+            current_branch = None
+            continue
+        if raw_line.startswith("worktree "):
+            current_path = raw_line.removeprefix("worktree ").strip()
+            continue
+        if raw_line.startswith("branch "):
+            current_branch = raw_line.removeprefix("branch ").strip()
+    if current_path and current_branch == target_ref:
+        resolved_path = str(Path(current_path).resolve())
+        if resolved_path != owned_path:
+            other_paths.append(resolved_path)
+    if not other_paths:
+        return None
+    return (
+        f"branch {worktree_branch} is checked out in another worktree: "
+        + ", ".join(other_paths)
+    )
+
+
+def purge_session_state_dir(session_root: Path) -> None:
+    if not session_root.exists():
+        return
+    parent = session_root.parent
+    if not os.access(parent, os.W_OK | os.X_OK):
+        raise PermissionError(
+            errno.EACCES,
+            f"parent directory is not writable: {parent}",
+            str(parent),
+        )
+    shutil.rmtree(session_root)
+    if session_root.exists():
+        raise OSError(f"session state still exists after purge: {session_root}")
+
+
+def cmd_cleanup(args: argparse.Namespace) -> int:
+    manifest_path = session_dir(args.session) / "manifest.json"
+    if not manifest_path.exists():
+        raise SystemExit(f"session manifest not found: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    workspace_id = manifest.get("workspace_id")
+    workers = manifest.get("workers", [])
+    worktree_entries = owned_worktree_entries(workers)
+
+    try:
+        if args.close_workers:
+            cmux_bin = resolve_cmux_bin()
+            for worker in manifest.get("workers", []):
+                surface_ref = worker.get("surface_ref")
+                if surface_ref:
+                    if not workspace_id:
+                        raise SystemExit(
+                            "cleanup failed: session manifest missing workspace_id for worker cleanup"
+                        )
+                    error = cleanup_step_error(
+                        [
+                            cmux_bin,
+                            "close-surface",
+                            "--workspace",
+                            workspace_id,
+                            "--surface",
+                            surface_ref,
+                        ],
+                        f"close-surface failed for {worker.get('worker_id', 'worker')} ({surface_ref})",
+                    )
+                    if error:
+                        raise SystemExit(f"cleanup failed: {error}")
+
+        hud = manifest.get("hud")
+        if args.close_hud and isinstance(hud, dict):
+            surface_ref = hud.get("surface_ref")
+            if surface_ref:
+                if not workspace_id:
+                    raise SystemExit(
+                        "cleanup failed: session manifest missing workspace_id for hud cleanup"
+                    )
+                error = cleanup_step_error(
+                    [
+                        resolve_cmux_bin(),
+                        "close-surface",
+                        "--workspace",
+                        workspace_id,
+                        "--surface",
+                        surface_ref,
+                    ],
+                    f"close-surface failed for hud ({surface_ref})",
+                )
+                if error:
+                    raise SystemExit(f"cleanup failed: {error}")
+
+        if args.remove_worktrees and worktree_entries:
+            main = manifest.get("main")
+            main_cwd = main.get("cwd") if isinstance(main, dict) else None
+            if not isinstance(main_cwd, str) or not main_cwd:
+                raise SystemExit("cleanup failed: session manifest missing main.cwd")
+            repo_root = repo_root_for(main_cwd)
+            for worktree_path, worktree_branch in worktree_entries:
+                branch_error = branch_checked_out_elsewhere_error(
+                    repo_root, worktree_path, worktree_branch
+                )
+                if branch_error:
+                    raise SystemExit(f"cleanup failed: {branch_error}")
+            for worker in workers:
+                worktree_path = worker.get("worktree_path")
+                worktree_branch = worker.get("worktree_branch")
+                if not worktree_path and not worktree_branch:
+                    continue
+                if worktree_path:
+                    error = cleanup_step_error(
+                        ["git", "-C", repo_root, "worktree", "remove", "--force", worktree_path],
+                        f"git worktree remove failed for {worktree_path}",
+                    )
+                    if error:
+                        raise SystemExit(f"cleanup failed: {error}")
+                    worker["worktree_path"] = None
+                    write_json(manifest_path, manifest)
+                if worktree_branch:
+                    error = cleanup_step_error(
+                        ["git", "-C", repo_root, "branch", "-D", worktree_branch],
+                        f"git branch delete failed for {worktree_branch}",
+                    )
+                    if error:
+                        raise SystemExit(f"cleanup failed: {error}")
+                    worker["worktree_branch"] = None
+                    write_json(manifest_path, manifest)
+    except SystemExit as exc:
+        detail = launch_failure_detail(exc)
+        if detail.startswith("cleanup failed: "):
+            raise SystemExit(detail) from None
+        raise SystemExit(f"cleanup failed: {detail}") from None
+    except BaseException as exc:
+        if isinstance(exc, KeyboardInterrupt):
+            raise
+        detail = launch_failure_detail(exc)
+        raise SystemExit(f"cleanup failed: {detail}") from None
+
+    manifest["cleanup"] = {"status": "cleaned"}
+    write_json(manifest_path, manifest)
+    if args.purge_state:
+        session_root = session_dir(args.session)
+        try:
+            purge_session_state_dir(session_root)
+        except OSError as exc:
+            raise SystemExit(
+                f"cleanup failed: failed to purge session state at {session_root}: {exc}"
+            ) from None
+    return 0
+
+
 def cmd_team(args: argparse.Namespace) -> int:
     workers = args.worker or ["review", "general"]
-    if any(bool(ROLE_SPECS[role]["write"]) for role in workers):
-        raise SystemExit("team not implemented yet: write-capable workers are not implemented yet")
     session_id = f"session-{uuid.uuid4().hex[:8]}"
     session_root = session_dir(session_id)
     session_root.mkdir(parents=True, exist_ok=True)
@@ -1320,10 +1616,24 @@ def cmd_team(args: argparse.Namespace) -> int:
     workspace_name = workspace_name_for_session(session_marker, args.name)
     workspace_id: str | None = None
     preserve_session_state = False
+    created_worktrees: list[tuple[str, str]] = []
+    manifest_path = session_root / "manifest.json"
 
     try:
         main_packet = session_root / "packets" / "main.md"
         write_packet(main_packet, build_packet("main", task, cwd, write_capable=False))
+        created_at = datetime.now(timezone.utc).isoformat()
+        planned_workers: list[WorkerPlan] = []
+        manifest = session_manifest(
+            session_id,
+            created_at,
+            session_root,
+            workspace_id,
+            main_packet,
+            cwd,
+            planned_workers,
+        )
+        write_json(manifest_path, manifest)
         main_command = codex_command(
             cwd, main_packet, "main", args.profile or "workflow_fidelity", session_id
         )
@@ -1350,19 +1660,43 @@ def cmd_team(args: argparse.Namespace) -> int:
             raise TeamLaunchError(
                 f"unable to recover workspace ref after new-workspace output: {detail}"
             )
+        manifest["workspace_id"] = workspace_id
+        write_json(manifest_path, manifest)
         main_pane = cmux_selected_pane(workspace_id)
         main_surface = cmux_selected_surface(workspace_id, main_pane)
         main_context = caller_context(workspace_id, main_surface)
         main_surface = str(main_context["surface_ref"])
         main_pane = str(main_context["pane_ref"])
-
-        planned_workers: list[WorkerPlan] = []
+        manifest["main"]["pane_ref"] = main_pane
+        manifest["main"]["surface_ref"] = main_surface
+        write_json(manifest_path, manifest)
         anchor_surface = main_surface
         for index, role in enumerate(workers, start=1):
             worker_id = f"worker-{index}"
             role_spec = ROLE_SPECS[role]
             packet_path = session_root / "packets" / f"{worker_id}.md"
-            write_packet(packet_path, build_packet(role, task, cwd, role_spec["write"]))
+            worker_cwd, worktree_path, worktree_branch = prepare_worker_root(
+                cwd, session_id, worker_id, bool(role_spec["write"])
+            )
+            if worktree_path and worktree_branch:
+                created_worktrees.append((worktree_path, worktree_branch))
+            write_packet(
+                packet_path,
+                build_packet(role, task, worker_cwd, bool(role_spec["write"])),
+            )
+            worker_plan = WorkerPlan(
+                worker_id=worker_id,
+                role=role,
+                write_capable=bool(role_spec["write"]),
+                profile=role_spec["profile"],
+                cwd=worker_cwd,
+                packet_path=str(packet_path),
+                worktree_path=worktree_path,
+                worktree_branch=worktree_branch,
+            )
+            planned_workers.append(worker_plan)
+            write_json(session_root / "workers" / f"{worker_id}.json", asdict(worker_plan))
+            persist_manifest_workers(manifest_path, manifest, planned_workers)
             anchor_surface = first_ref(
                 cmux_text(
                     "new-split",
@@ -1394,42 +1728,20 @@ def cmd_team(args: argparse.Namespace) -> int:
                     workspace_id,
                     "--surface",
                     anchor_surface,
-                    codex_command(cwd, packet_path, role, role_spec["profile"], session_id)
+                    codex_command(
+                        worker_cwd,
+                        packet_path,
+                        role,
+                        role_spec["profile"],
+                        session_id,
+                    )
                     + "\n",
                 ]
             )
-            planned_workers.append(
-                WorkerPlan(
-                    worker_id=worker_id,
-                    role=role,
-                    write_capable=bool(role_spec["write"]),
-                    profile=role_spec["profile"],
-                    cwd=cwd,
-                    packet_path=str(packet_path),
-                    pane_ref=str(focused["pane_ref"]),
-                    surface_ref=str(focused["surface_ref"]),
-                )
-            )
-
-        manifest = {
-            "session_id": session_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "workspace_id": workspace_id,
-            "session_root": str(session_root),
-            "main": {
-                "pane_ref": main_pane,
-                "surface_ref": main_surface,
-                "packet_path": str(main_packet),
-                "cwd": cwd,
-            },
-            "workers": [asdict(worker) for worker in planned_workers],
-            "hud": None,
-            "cleanup": {"status": "active"},
-        }
-        manifest_path = session_root / "manifest.json"
-        write_json(manifest_path, manifest)
-        for worker in planned_workers:
-            write_json(session_root / "workers" / f"{worker.worker_id}.json", asdict(worker))
+            worker_plan.pane_ref = str(focused["pane_ref"])
+            worker_plan.surface_ref = str(focused["surface_ref"])
+            write_json(session_root / "workers" / f"{worker_id}.json", asdict(worker_plan))
+            persist_manifest_workers(manifest_path, manifest, planned_workers)
 
         if args.json:
             print(
@@ -1459,10 +1771,51 @@ def cmd_team(args: argparse.Namespace) -> int:
             if close_proc.returncode != 0:
                 close_detail = probe_failure_detail(close_proc) or f"exit {close_proc.returncode}"
                 close_error = f"close-workspace failed: {close_detail}"
+        rollback_cleanup_errors: list[str] = []
         if close_error or preserve_session_state:
+            rollback_cleanup_errors = []
+        elif created_worktrees:
+            repo_root = repo_root_for(cwd)
+            for worktree_path, worktree_branch in created_worktrees:
+                branch_error = branch_checked_out_elsewhere_error(
+                    repo_root, worktree_path, worktree_branch
+                )
+                if branch_error:
+                    rollback_cleanup_errors.append(branch_error)
+            if rollback_cleanup_errors:
+                details = [f"team launch failed: {launch_detail}"]
+                details.extend(rollback_cleanup_errors)
+                details.append(f"session state preserved at {session_root}")
+                raise SystemExit("; ".join(details)) from None
+            for worktree_path, worktree_branch in created_worktrees:
+                worktree_error = cleanup_step_error(
+                    ["git", "-C", repo_root, "worktree", "remove", "--force", worktree_path],
+                    f"git worktree remove failed for rollback path {worktree_path}",
+                )
+                if worktree_error:
+                    rollback_cleanup_errors.append(worktree_error)
+                    continue
+                cleaned_worker = matching_worker_plan(
+                    planned_workers, worktree_path, worktree_branch
+                )
+                if cleaned_worker is not None:
+                    cleaned_worker.worktree_path = None
+                    persist_manifest_workers(manifest_path, manifest, planned_workers)
+                branch_error = cleanup_step_error(
+                    ["git", "-C", repo_root, "branch", "-D", worktree_branch],
+                    f"git branch delete failed for rollback path {worktree_branch}",
+                )
+                if branch_error:
+                    rollback_cleanup_errors.append(branch_error)
+                    continue
+                if cleaned_worker is not None:
+                    cleaned_worker.worktree_branch = None
+                    persist_manifest_workers(manifest_path, manifest, planned_workers)
+        if close_error or preserve_session_state or rollback_cleanup_errors:
             details = [f"team launch failed: {launch_detail}"]
             if close_error:
                 details.append(close_error)
+            details.extend(rollback_cleanup_errors)
             details.append(f"session state preserved at {session_root}")
             raise SystemExit(
                 "; ".join(details)
@@ -1479,7 +1832,7 @@ def main() -> int:
     if args.command == "team":
         return cmd_team(args)
     if args.command == "cleanup":
-        raise SystemExit("cleanup not implemented yet")
+        return cmd_cleanup(args)
     parser.error(f"unknown command {args.command}")
 
 

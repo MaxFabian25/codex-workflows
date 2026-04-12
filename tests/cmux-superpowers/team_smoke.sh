@@ -182,6 +182,39 @@ for entry in entries:
     assert entry["argv"][-1] == packet.read_text(encoding="utf-8").rstrip("\n"), entry
 PY
 
+non_git_cwd="$tmp/non-git-cwd"
+non_git_logs="$tmp/non-git-logs"
+non_git_state="$tmp/non-git-state"
+mkdir -p "$non_git_cwd" "$non_git_logs" "$non_git_state"
+cat >"$non_git_cwd/NOTES.md" <<'EOF'
+temporary non-git directory
+EOF
+
+non_git_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$non_git_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$non_git_state" \
+  python3 "$TEAM" team --json --cwd "$non_git_cwd" --worker review --no-hud "Audit a non-git directory"
+)"
+non_git_session_id="$(python3 - <<'PY' "$non_git_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+non_git_workspace_id="$(python3 - <<'PY' "$non_git_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$non_git_workspace_id")
+
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$non_git_state" \
+python3 "$TEAM" cleanup --session "$non_git_session_id" --close-workers --remove-worktrees --purge-state
+
+test ! -e "$non_git_state/$non_git_session_id" || fail "expected non-git cleanup to purge session state: $non_git_state/$non_git_session_id"
+
 if [[ -x /usr/bin/python3 ]]; then
   assert_python39_config() {
     local name="$1"
@@ -326,19 +359,376 @@ codex_hooks = false
 EOF
 fi
 
-reject_state="$tmp/reject-state"
-mkdir -p "$reject_state"
+write_logs="$tmp/write-logs"
+write_state="$tmp/write-state"
+write_repo="$tmp/write-repo"
+write_nested_cwd="$write_repo/nested/path"
+mkdir -p "$write_logs" "$write_state" "$write_repo"
+git -C "$write_repo" init -q
+cat >"$write_repo/README.md" <<'EOF'
+temp repo
+EOF
+mkdir -p "$write_nested_cwd"
+cat >"$write_nested_cwd/worker.txt" <<'EOF'
+tracked nested file
+EOF
+git -C "$write_repo" add README.md
+git -C "$write_repo" add "$write_nested_cwd/worker.txt"
+git -C "$write_repo" -c user.name="Smoke Test" -c user.email="smoke@example.com" commit -qm "init"
+
 implement_output="$tmp/implement-output.log"
 assert_command_fails_with_output \
   "$implement_output" \
   env \
     CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
     CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
-    CMUX_SUPERPOWERS_STUB_LOG_DIR="$logs" \
-    CMUX_SUPERPOWERS_STATE_ROOT="$reject_state" \
-    python3 "$TEAM" team --json --cwd "$ROOT" --worker implement --no-hud "Implement the approved change"
-assert_contains "$implement_output" "write-capable workers are not implemented yet"
-test -z "$(find "$reject_state" -mindepth 1 -print -quit)" || fail "expected rejected write-capable launch to leave no state behind"
+    CMUX_SUPERPOWERS_STUB_LOG_DIR="$write_logs" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$write_state" \
+    python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement --no-hud "Implement a no-op change"
+assert_contains "$implement_output" "ignored .worktrees/ or worktrees/ directory"
+test -z "$(find "$write_state" -mindepth 1 -print -quit)" || fail "expected rejected write-capable launch to leave no state behind"
+rm -rf "$write_logs"
+mkdir -p "$write_logs"
+
+cat >"$write_repo/.gitignore" <<'EOF'
+.worktrees/
+EOF
+git -C "$write_repo" add .gitignore
+git -C "$write_repo" -c user.name="Smoke Test" -c user.email="smoke@example.com" commit -qm "ignore worktrees"
+
+write_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$write_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$write_state" \
+  python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement --no-hud "Implement a no-op change"
+)"
+
+write_manifest_path="$(python3 - <<'PY' "$write_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+write_workspace_id="$(python3 - <<'PY' "$write_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+write_session_id="$(python3 - <<'PY' "$write_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+owned_workspaces+=("$write_workspace_id")
+
+write_worktree_path="$(python3 - <<'PY' "$write_manifest_path" "$write_nested_cwd"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert manifest["main"]["cwd"] == str(Path(sys.argv[2]).resolve()), manifest
+assert len(manifest["workers"]) == 1, manifest
+worker = manifest["workers"][0]
+assert worker["role"] == "implement", worker
+assert worker["write_capable"] is True, worker
+assert worker["worktree_path"], worker
+assert worker["worktree_branch"], worker
+expected_cwd = str(Path(worker["worktree_path"]) / "nested" / "path")
+assert worker["cwd"] == expected_cwd, worker
+worker_json = Path(manifest["session_root"]) / "workers" / "worker-1.json"
+assert worker_json.exists(), worker_json
+print(worker["worktree_path"])
+PY
+)"
+write_worktree_branch="$(python3 - <<'PY' "$write_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(manifest["workers"][0]["worktree_branch"])
+PY
+)"
+
+test -d "$write_worktree_path" || fail "missing worktree: $write_worktree_path"
+test -d "$write_worktree_path/nested/path" || fail "missing nested worktree cwd: $write_worktree_path/nested/path"
+git -C "$write_repo" show-ref --verify --quiet "refs/heads/$write_worktree_branch" || fail "missing worktree branch: $write_worktree_branch"
+git -C "$write_repo" worktree list --porcelain | rg -Fq -- "worktree $write_worktree_path" || fail "missing git worktree registration for $write_worktree_path"
+
+write_log_count=0
+for _ in $(seq 1 20); do
+  write_log_count="$(find "$write_logs" -type f | wc -l | tr -d ' ')"
+  if [[ "$write_log_count" -ge 2 ]]; then
+    break
+  fi
+  sleep 0.25
+done
+test "$write_log_count" -ge 2 || fail "expected main + implement codex launches, saw $write_log_count"
+python3 - <<'PY' "$write_logs" "$write_nested_cwd" "$write_worktree_path"
+import json
+import sys
+from pathlib import Path
+
+entries = [json.loads(path.read_text(encoding="utf-8")) for path in sorted(Path(sys.argv[1]).glob("*.json"))]
+scoped = [entry for entry in entries if entry["role"] in {"main", "implement"}]
+assert sorted(entry["role"] for entry in scoped) == ["implement", "main"], scoped
+for entry in scoped:
+    if entry["role"] == "main":
+        assert entry["cwd"] == str(Path(sys.argv[2]).resolve()), entry
+    if entry["role"] == "implement":
+        assert entry["cwd"] == str((Path(sys.argv[3]) / "nested" / "path").resolve()), entry
+PY
+
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$write_state" \
+python3 "$TEAM" cleanup --session "$write_session_id" --close-workers --remove-worktrees --purge-state
+
+test ! -d "$write_worktree_path" || fail "worktree still exists after cleanup: $write_worktree_path"
+if git -C "$write_repo" show-ref --verify --quiet "refs/heads/$write_worktree_branch"; then
+  fail "worktree branch still exists after cleanup: $write_worktree_branch"
+fi
+test ! -e "$write_state/$write_session_id" || fail "session state still exists after purge: $write_state/$write_session_id"
+
+branch_in_use_logs="$tmp/branch-in-use-logs"
+branch_in_use_state="$tmp/branch-in-use-state"
+branch_in_use_other="$tmp/branch-in-use-other"
+mkdir -p "$branch_in_use_logs" "$branch_in_use_state"
+branch_in_use_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$branch_in_use_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$branch_in_use_state" \
+  python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement --no-hud "Cleanup should fail before removing a locked branch"
+)"
+branch_in_use_session_id="$(python3 - <<'PY' "$branch_in_use_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+branch_in_use_workspace_id="$(python3 - <<'PY' "$branch_in_use_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$branch_in_use_workspace_id")
+branch_in_use_manifest_path="$(python3 - <<'PY' "$branch_in_use_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+branch_in_use_worktree_path="$(python3 - <<'PY' "$branch_in_use_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+worker = manifest["workers"][0]
+assert worker["role"] == "implement", worker
+assert worker["worktree_path"], worker
+assert worker["worktree_branch"], worker
+print(worker["worktree_path"])
+PY
+)"
+branch_in_use_worktree_branch="$(python3 - <<'PY' "$branch_in_use_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(manifest["workers"][0]["worktree_branch"])
+PY
+)"
+git -C "$write_repo" worktree add --force "$branch_in_use_other" "$branch_in_use_worktree_branch" >/dev/null
+branch_in_use_cleanup_output="$tmp/branch-in-use-cleanup-output.log"
+assert_command_fails_with_output \
+  "$branch_in_use_cleanup_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$branch_in_use_state" \
+    python3 "$TEAM" cleanup --session "$branch_in_use_session_id" --close-workers --remove-worktrees --purge-state
+assert_contains "$branch_in_use_cleanup_output" "checked out in another worktree"
+test -e "$branch_in_use_state/$branch_in_use_session_id" || fail "expected branch-in-use cleanup failure to preserve session state"
+test -d "$branch_in_use_worktree_path" || fail "expected branch-in-use cleanup failure to preserve worktree: $branch_in_use_worktree_path"
+git -C "$write_repo" show-ref --verify --quiet "refs/heads/$branch_in_use_worktree_branch" || fail "expected branch-in-use cleanup failure to preserve branch: $branch_in_use_worktree_branch"
+python3 - <<'PY' "$branch_in_use_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert manifest["cleanup"]["status"] == "active", manifest
+PY
+
+multi_cleanup_logs="$tmp/multi-cleanup-logs"
+multi_cleanup_state="$tmp/multi-cleanup-state"
+multi_cleanup_fake_git_dir="$tmp/multi-cleanup-fake-git"
+mkdir -p "$multi_cleanup_logs" "$multi_cleanup_state" "$multi_cleanup_fake_git_dir"
+multi_cleanup_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$multi_cleanup_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$multi_cleanup_state" \
+  python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement --worker implement --no-hud "Cleanup should stay retry-safe after a late multi-worker failure"
+)"
+multi_cleanup_session_id="$(python3 - <<'PY' "$multi_cleanup_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+multi_cleanup_workspace_id="$(python3 - <<'PY' "$multi_cleanup_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$multi_cleanup_workspace_id")
+multi_cleanup_manifest_path="$(python3 - <<'PY' "$multi_cleanup_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+multi_cleanup_worker_1_path="$(python3 - <<'PY' "$multi_cleanup_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert [worker["role"] for worker in manifest["workers"]] == ["implement", "implement"], manifest
+print(manifest["workers"][0]["worktree_path"])
+PY
+)"
+multi_cleanup_worker_1_branch="$(python3 - <<'PY' "$multi_cleanup_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(manifest["workers"][0]["worktree_branch"])
+PY
+)"
+multi_cleanup_worker_2_path="$(python3 - <<'PY' "$multi_cleanup_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(manifest["workers"][1]["worktree_path"])
+PY
+)"
+multi_cleanup_worker_2_branch="$(python3 - <<'PY' "$multi_cleanup_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(manifest["workers"][1]["worktree_branch"])
+PY
+)"
+real_git="$(command -v git)"
+cat >"$multi_cleanup_fake_git_dir/git" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+real_git="${CMUX_SUPERPOWERS_REAL_GIT:?}"
+fail_branch="${CMUX_SUPERPOWERS_FAIL_BRANCH_DELETE:-}"
+orig=("$@")
+if [[ "${1:-}" == "-C" ]]; then
+  shift 2
+fi
+if [[ "${1:-}" == "branch" && "${2:-}" == "-D" && "${3:-}" == "$fail_branch" ]]; then
+  echo "forced late branch delete failure for $fail_branch" >&2
+  exit 73
+fi
+exec "$real_git" "${orig[@]}"
+EOF
+chmod +x "$multi_cleanup_fake_git_dir/git"
+multi_cleanup_output="$tmp/multi-cleanup-output.log"
+assert_command_fails_with_output \
+  "$multi_cleanup_output" \
+  env \
+    PATH="$multi_cleanup_fake_git_dir:$PATH" \
+    CMUX_SUPERPOWERS_REAL_GIT="$real_git" \
+    CMUX_SUPERPOWERS_FAIL_BRANCH_DELETE="$multi_cleanup_worker_2_branch" \
+    CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$multi_cleanup_state" \
+    python3 "$TEAM" cleanup --session "$multi_cleanup_session_id" --close-workers --remove-worktrees --purge-state
+assert_contains "$multi_cleanup_output" "forced late branch delete failure"
+test -e "$multi_cleanup_state/$multi_cleanup_session_id" || fail "expected late multi-worker cleanup failure to preserve session state"
+test ! -d "$multi_cleanup_worker_1_path" || fail "expected late multi-worker cleanup failure to remove first worktree: $multi_cleanup_worker_1_path"
+if git -C "$write_repo" show-ref --verify --quiet "refs/heads/$multi_cleanup_worker_1_branch"; then
+  fail "expected late multi-worker cleanup failure to delete first branch: $multi_cleanup_worker_1_branch"
+fi
+test ! -d "$multi_cleanup_worker_2_path" || fail "expected late multi-worker cleanup failure to remove second worktree before branch delete failure: $multi_cleanup_worker_2_path"
+git -C "$write_repo" show-ref --verify --quiet "refs/heads/$multi_cleanup_worker_2_branch" || fail "expected late multi-worker cleanup failure to preserve second branch: $multi_cleanup_worker_2_branch"
+python3 - <<'PY' "$multi_cleanup_manifest_path" "$multi_cleanup_worker_2_branch"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert manifest["cleanup"]["status"] == "active", manifest
+worker_1, worker_2 = manifest["workers"]
+assert worker_1["worktree_path"] is None, worker_1
+assert worker_1["worktree_branch"] is None, worker_1
+assert worker_2["worktree_path"] is None, worker_2
+assert worker_2["worktree_branch"] == sys.argv[2], worker_2
+PY
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$multi_cleanup_state" \
+python3 "$TEAM" cleanup --session "$multi_cleanup_session_id" --remove-worktrees --purge-state
+test ! -e "$multi_cleanup_state/$multi_cleanup_session_id" || fail "expected retry-safe multi-worker cleanup to purge session state"
+if git -C "$write_repo" show-ref --verify --quiet "refs/heads/$multi_cleanup_worker_2_branch"; then
+  fail "expected retry-safe multi-worker cleanup to delete second branch: $multi_cleanup_worker_2_branch"
+fi
+
+purge_fail_logs="$tmp/purge-fail-logs"
+purge_fail_state="$tmp/purge-fail-state"
+mkdir -p "$purge_fail_logs" "$purge_fail_state"
+purge_fail_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$purge_fail_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$purge_fail_state" \
+  python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Purge-state should fail closed"
+)"
+purge_fail_session_id="$(python3 - <<'PY' "$purge_fail_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+purge_fail_workspace_id="$(python3 - <<'PY' "$purge_fail_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$purge_fail_workspace_id")
+purge_fail_manifest_path="$(python3 - <<'PY' "$purge_fail_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+chmod 555 "$purge_fail_state"
+purge_fail_output="$tmp/purge-fail-output.log"
+assert_command_fails_with_output \
+  "$purge_fail_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$purge_fail_state" \
+    python3 "$TEAM" cleanup --session "$purge_fail_session_id" --purge-state
+chmod 755 "$purge_fail_state"
+assert_contains "$purge_fail_output" "failed to purge session state"
+test -e "$purge_fail_state/$purge_fail_session_id" || fail "expected purge-state failure to preserve session state"
+python3 - <<'PY' "$purge_fail_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert manifest["cleanup"]["status"] == "cleaned", manifest
+PY
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$purge_fail_state" \
+python3 "$TEAM" cleanup --session "$purge_fail_session_id" --purge-state
+test ! -e "$purge_fail_state/$purge_fail_session_id" || fail "expected retry after purge-state failure to remove session state"
 
 failing_cmux="$tmp/failing-cmux"
 cat >"$failing_cmux" <<'EOF'
@@ -501,12 +891,28 @@ JSON
     fi
     ;;
   new-split)
-    if [[ "${CMUX_SUPERPOWERS_FAIL_MODE:-exit}" == "malformed" ]]; then
-      echo "not-a-surface-ref"
-    else
-      echo "forced split failure" >&2
-      exit 9
+    case "${CMUX_SUPERPOWERS_FAIL_MODE:-exit}" in
+      malformed)
+        echo "not-a-surface-ref"
+        ;;
+      cleanup-close-surface)
+        echo "surface:cleanup-worker"
+        ;;
+      *)
+        echo "forced split failure" >&2
+        exit 9
+        ;;
+    esac
+    ;;
+  rename-tab|send)
+    exit 0
+    ;;
+  close-surface)
+    if [[ "${CMUX_SUPERPOWERS_FAIL_MODE:-exit}" == "cleanup-close-surface" ]]; then
+      echo "forced close-surface failure" >&2
+      exit 12
     fi
+    exit 0
     ;;
   close-workspace)
     workspace="$(workspace_arg "$@")"
@@ -524,6 +930,63 @@ JSON
 esac
 EOF
 chmod +x "$failing_cmux"
+
+cleanup_fail_state="$tmp/cleanup-fail-state"
+cleanup_fail_cmux_state="$tmp/cleanup-fail-cmux-state"
+mkdir -p "$cleanup_fail_state"
+cleanup_fail_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$failing_cmux" \
+  CMUX_SUPERPOWERS_FAKE_CMUX_STATE="$cleanup_fail_cmux_state" \
+  CMUX_SUPERPOWERS_FAIL_MODE="cleanup-close-surface" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$tmp/cleanup-fail-logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$cleanup_fail_state" \
+  python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement --no-hud "Cleanup should fail closed"
+)"
+cleanup_fail_manifest_path="$(python3 - <<'PY' "$cleanup_fail_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+cleanup_fail_session_id="$(python3 - <<'PY' "$cleanup_fail_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+cleanup_fail_worktree_path="$(python3 - <<'PY' "$cleanup_fail_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert len(manifest["workers"]) == 1, manifest
+worker = manifest["workers"][0]
+assert worker["role"] == "implement", worker
+assert worker["worktree_path"], worker
+print(worker["worktree_path"])
+PY
+)"
+test -d "$cleanup_fail_worktree_path" || fail "expected cleanup-failure worktree to exist before cleanup: $cleanup_fail_worktree_path"
+cleanup_fail_output="$tmp/cleanup-fail-output.log"
+assert_command_fails_with_output \
+  "$cleanup_fail_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$failing_cmux" \
+    CMUX_SUPERPOWERS_FAKE_CMUX_STATE="$cleanup_fail_cmux_state" \
+    CMUX_SUPERPOWERS_FAIL_MODE="cleanup-close-surface" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$cleanup_fail_state" \
+    python3 "$TEAM" cleanup --session "$cleanup_fail_session_id" --close-workers --remove-worktrees --purge-state
+assert_contains "$cleanup_fail_output" "close-surface"
+test -e "$cleanup_fail_state/$cleanup_fail_session_id" || fail "expected cleanup failure to preserve session state"
+test -d "$cleanup_fail_worktree_path" || fail "expected cleanup failure to preserve worktree: $cleanup_fail_worktree_path"
+python3 - <<'PY' "$cleanup_fail_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert manifest["cleanup"]["status"] == "active", manifest
+PY
 
 failed_launch_state="$tmp/failed-launch-state"
 mkdir -p "$failed_launch_state"
@@ -555,6 +1018,64 @@ assert_command_fails_with_output \
     python3 "$TEAM" team --json --cwd "$ROOT" --worker review --no-hud "Fail during rollback close"
 assert_contains "$close_fail_output" "close-workspace failed"
 test -n "$(find "$close_fail_state" -mindepth 1 -print -quit)" || fail "expected close-workspace failure to preserve state"
+
+implement_close_fail_state="$tmp/implement-close-fail-state"
+mkdir -p "$implement_close_fail_state"
+implement_close_fail_output="$tmp/implement-close-fail-output.log"
+assert_command_fails_with_output \
+  "$implement_close_fail_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$failing_cmux" \
+    CMUX_SUPERPOWERS_FAKE_CMUX_STATE="$tmp/implement-close-fail-cmux-state" \
+    CMUX_SUPERPOWERS_FAIL_MODE="close" \
+    CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+    CMUX_SUPERPOWERS_STUB_LOG_DIR="$tmp/implement-close-fail-logs" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$implement_close_fail_state" \
+    python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement --no-hud "Fail during implement rollback close"
+assert_contains "$implement_close_fail_output" "close-workspace failed"
+test -n "$(find "$implement_close_fail_state" -mindepth 1 -print -quit)" || fail "expected implement close-workspace failure to preserve state"
+implement_close_fail_worker_json="$(find "$implement_close_fail_state" -path '*/workers/worker-1.json' -print -quit)"
+test -n "$implement_close_fail_worker_json" || fail "expected implement close-workspace failure to preserve worker metadata"
+implement_close_fail_session_id="$(python3 - <<'PY' "$implement_close_fail_worker_json"
+import sys
+from pathlib import Path
+
+print(Path(sys.argv[1]).parents[1].name)
+PY
+)"
+implement_close_fail_worktree_path="$(python3 - <<'PY' "$implement_close_fail_worker_json"
+import json
+import sys
+from pathlib import Path
+
+worker = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert worker["role"] == "implement", worker
+assert worker["worktree_path"], worker
+assert worker["worktree_branch"], worker
+print(worker["worktree_path"])
+PY
+)"
+implement_close_fail_worktree_branch="$(python3 - <<'PY' "$implement_close_fail_worker_json"
+import json
+import sys
+from pathlib import Path
+
+worker = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(worker["worktree_branch"])
+PY
+)"
+test -d "$implement_close_fail_worktree_path" || fail "expected implement close-workspace failure to preserve worktree: $implement_close_fail_worktree_path"
+git -C "$write_repo" show-ref --verify --quiet "refs/heads/$implement_close_fail_worktree_branch" || fail "expected implement close-workspace failure to preserve branch: $implement_close_fail_worktree_branch"
+CMUX_SUPERPOWERS_CMUX_BIN="$failing_cmux" \
+CMUX_SUPERPOWERS_FAKE_CMUX_STATE="$tmp/implement-close-fail-cmux-state" \
+CMUX_SUPERPOWERS_FAIL_MODE="ok" \
+CMUX_SUPERPOWERS_STATE_ROOT="$implement_close_fail_state" \
+python3 "$TEAM" cleanup --session "$implement_close_fail_session_id" --close-workers --remove-worktrees --purge-state
+test ! -e "$implement_close_fail_state/$implement_close_fail_session_id" || fail "expected preserved implement close-workspace failure cleanup to purge state"
+test ! -d "$implement_close_fail_worktree_path" || fail "expected preserved implement close-workspace failure cleanup to remove worktree: $implement_close_fail_worktree_path"
+if git -C "$write_repo" show-ref --verify --quiet "refs/heads/$implement_close_fail_worktree_branch"; then
+  fail "expected preserved implement close-workspace failure cleanup to delete branch: $implement_close_fail_worktree_branch"
+fi
 
 malformed_state="$tmp/malformed-state"
 mkdir -p "$malformed_state"

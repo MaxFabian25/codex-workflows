@@ -34,6 +34,193 @@ run_wrapper_parser_rejection_smoke() {
   assert_contains "$invalid_worker_output" "invalid choice: 'invalid'"
 }
 
+write_wrapper_smoke_cmux() {
+  local bin_dir="$1"
+  write_cmux_executable "$bin_dir" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cmd="${1:?}"
+shift
+state_root="${CMUX_SUPERPOWERS_INSTALL_FAKE_CMUX_STATE_ROOT:?}"
+mkdir -p "$state_root"
+
+workspace_arg() {
+  local workspace=""
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --workspace)
+        workspace="${2:?}"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+  printf '%s' "${workspace:-workspace:install}"
+}
+
+surface_arg() {
+  local surface=""
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --surface)
+        surface="${2:?}"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+  printf '%s' "${surface:-surface:main}"
+}
+
+case "$cmd" in
+  version)
+    echo "cmux 0.test"
+    ;;
+  new-workspace)
+    workspace_name=""
+    while [[ "$#" -gt 0 ]]; do
+      case "$1" in
+        --name)
+          workspace_name="${2:?}"
+          shift 2
+          ;;
+        *)
+          shift
+          ;;
+      esac
+    done
+    printf '%s\n' "$workspace_name" >"$state_root/workspace-name"
+    echo "workspace:install"
+    ;;
+  list-workspaces)
+    if [[ -f "$state_root/workspace-name" ]]; then
+      workspace_name="$(<"$state_root/workspace-name")"
+      printf '* workspace:install  %s  [selected]\n' "$workspace_name"
+    fi
+    ;;
+  list-panes)
+    echo "* pane:main  [1 surface]  [focused]"
+    ;;
+  list-pane-surfaces)
+    echo "* surface:main  smoke  [selected]"
+    ;;
+  identify)
+    workspace="$(workspace_arg "$@")"
+    surface="$(surface_arg "$@")"
+    pane="pane:${surface#surface:}"
+    cat <<JSON
+{"caller":{"workspace_ref":"$workspace","pane_ref":"$pane","surface_ref":"$surface","tab_ref":"tab:${surface#surface:}","window_ref":"window:install","surface_type":"terminal","is_browser_surface":false},"focused":{"workspace_ref":"$workspace","pane_ref":"$pane","surface_ref":"$surface","tab_ref":"tab:${surface#surface:}","window_ref":"window:install","surface_type":"terminal","is_browser_surface":false}}
+JSON
+    ;;
+  new-split)
+    split_count=0
+    if [[ -f "$state_root/split-count" ]]; then
+      split_count="$(<"$state_root/split-count")"
+    fi
+    split_count="$((split_count + 1))"
+    printf '%s\n' "$split_count" >"$state_root/split-count"
+    echo "surface:worker-$split_count"
+    ;;
+  rename-tab|send|close-surface|close-workspace)
+    exit 0
+    ;;
+  *)
+    echo "{}"
+    ;;
+esac
+EOF
+}
+
+run_wrapper_team_cleanup_smoke() {
+  local wrapper="$1"
+  local output_dir="$2"
+  local wrapper_dir
+  wrapper_dir="$(cd "$(dirname "$wrapper")" && pwd -P)"
+  local repo="$output_dir/wrapper-repo"
+  local state_root="$output_dir/wrapper-state"
+
+  mkdir -p "$repo" "$state_root"
+  git -C "$repo" init -q
+  cat >"$repo/README.md" <<'EOF'
+temp repo
+EOF
+  git -C "$repo" add README.md
+  git -C "$repo" -c user.name="Smoke Test" -c user.email="smoke@example.com" commit -qm "init"
+  cat >"$repo/.gitignore" <<'EOF'
+.worktrees/
+EOF
+  git -C "$repo" add .gitignore
+  git -C "$repo" -c user.name="Smoke Test" -c user.email="smoke@example.com" commit -qm "ignore worktrees"
+
+  local team_output="$output_dir/team-output.json"
+  env \
+    PATH="$wrapper_dir:$PATH" \
+    CMUX_SUPERPOWERS_INSTALL_FAKE_CMUX_STATE_ROOT="$output_dir/wrapper-cmux-state" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$state_root" \
+    "$wrapper" \
+    team \
+    --json \
+    --cwd "$repo" \
+    --worker implement \
+    --no-hud \
+    "task text" >"$team_output"
+
+  local session_id
+  session_id="$(python3 - <<'PY' "$team_output"
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+print(payload["session_id"])
+PY
+)"
+  local manifest_path
+  manifest_path="$(python3 - <<'PY' "$team_output"
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+print(payload["manifest_path"])
+PY
+)"
+  local worktree_path
+  worktree_path="$(python3 - <<'PY' "$manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert len(manifest["workers"]) == 1, manifest
+worker = manifest["workers"][0]
+assert worker["role"] == "implement", worker
+assert worker["write_capable"] is True, worker
+assert worker["worktree_path"], worker
+print(worker["worktree_path"])
+PY
+)"
+
+  test -d "$worktree_path" || fail "missing worktree: $worktree_path"
+
+  env \
+    PATH="$wrapper_dir:$PATH" \
+    CMUX_SUPERPOWERS_INSTALL_FAKE_CMUX_STATE_ROOT="$output_dir/wrapper-cmux-state" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$state_root" \
+    "$wrapper" \
+    cleanup \
+    --session "$session_id" \
+    --close-workers \
+    --remove-worktrees \
+    --purge-state
+
+  test ! -d "$worktree_path" || fail "worktree still exists after cleanup: $worktree_path"
+  test ! -e "$state_root/$session_id" || fail "session state still exists after purge: $state_root/$session_id"
+}
+
 run_wrapper_parser_smoke() {
   local wrapper="$1"
   local output_dir="$2"
@@ -41,47 +228,18 @@ run_wrapper_parser_smoke() {
   wrapper_dir="$(cd "$(dirname "$wrapper")" && pwd -P)"
   local codex_home="$output_dir/codex-home"
 
-  write_default_cmux "$wrapper_dir"
+  write_wrapper_smoke_cmux "$wrapper_dir"
   write_default_codex "$wrapper_dir"
   write_healthy_hooks_fixture "$codex_home"
   write_enabled_config "$codex_home"
 
-  env PATH="$wrapper_dir:$PATH" CODEX_HOME="$codex_home" "$wrapper" doctor --json >/dev/null
-
-  local team_output="$output_dir/team-not-implemented.log"
-  assert_command_fails_with_output \
-    "$team_output" \
-    env \
-      PATH="$wrapper_dir:$PATH" \
-      CODEX_HOME="$codex_home" \
-      "$wrapper" \
-      team \
-      --json \
-      --cwd . \
-      --profile demo \
-      --worker review \
-      --worker implement \
-      --worker general \
-      --name scaffold \
-      --no-hud \
-      "task text"
-  assert_contains "$team_output" "team not implemented yet"
-
-  local cleanup_output="$output_dir/cleanup-not-implemented.log"
-  assert_command_fails_with_output \
-    "$cleanup_output" \
-    env \
-      PATH="$wrapper_dir:$PATH" \
-      CODEX_HOME="$codex_home" \
-      "$wrapper" \
-      cleanup \
-      --session demo \
-      --close-workers \
-      --close-hud \
-      --remove-worktrees \
-      --purge-state
-  assert_contains "$cleanup_output" "cleanup not implemented yet"
-
+  env \
+    PATH="$wrapper_dir:$PATH" \
+    CODEX_HOME="$codex_home" \
+    CMUX_SUPERPOWERS_INSTALL_FAKE_CMUX_STATE_ROOT="$output_dir/wrapper-cmux-state" \
+    "$wrapper" \
+    doctor --json >/dev/null
+  run_wrapper_team_cleanup_smoke "$wrapper" "$output_dir"
   run_wrapper_parser_rejection_smoke "$wrapper" "$output_dir"
 }
 
