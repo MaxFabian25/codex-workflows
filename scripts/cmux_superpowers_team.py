@@ -187,6 +187,23 @@ def write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def manifest_hud_json_path(manifest: dict) -> Path | None:
+    hud = manifest.get("hud")
+    if not isinstance(hud, dict):
+        return None
+    hud_json = hud.get("hud_json")
+    if not isinstance(hud_json, str) or not hud_json:
+        return None
+    return Path(hud_json)
+
+
+def persist_manifest(manifest_path: Path, manifest: dict) -> None:
+    write_json(manifest_path, manifest)
+    hud_json_path = manifest_hud_json_path(manifest)
+    if hud_json_path is not None:
+        write_json(hud_json_path, build_hud_payload(manifest))
+
+
 def build_hud_payload(manifest: dict) -> dict:
     main = manifest["main"]
     return {
@@ -289,7 +306,7 @@ def persist_manifest_workers(
     manifest_path: Path, manifest: dict, workers: list[WorkerPlan]
 ) -> None:
     manifest["workers"] = [asdict(worker) for worker in workers]
-    write_json(manifest_path, manifest)
+    persist_manifest(manifest_path, manifest)
     session_root = manifest.get("session_root")
     if not isinstance(session_root, str) or not session_root:
         raise ValueError("manifest missing session_root")
@@ -302,7 +319,7 @@ def persist_manifest_workers(
 def persist_manifest_worker(
     manifest_path: Path, manifest: dict, worker_payload: dict
 ) -> None:
-    write_json(manifest_path, manifest)
+    persist_manifest(manifest_path, manifest)
     session_root = manifest.get("session_root")
     if not isinstance(session_root, str) or not session_root:
         raise ValueError("manifest missing session_root")
@@ -1544,6 +1561,15 @@ def owned_worktree_descriptions(workers: list[dict[str, object]]) -> list[str]:
     return descriptions
 
 
+def owned_hud_descriptions(hud: object) -> list[str]:
+    if not isinstance(hud, dict):
+        return []
+    surface_ref = hud.get("surface_ref")
+    if not isinstance(surface_ref, str) or not surface_ref:
+        return []
+    return [f"hud ({surface_ref})"]
+
+
 def branch_checked_out_elsewhere_error(
     repo_root: str, owned_worktree_path: str | None, worktree_branch: str | None
 ) -> str | None:
@@ -1603,6 +1629,7 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
     workspace_id = manifest.get("workspace_id")
     workers = manifest.get("workers", [])
     worktree_entries = owned_worktree_entries(workers)
+    hud = manifest.get("hud")
 
     try:
         if args.close_workers:
@@ -1630,7 +1657,6 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                     worker["surface_ref"] = None
                     persist_manifest_worker(manifest_path, manifest, worker)
 
-        hud = manifest.get("hud")
         if args.close_hud and isinstance(hud, dict):
             surface_ref = hud.get("surface_ref")
             if surface_ref:
@@ -1652,7 +1678,7 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                 if error:
                     raise SystemExit(f"cleanup failed: {error}")
                 hud["surface_ref"] = None
-                write_json(manifest_path, manifest)
+                persist_manifest(manifest_path, manifest)
 
         if args.remove_worktrees and worktree_entries:
             main = manifest.get("main")
@@ -1689,11 +1715,24 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
                         raise SystemExit(f"cleanup failed: {error}")
                     worker["worktree_branch"] = None
                     persist_manifest_worker(manifest_path, manifest, worker)
-        remaining_owned_resources = owned_worktree_descriptions(manifest.get("workers", []))
-        if args.purge_state and remaining_owned_resources:
+        remaining_worktree_resources = owned_worktree_descriptions(manifest.get("workers", []))
+        remaining_hud_resources = owned_hud_descriptions(hud)
+        if args.purge_state and remaining_hud_resources and remaining_worktree_resources:
+            raise SystemExit(
+                "cleanup failed: cannot purge session state while owned hud and worktree resources remain: "
+                + ", ".join(remaining_hud_resources + remaining_worktree_resources)
+                + "; rerun cleanup with --close-hud and --remove-worktrees"
+            )
+        if args.purge_state and remaining_hud_resources:
+            raise SystemExit(
+                "cleanup failed: cannot purge session state while owned hud resources remain: "
+                + ", ".join(remaining_hud_resources)
+                + "; rerun cleanup with --close-hud"
+            )
+        if args.purge_state and remaining_worktree_resources:
             raise SystemExit(
                 "cleanup failed: cannot purge session state while owned worktree resources remain: "
-                + ", ".join(remaining_owned_resources)
+                + ", ".join(remaining_worktree_resources)
                 + "; rerun cleanup with --remove-worktrees"
             )
     except SystemExit as exc:
@@ -1708,7 +1747,7 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
         raise SystemExit(f"cleanup failed: {detail}") from None
 
     manifest["cleanup"] = {"status": "cleaned"}
-    write_json(manifest_path, manifest)
+    persist_manifest(manifest_path, manifest)
     if args.purge_state:
         session_root = session_dir(args.session)
         try:
@@ -1748,7 +1787,7 @@ def cmd_team(args: argparse.Namespace) -> int:
             cwd,
             planned_workers,
         )
-        write_json(manifest_path, manifest)
+        persist_manifest(manifest_path, manifest)
         main_command = codex_command(
             cwd, main_packet, "main", args.profile or "workflow_fidelity", session_id
         )
@@ -1776,7 +1815,7 @@ def cmd_team(args: argparse.Namespace) -> int:
                 f"unable to recover workspace ref after new-workspace output: {detail}"
             )
         manifest["workspace_id"] = workspace_id
-        write_json(manifest_path, manifest)
+        persist_manifest(manifest_path, manifest)
         main_pane = cmux_selected_pane(workspace_id)
         main_surface = cmux_selected_surface(workspace_id, main_pane)
         main_context = caller_context(workspace_id, main_surface)
@@ -1784,7 +1823,7 @@ def cmd_team(args: argparse.Namespace) -> int:
         main_pane = str(main_context["pane_ref"])
         manifest["main"]["pane_ref"] = main_pane
         manifest["main"]["surface_ref"] = main_surface
-        write_json(manifest_path, manifest)
+        persist_manifest(manifest_path, manifest)
         anchor_surface = main_surface
         for index, role in enumerate(workers, start=1):
             worker_id = f"worker-{index}"
@@ -1903,8 +1942,7 @@ def cmd_team(args: argparse.Namespace) -> int:
                 "surface_ref": hud_surface,
                 "hud_json": str(hud_json_path),
             }
-            write_json(manifest_path, manifest)
-            write_json(hud_json_path, build_hud_payload(manifest))
+            persist_manifest(manifest_path, manifest)
 
         if args.json:
             print(

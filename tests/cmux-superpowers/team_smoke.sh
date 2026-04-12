@@ -135,6 +135,11 @@ import json, sys
 print(json.loads(sys.argv[1])["manifest_path"])
 PY
 )"
+hud_session_id="$(python3 - <<'PY' "$hud_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
 hud_workspace_id="$(python3 - <<'PY' "$hud_payload"
 import json, sys
 print(json.loads(sys.argv[1])["workspace_id"])
@@ -158,6 +163,29 @@ assert hud_payload["session_id"] == manifest["session_id"], hud_payload
 assert hud_payload["workspace_id"] == manifest["workspace_id"], hud_payload
 assert hud_payload["main"] == manifest["main"], (hud_payload["main"], manifest["main"])
 PY
+
+hud_purge_output="$tmp/hud-purge-output.log"
+assert_command_fails_with_output \
+  "$hud_purge_output" \
+  env \
+    CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+    CMUX_SUPERPOWERS_STATE_ROOT="$hud_state" \
+    python3 "$TEAM" cleanup --session "$hud_session_id" --purge-state
+assert_contains "$hud_purge_output" "cannot purge session state while owned hud resources remain"
+test -e "$hud_state/$hud_session_id" || fail "expected owned-hud purge failure to preserve session state"
+python3 - <<'PY' "$hud_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert manifest["cleanup"]["status"] == "active", manifest
+assert manifest["hud"]["surface_ref"], manifest["hud"]
+PY
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$hud_state" \
+python3 "$TEAM" cleanup --session "$hud_session_id" --close-hud --purge-state
+test ! -e "$hud_state/$hud_session_id" || fail "expected owned-hud purge retry to remove session state"
 
 default_logs="$tmp/default-logs"
 default_state="$tmp/default-state"
@@ -827,6 +855,75 @@ test ! -e "$multi_cleanup_state/$multi_cleanup_session_id" || fail "expected ret
 if git -C "$write_repo" show-ref --verify --quiet "refs/heads/$multi_cleanup_worker_2_branch"; then
   fail "expected retry-safe multi-worker cleanup to delete second branch: $multi_cleanup_worker_2_branch"
 fi
+
+hud_cleanup_logs="$tmp/hud-cleanup-logs"
+hud_cleanup_state="$tmp/hud-cleanup-state"
+mkdir -p "$hud_cleanup_logs" "$hud_cleanup_state"
+hud_cleanup_payload="$(
+  CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+  CMUX_SUPERPOWERS_CODEX_BIN="$stub" \
+  CMUX_SUPERPOWERS_STUB_LOG_DIR="$hud_cleanup_logs" \
+  CMUX_SUPERPOWERS_STATE_ROOT="$hud_cleanup_state" \
+  python3 "$TEAM" team --json --cwd "$write_nested_cwd" --worker implement "Refresh hud.json after cleanup mutates worker state"
+)"
+hud_cleanup_session_id="$(python3 - <<'PY' "$hud_cleanup_payload"
+import json, sys
+print(json.loads(sys.argv[1])["session_id"])
+PY
+)"
+hud_cleanup_workspace_id="$(python3 - <<'PY' "$hud_cleanup_payload"
+import json, sys
+print(json.loads(sys.argv[1])["workspace_id"])
+PY
+)"
+owned_workspaces+=("$hud_cleanup_workspace_id")
+hud_cleanup_manifest_path="$(python3 - <<'PY' "$hud_cleanup_payload"
+import json, sys
+print(json.loads(sys.argv[1])["manifest_path"])
+PY
+)"
+hud_cleanup_worktree_path="$(python3 - <<'PY' "$hud_cleanup_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+worker = manifest["workers"][0]
+assert worker["role"] == "implement", worker
+assert manifest["hud"]["surface_ref"], manifest["hud"]
+assert worker["surface_ref"], worker
+assert worker["worktree_path"], worker
+print(worker["worktree_path"])
+PY
+)"
+test -d "$hud_cleanup_worktree_path" || fail "expected hud cleanup worktree to exist before cleanup: $hud_cleanup_worktree_path"
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$hud_cleanup_state" \
+python3 "$TEAM" cleanup --session "$hud_cleanup_session_id" --close-workers --remove-worktrees
+test ! -d "$hud_cleanup_worktree_path" || fail "expected hud cleanup to remove worktree: $hud_cleanup_worktree_path"
+python3 - <<'PY' "$hud_cleanup_manifest_path"
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+worker = manifest["workers"][0]
+worker_json = json.loads((Path(manifest["session_root"]) / "workers" / "worker-1.json").read_text(encoding="utf-8"))
+hud_json = json.loads((Path(manifest["session_root"]) / "hud.json").read_text(encoding="utf-8"))
+hud_worker = hud_json["workers"][0]
+
+assert manifest["cleanup"]["status"] == "cleaned", manifest
+assert worker["surface_ref"] is None, worker
+assert worker["worktree_path"] is None, worker
+assert worker_json["surface_ref"] == worker["surface_ref"], worker_json
+assert worker_json["worktree_path"] == worker["worktree_path"], worker_json
+assert hud_worker["surface_ref"] == worker["surface_ref"], (hud_worker, worker)
+assert hud_worker["worktree_path"] == worker["worktree_path"], (hud_worker, worker)
+PY
+CMUX_SUPERPOWERS_CMUX_BIN="$CMUX_BIN" \
+CMUX_SUPERPOWERS_STATE_ROOT="$hud_cleanup_state" \
+python3 "$TEAM" cleanup --session "$hud_cleanup_session_id" --close-hud --purge-state
+test ! -e "$hud_cleanup_state/$hud_cleanup_session_id" || fail "expected hud cleanup retry to purge session state"
 
 purge_fail_logs="$tmp/purge-fail-logs"
 purge_fail_state="$tmp/purge-fail-state"
