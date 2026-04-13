@@ -51,7 +51,7 @@ FORBIDDEN_SNIPPETS = [
     join_fragments("https://claude.com/plugins/", "super", "powers"),
     join_fragments("discord.gg/", "Jd8Vphy9jq"),
     join_fragments("github.com/sponsors/", "obra"),
-    join_fragments("/Users/", "maxibon"),
+    join_fragments("/Use", "rs/"),
     join_fragments("max", "fa-"),
     join_fragments("~/.claude/", "skills"),
     join_fragments("Claude", " Code"),

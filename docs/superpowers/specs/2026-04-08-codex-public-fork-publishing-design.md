@@ -86,7 +86,7 @@ The public branch will be Codex-only.
 
 Personal/operator materials are removed from the public branch.
 
-- Delete workstation rollout plans/specs that hardcode `/Users/maxibon`, `maxfa-*`, `.worktrees/...`, or local config evidence.
+- Delete workstation rollout plans/specs that hardcode maintainer home directories, host aliases, `.worktrees/...`, or local config evidence.
 - Delete one-off sync scripts and infrastructure helpers tied to the maintainer’s machines.
 - Normalize remaining examples that still contain personal paths or upstream contributor home directories.
 
@@ -169,7 +169,7 @@ The public-first publishing surfaces are not ready until all of the following pa
   - `obra/superpowers`
   - upstream community/support URLs
   - `Claude Code`, `Anthropic`, and removed-platform leftovers in public-first surfaces
-  - `/Users/maxibon`, `maxfa-`, `.worktrees/`, and other private operator markers
+  - maintainer home directories, host aliases, `.worktrees/`, and other private operator markers
 - Run the process-family validator after the cutover to confirm the Codex-facing skill library still passes.
 - Add and run one targeted validation check for the new Codex plugin surface so the plugin contract is not documentation-only.
 - Require clean `git status` at the end of the publishing-prep branch.

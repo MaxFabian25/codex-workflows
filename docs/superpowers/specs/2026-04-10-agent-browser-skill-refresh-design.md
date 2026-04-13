@@ -17,7 +17,7 @@ No runtime upgrade is required at design time. The installed CLI already matches
 - Replace stale or non-official guidance in the current local skill copies.
 - Add the missing `references/` and `templates/` needed for a usable guided lane.
 - Keep `agent-browser` focused on general browser automation and move dev-server smoke policy into a smaller `agent-browser-verify` overlay.
-- Encode the local session-ownership contract from `/Users/maxibon/AGENTS.md` so browser runs are deterministic and reusable.
+- Encode the local session-ownership contract from `~/AGENTS.md` so browser runs are deterministic and reusable.
 - Define a validation bundle that can prove the skill refresh matches the current CLI and docs.
 
 ## Non-Goals
@@ -95,7 +95,7 @@ There is no official upstream `agent-browser-verify` package to sync from. The l
 
 ### Local session policy overrides official close-on-exit examples
 
-The official upstream skill recommends closing sessions when done. The local `/Users/maxibon/AGENTS.md` contract is stricter and more specific:
+The official upstream skill recommends closing sessions when done. The local `~/AGENTS.md` contract is stricter and more specific:
 
 - one deterministic `--session <name>` per task
 - `agent-browser session list` before new `open` or `connect`
@@ -163,7 +163,7 @@ Because there is no upstream verify package, the local verify lane needs a small
 | `references/dev-server-smoke.md` | Canonical smoke flow for local dev servers and staging pages |
 | `references/framework-overlays.md` | Detection patterns for common dev overlay surfaces and obvious error states |
 | `references/console-network-diagnostics.md` | Use `console`, `errors`, `network requests`, and `network request <id>` instead of custom page globals |
-| `references/session-hygiene.md` | Local owned-session policy from `/Users/maxibon/AGENTS.md` |
+| `references/session-hygiene.md` | Local owned-session policy from `~/AGENTS.md` |
 | `references/vercel-sandbox-smoke.md` | Optional Vercel/Sandbox browser path when the target is not a local host page |
 | `templates/dev-server-smoke.sh` | One-page smoke template |
 | `templates/route-matrix-smoke.sh` | Optional multi-route smoke template when several routes need the same checks |
@@ -342,7 +342,7 @@ The future implementation is acceptable only if all of the following are true:
 - The local browser skill examples align to the current `0.25.x` command contract.
 - The verify skill no longer mentions `window.__consoleErrors`.
 - The verify skill no longer treats `wait --load networkidle` as the default settle strategy.
-- Both skills encode deterministic owned-session behavior aligned to `/Users/maxibon/AGENTS.md`.
+- Both skills encode deterministic owned-session behavior aligned to `~/AGENTS.md`.
 - The core skill points to official `agent-browser.dev` docs instead of unrelated Codex announcement docs.
 - The future validation bundle proves CLI parity before skill content is declared refreshed.
 

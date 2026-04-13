@@ -116,7 +116,7 @@ FORBIDDEN_SNIPPETS = [
     "https://claude.com/plugins/superpowers",
     "discord.gg/Jd8Vphy9jq",
     "github.com/sponsors/obra",
-    "/Users/maxibon",
+    join_fragments("/Use", "rs/"),
     "maxfa-",
     ".worktrees/",
     "~/.claude/skills",
@@ -656,8 +656,8 @@ Expected: `.github/FUNDING.yml` no longer exists
 ```diff
 @@
 -Instances of abusive, harassing, or otherwise unacceptable behavior may be
--reported to the community leaders responsible for enforcement at
--jesse@primeradiant.com.
++reported through the repository issue intake at
++https://github.com/MaxFabian25/superpowers/issues/new/choose.
 +Instances of abusive, harassing, or otherwise unacceptable behavior may be
 +reported through the repository issue intake at
 +https://github.com/MaxFabian25/superpowers/issues/new/choose.
@@ -816,7 +816,7 @@ Expected: `skills/writing-skills/anthropic-best-practices.md` no longer exists
 Run: `bash tests/codex-public-fork/run.sh`
 Expected: FAIL, but the public-surface failures for issue/config/skill docs should be gone
 
-Run: `python3 _shared/validators/validate_skill_library.py --root /Users/maxibon/.codex/superpowers --family process`
+Run: `python3 _shared/validators/validate_skill_library.py --root . --family process`
 Expected: PASS
 
 - [ ] **Step 9: Commit Task 3**
@@ -908,16 +908,16 @@ git commit -m "refactor: remove non-codex plugin and private rollout surfaces"
 
 ```diff
 @@
--/Users/jesse/project/packages/core
-+/Users/example/project/packages/core
+-~/project/packages/core
++~/project/packages/core
 ```
 
 - [ ] **Step 2: Normalize the example worktree path in `skills/using-git-worktrees/SKILL.md`**
 
 ```diff
 @@
--/Users/jesse/myproject/.worktrees/auth
-+/Users/example/myproject/.worktrees/auth
+-~/myproject/.worktrees/auth
++~/myproject/.worktrees/auth
 ```
 
 - [ ] **Step 3: Delete the creation log**
@@ -935,7 +935,7 @@ Expected: PASS: `codex public fork validator`, `PASS: 23 validated targets`, `pl
 Run:
 
 ```bash
-! rg -n 'https://github.com/obra/superpowers|https://github.com/obra/superpowers-marketplace|claude.com/plugins/superpowers|discord.gg/Jd8Vphy9jq|/Users/maxibon|maxfa-|~/.claude/skills|~/.config/opencode|CLAUDE_PLUGIN_ROOT|Gemini CLI|OpenCode' \
+! rg -n 'https://github.com/obra/superpowers|https://github.com/obra/superpowers-marketplace|claude.com/plugins/superpowers|discord.gg/Jd8Vphy9jq|/(Users|home)/|maxfa-|~/.claude/skills|~/.config/opencode|CLAUDE_PLUGIN_ROOT|Gemini CLI|OpenCode' \
   README.md .codex/INSTALL.md docs/README.codex.md .github package.json CHANGELOG.md RELEASE-NOTES.md SECURITY.md .codex-plugin skills contract commands
 ```
 
