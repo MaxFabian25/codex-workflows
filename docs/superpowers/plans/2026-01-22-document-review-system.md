@@ -4,9 +4,9 @@
 
 **Goal:** Add spec and plan document review loops to the brainstorming and writing-plans skills.
 
-**Architecture:** Create reviewer prompt templates in each skill directory. Modify skill files to add review loops after document creation. Use Task tool with general-purpose subagent for reviewer dispatch.
+**Architecture:** Create reviewer prompt templates in each skill directory. Modify skill files to add review loops after document creation. Use `spawn_agent(task_name=..., agent_type="parallel_explorer", message="...")` for reviewer dispatch, with explicit `agent_type` because the local superpowers contract requires it.
 
-**Tech Stack:** Markdown skill files, subagent dispatch via Task tool
+**Tech Stack:** Markdown skill files, subagent dispatch via `spawn_agent(task_name=..., agent_type="...", message="...")`
 
 **Spec:** docs/superpowers/specs/2026-01-22-document-review-system-design.md
 
@@ -23,7 +23,7 @@ This chunk adds the spec document reviewer to the brainstorming skill.
 
 - [ ] **Step 1:** Create the reviewer prompt template file
 
-```markdown
+````markdown
 # Spec Document Reviewer Prompt Template
 
 Use this template when dispatching a spec document reviewer subagent.
@@ -32,46 +32,45 @@ Use this template when dispatching a spec document reviewer subagent.
 
 **Dispatch after:** Spec document is written to docs/superpowers/specs/
 
-```
-Task tool (general-purpose):
-  description: "Review spec document"
-  prompt: |
-    You are a spec document reviewer. Verify this spec is complete and ready for planning.
+Pass the following content directly as the outer `message=` string in `spawn_agent(task_name="review_spec_document", agent_type="parallel_explorer", message="...")`:
 
-    **Spec to review:** [SPEC_FILE_PATH]
+```md
+You are a spec document reviewer. Verify this spec is complete and ready for planning.
 
-    ## What to Check
+**Spec to review:** [SPEC_FILE_PATH]
 
-    | Category | What to Look For |
-    |----------|------------------|
-    | Completeness | TODOs, placeholders, "TBD", incomplete sections |
-    | Coverage | Missing error handling, edge cases, integration points |
-    | Consistency | Internal contradictions, conflicting requirements |
-    | Clarity | Ambiguous requirements |
-    | YAGNI | Unrequested features, over-engineering |
+## What to Check
 
-    ## CRITICAL
+| Category | What to Look For |
+|----------|------------------|
+| Completeness | TODOs, placeholders, "TBD", incomplete sections |
+| Coverage | Missing error handling, edge cases, integration points |
+| Consistency | Internal contradictions, conflicting requirements |
+| Clarity | Ambiguous requirements |
+| YAGNI | Unrequested features, over-engineering |
 
-    Look especially hard for:
-    - Any TODO markers or placeholder text
-    - Sections saying "to be defined later" or "will spec when X is done"
-    - Sections noticeably less detailed than others
+## CRITICAL
 
-    ## Output Format
+Look especially hard for:
+- Any TODO markers or placeholder text
+- Sections saying "to be defined later" or "will spec when X is done"
+- Sections noticeably less detailed than others
 
-    ## Spec Review
+## Output Format
 
-    **Status:** ✅ Approved | ❌ Issues Found
+## Spec Review
 
-    **Issues (if any):**
-    - [Section X]: [specific issue] - [why it matters]
+**Status:** Approved | Issues Found
 
-    **Recommendations (advisory):**
-    - [suggestions that don't block approval]
+**Issues (if any):**
+- [Section X]: [specific issue] - [why it matters]
+
+**Recommendations (advisory):**
+- [suggestions that don't block approval]
 ```
 
 **Reviewer returns:** Status, Issues (if any), Recommendations
-```
+````
 
 - [ ] **Step 2:** Verify the file was created correctly
 
@@ -100,7 +99,7 @@ Run: `cat skills/brainstorming/SKILL.md`
 
 Find the "After the Design" section and add a new "Spec Review Loop" section after documentation but before implementation:
 
-```markdown
+````markdown
 **Spec Review Loop:**
 After writing the spec document:
 1. Dispatch spec-document-reviewer subagent (see spec-document-reviewer-prompt.md)
@@ -114,7 +113,7 @@ After writing the spec document:
 - Same agent that wrote the spec fixes it (preserves context)
 - If loop exceeds 5 iterations, surface to human for guidance
 - Reviewers are advisory - explain disagreements if you believe feedback is incorrect
-```
+````
 
 - [ ] **Step 3:** Verify the changes
 
@@ -141,7 +140,7 @@ This chunk adds the plan document reviewer to the writing-plans skill.
 
 - [ ] **Step 1:** Create the reviewer prompt template file
 
-```markdown
+````markdown
 # Plan Document Reviewer Prompt Template
 
 Use this template when dispatching a plan document reviewer subagent.
@@ -150,48 +149,47 @@ Use this template when dispatching a plan document reviewer subagent.
 
 **Dispatch after:** Each plan chunk is written
 
-```
-Task tool (general-purpose):
-  description: "Review plan chunk N"
-  prompt: |
-    You are a plan document reviewer. Verify this plan chunk is complete and ready for implementation.
+Pass the following content directly as the outer `message=` string in `spawn_agent(task_name="review_plan_chunk_n", agent_type="parallel_explorer", message="...")`:
 
-    **Plan chunk to review:** [PLAN_FILE_PATH] - Chunk N only
-    **Spec for reference:** [SPEC_FILE_PATH]
+```md
+You are a plan document reviewer. Verify this plan chunk is complete and ready for implementation.
 
-    ## What to Check
+**Plan chunk to review:** [PLAN_FILE_PATH] - Chunk N only
+**Spec for reference:** [SPEC_FILE_PATH]
 
-    | Category | What to Look For |
-    |----------|------------------|
-    | Completeness | TODOs, placeholders, incomplete tasks, missing steps |
-    | Spec Alignment | Chunk covers relevant spec requirements, no scope creep |
-    | Task Decomposition | Tasks atomic, clear boundaries, steps actionable |
-    | Task Syntax | Checkbox syntax (`- [ ]`) on tasks and steps |
-    | Chunk Size | Each chunk under 1000 lines |
+## What to Check
 
-    ## CRITICAL
+| Category | What to Look For |
+|----------|------------------|
+| Completeness | TODOs, placeholders, incomplete tasks, missing steps |
+| Spec Alignment | Chunk covers relevant spec requirements, no scope creep |
+| Task Decomposition | Tasks atomic, clear boundaries, steps actionable |
+| Task Syntax | Checkbox syntax (`- [ ]`) on tasks and steps |
+| Chunk Size | Each chunk under 1000 lines |
 
-    Look especially hard for:
-    - Any TODO markers or placeholder text
-    - Steps that say "similar to X" without actual content
-    - Incomplete task definitions
-    - Missing verification steps or expected outputs
+## CRITICAL
 
-    ## Output Format
+Look especially hard for:
+- Any TODO markers or placeholder text
+- Steps that say "similar to X" without actual content
+- Incomplete task definitions
+- Missing verification steps or expected outputs
 
-    ## Plan Review - Chunk N
+## Output Format
 
-    **Status:** ✅ Approved | ❌ Issues Found
+## Plan Review - Chunk N
 
-    **Issues (if any):**
-    - [Task X, Step Y]: [specific issue] - [why it matters]
+**Status:** Approved | Issues Found
 
-    **Recommendations (advisory):**
-    - [suggestions that don't block approval]
+**Issues (if any):**
+- [Task X, Step Y]: [specific issue] - [why it matters]
+
+**Recommendations (advisory):**
+- [suggestions that don't block approval]
 ```
 
 **Reviewer returns:** Status, Issues (if any), Recommendations
-```
+````
 
 - [ ] **Step 2:** Verify the file was created
 

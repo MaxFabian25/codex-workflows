@@ -40,7 +40,7 @@ Both follow the iterative loop pattern used by implementation reviews.
 
 **Review loop:** Issues found -> brainstorming agent fixes -> re-review -> repeat until approved.
 
-**Dispatch mechanism:** Use the Task tool with `subagent_type: general-purpose`. The reviewer prompt template provides the full prompt. The brainstorming skill's controller dispatches the reviewer.
+**Dispatch mechanism:** Use `spawn_agent(task_name=..., agent_type="parallel_explorer", message="...")`. The reviewer prompt template provides the full outer `message=` payload, and the local superpowers contract requires explicit `agent_type` on every dispatch.
 
 ## Plan Document Reviewer
 
@@ -76,7 +76,7 @@ The reviewer reads both and compares requirements coverage.
 5. If approved: proceed to chunk N+1
 6. Repeat until all chunks approved
 
-**Dispatch mechanism:** Same as spec reviewer - Task tool with `subagent_type: general-purpose`.
+**Dispatch mechanism:** Same as spec reviewer - `spawn_agent(task_name=..., agent_type="parallel_explorer", message="...")` with explicit local `agent_type`.
 
 ## Updated Workflow
 
