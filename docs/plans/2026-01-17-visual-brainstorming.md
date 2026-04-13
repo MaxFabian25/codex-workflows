@@ -65,7 +65,7 @@ if (!fs.existsSync(SCREEN_FILE)) {
 </head>
 <body>
   <h1>Brainstorm Companion</h1>
-  <p>Waiting for Claude to push a screen...</p>
+  <p>Waiting for the agent to push a screen...</p>
 </body>
 </html>`);
 }

@@ -182,7 +182,7 @@ const WAITING_PAGE = `<!DOCTYPE html>
 h1 { color: #333; } p { color: #666; }</style>
 </head>
 <body><h1>Brainstorm Companion</h1>
-<p>Waiting for Claude to push a screen...</p></body></html>`;
+<p>Waiting for the agent to push a screen...</p></body></html>`;
 
 const frameTemplate = fs.readFileSync(path.join(__dirname, 'frame-template.html'), 'utf-8');
 const helperScript = fs.readFileSync(path.join(__dirname, 'helper.js'), 'utf-8');
@@ -318,7 +318,7 @@ function handleMessage(text) {
   }
   console.log(JSON.stringify({ source: 'user-event', ...event }));
   if (event.choice) {
-    const eventsFile = path.join(SCREEN_DIR, '.events');
+    const eventsFile = path.join(STATE_DIR, 'events');
     fs.appendFileSync(eventsFile, JSON.stringify(event) + '\n');
   }
 }
@@ -357,7 +357,7 @@ function startServer() {
       debounceTimers.delete(filename);
       const filePath = path.join(SCREEN_DIR, filename);
       if (eventType === 'rename' && fs.existsSync(filePath)) {
-        const eventsFile = path.join(SCREEN_DIR, '.events');
+        const eventsFile = path.join(STATE_DIR, 'events');
         if (fs.existsSync(eventsFile)) fs.unlinkSync(eventsFile);
         console.log(JSON.stringify({ type: 'screen-added', file: filePath }));
       } else if (eventType === 'change') {
@@ -372,10 +372,10 @@ function startServer() {
     const info = JSON.stringify({
       type: 'server-started', port: Number(PORT), host: HOST,
       url_host: URL_HOST, url: 'http://' + URL_HOST + ':' + PORT,
-      screen_dir: SCREEN_DIR
+      screen_dir: SCREEN_DIR, state_dir: STATE_DIR
     });
     console.log(info);
-    fs.writeFileSync(path.join(SCREEN_DIR, '.server-info'), info + '\n');
+    fs.writeFileSync(path.join(STATE_DIR, 'server-info'), info + '\n');
   });
 }
 
@@ -458,7 +458,7 @@ Expected: `server-started` JSON printed with port 9876
 
 - [ ] **Step 2: Open browser to http://localhost:9876**
 
-Expected: Waiting page with "Waiting for Claude to push a screen..."
+Expected: Waiting page with "Waiting for the agent to push a screen..."
 
 - [ ] **Step 3: Write an HTML file to the screen directory**
 
