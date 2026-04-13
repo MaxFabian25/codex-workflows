@@ -75,7 +75,7 @@ Add this exact loop inside `validate_family()` after the existing `BOUNDARY_REQU
 
 - [ ] **Step 2: Run the validator to confirm the new contract checks fail**
 
-Run: `python3 _shared/validators/validate_skill_library.py --root /Users/maxibon/.codex/superpowers --family process`
+Run: `python3 _shared/validators/validate_skill_library.py --root . --family process`
 Expected: `FAIL` with missing required text for `contract/process-family.md` and `contract/prompt-packet.md`
 
 - [ ] **Step 3: Update `contract/process-family.md` with the root-owned elicitation rule**
@@ -114,7 +114,7 @@ Expected: `FAIL` with missing required text for `contract/process-family.md` and
 
 - [ ] **Step 5: Re-run the validator to verify the contract surfaces pass**
 
-Run: `python3 _shared/validators/validate_skill_library.py --root /Users/maxibon/.codex/superpowers --family process`
+Run: `python3 _shared/validators/validate_skill_library.py --root . --family process`
 Expected: `PASS: 23 validated targets`
 
 - [ ] **Step 6: Commit Task 1**
@@ -156,7 +156,7 @@ TARGETED_REQUIRED_SUBSTRINGS.update({
 
 - [ ] **Step 2: Run the validator and confirm it now fails on the shared tool map and brainstorming skill**
 
-Run: `python3 _shared/validators/validate_skill_library.py --root /Users/maxibon/.codex/superpowers --family process`
+Run: `python3 _shared/validators/validate_skill_library.py --root . --family process`
 Expected: `FAIL` with missing required text for `skills/using-superpowers/references/codex-tools.md` and `skills/brainstorming/SKILL.md`
 
 - [ ] **Step 3: Expand `skills/using-superpowers/references/codex-tools.md` to reflect the active local tool surface**
@@ -213,7 +213,7 @@ Expected: `FAIL` with missing required text for `skills/using-superpowers/refere
 
 - [ ] **Step 5: Re-run the validator to verify the tool map and brainstorming skill now satisfy the contract**
 
-Run: `python3 _shared/validators/validate_skill_library.py --root /Users/maxibon/.codex/superpowers --family process`
+Run: `python3 _shared/validators/validate_skill_library.py --root . --family process`
 Expected: `PASS: 23 validated targets`
 
 - [ ] **Step 6: Commit Task 2**
@@ -266,7 +266,7 @@ TARGETED_CONTENT_GUARDS.setdefault("skills/brainstorming/visual-companion.md", [
 
 - [ ] **Step 2: Run the validator and confirm the remaining targets fail before the docs are updated**
 
-Run: `python3 _shared/validators/validate_skill_library.py --root /Users/maxibon/.codex/superpowers --family process`
+Run: `python3 _shared/validators/validate_skill_library.py --root . --family process`
 Expected: `FAIL` with missing required text for `skills/dispatching-parallel-agents/SKILL.md` and `skills/brainstorming/visual-companion.md`
 
 - [ ] **Step 3: Update `skills/dispatching-parallel-agents/SKILL.md` with the parent-mediated ambiguity handoff**
@@ -320,7 +320,7 @@ Expected: `FAIL` with missing required text for `skills/dispatching-parallel-age
 
 - [ ] **Step 5: Re-run the process-family validator**
 
-Run: `python3 _shared/validators/validate_skill_library.py --root /Users/maxibon/.codex/superpowers --family process`
+Run: `python3 _shared/validators/validate_skill_library.py --root . --family process`
 Expected: `PASS: 23 validated targets`
 
 - [ ] **Step 6: Run the residual stale-guidance scan**

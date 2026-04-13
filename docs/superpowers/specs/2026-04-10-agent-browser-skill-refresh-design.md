@@ -7,22 +7,22 @@ Status: Approved design for implementation planning
 
 Refresh the local `vercel:agent-browser` skill package against the current official `agent-browser.dev` docs and the installed `agent-browser 0.25.3` CLI surface.
 
-This is a truth refresh, not a package redesign. The goal is to remove stale guidance, fill the current documentation coverage gaps, and make the skill internally consistent with the local `/Users/maxibon/AGENTS.md` session contract.
+This is a truth refresh, not a package redesign. The goal is to remove stale guidance, fill the current documentation coverage gaps, and make the skill internally consistent with the local `~/AGENTS.md` session contract.
 
-The design doc is stored in `/Users/maxibon/.codex/superpowers` because that repo contains the canonical `docs/superpowers/specs/` surface. The target `agent-browser` skill package under the plugin cache is not itself in a git repository.
+The design doc is stored in `~/.codex/superpowers` because that repo contains the canonical `docs/superpowers/specs/` surface. The target `agent-browser` skill package under the plugin cache is not itself in a git repository.
 
 ## Goals
 
 - Ground the local skill in the current official docs at `https://agent-browser.dev/`.
 - Identify and remove stale or misleading guidance in `SKILL.md`, `references/`, and `templates/`.
 - Add the missing `references/` needed to cover the current official surface area.
-- Keep the package aligned with the current installed CLI behavior on this workstation.
-- Preserve the local deterministic session-ownership contract from `/Users/maxibon/AGENTS.md`.
+- Keep the package aligned with the current installed CLI behavior in the local environment.
+- Preserve the local deterministic session-ownership contract from `~/AGENTS.md`.
 
 ## Non-Goals
 
 - Redesign the package structure beyond what is needed for documentation truthfulness.
-- Invent new browser workflows that are not grounded in the official docs or local workstation policy.
+- Invent new browser workflows that are not grounded in the official docs or local environment policy.
 - Treat migration-era “native mode” transition details as a first-class agent workflow surface.
 - Implement the package refresh in this design phase.
 
@@ -55,7 +55,7 @@ That is materially better than an earlier thinner local copy, but it is still mi
 
 ### 2. The installed runtime is current enough for documentation alignment
 
-The workstation reports:
+The local environment reports:
 
 - `agent-browser --version` -> `agent-browser 0.25.3`
 - `agent-browser --help` exposes the current command groups and options expected for the refresh
@@ -207,7 +207,7 @@ This reduces confusion between task isolation and auth persistence, which the cu
 
 ## 7. Make the local AGENTS session contract a first-class override
 
-Both `SKILL.md` and `references/session-management.md` should explicitly encode the local workstation rules:
+Both `SKILL.md` and `references/session-management.md` should explicitly encode the local environment rules:
 
 1. use one deterministic `--session <name>` per task
 2. run `agent-browser session list` before new `open` or `connect`
@@ -215,7 +215,7 @@ Both `SKILL.md` and `references/session-management.md` should explicitly encode 
 4. close only the owned named session when cleanup is explicit, the session is stale or failed, or the user asks for cleanup
 5. never close unrelated sessions
 
-This override is necessary because some official examples assume close-on-exit behavior that is not valid under the local workstation contract.
+This override is necessary because some official examples assume close-on-exit behavior that is not valid under the local environment contract.
 
 ## 8. Change the default wait strategy package-wide
 
@@ -310,10 +310,10 @@ Implementation should be considered correct only if all of the following pass:
 
 1. File inventory matches the designed `references/` set and existing `templates/` set.
 2. `SKILL.md` frontmatter remains valid and the package still reads as one coherent skill.
-3. Local examples do not conflict with `/Users/maxibon/AGENTS.md`.
+3. Local examples do not conflict with `~/AGENTS.md`.
 4. Stale `networkidle` defaults are removed from the package except where explicitly justified.
 5. The docs list in `SKILL.md` points only at current official docs pages.
-6. The written command coverage is checked against the current `agent-browser --help` output on this workstation.
+6. The written command coverage is checked against the current `agent-browser --help` output in the local environment.
 7. A quick `rg` scan confirms the removed stale patterns are actually gone from the package.
 
 Suggested verification commands for implementation:

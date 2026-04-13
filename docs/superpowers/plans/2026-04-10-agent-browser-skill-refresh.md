@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED FLOW: First use superpowers:using-git-worktrees to create the isolated workspace for this plan. Then use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refresh the active `vercel:agent-browser` skill so it matches the current official `agent-browser.dev` docs, the local `agent-browser 0.25.3` CLI surface, and the `/Users/maxibon/AGENTS.md` session contract.
+**Goal:** Refresh the active `vercel:agent-browser` skill so it matches the current official `agent-browser.dev` docs, the local `agent-browser 0.25.3` CLI surface, and the `~/AGENTS.md` session contract.
 
-**Architecture:** Do the real edits in the git-backed Vercel plugin source repo at `/Users/maxibon/.codex/.tmp/plugins`, not directly in the generated cache. First import the fuller installed cache copy of `agent-browser/` into the source repo as a baseline, then refresh only the core `agent-browser` package there, and finally sync that one package back into the active cache with parity and live CLI verification. Because the active cache is not git-backed, source-repo commits are the durable history and cache sync is an explicit deployment step.
+**Architecture:** Do the real edits in the git-backed Vercel plugin source repo at `~/.codex/.tmp/plugins`, not directly in the generated cache. First import the fuller installed cache copy of `agent-browser/` into the source repo as a baseline, then refresh only the core `agent-browser` package there, and finally sync that one package back into the active cache with parity and live CLI verification. Because the active cache is not git-backed, source-repo commits are the durable history and cache sync is an explicit deployment step.
 
 **Tech Stack:** Markdown skill packages, shell, `rg`, `rsync`, `diff`, `python3` standard library, `agent-browser 0.25.3`
 
@@ -14,53 +14,53 @@
 
 Use these absolute paths during implementation:
 
-- Source plugin repo root: `/Users/maxibon/.codex/.tmp/plugins`
-- Source `agent-browser` package: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser`
-- Active cache `agent-browser` package: `/Users/maxibon/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser`
+- Source plugin repo root: `~/.codex/.tmp/plugins`
+- Source `agent-browser` package: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser`
+- Active cache `agent-browser` package: `~/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser`
 
 Files that will exist after implementation:
 
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/authentication.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/commands.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/configuration.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/debug-observability.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/diffing.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/profiling.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/proxy-support.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/security-and-confirmations.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/selectors.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/session-management.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/snapshot-refs.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/video-recording.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/authenticated-session.sh`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/capture-workflow.sh`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/form-automation.sh`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/authentication.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/commands.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/configuration.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/debug-observability.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/diffing.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/profiling.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/proxy-support.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/security-and-confirmations.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/selectors.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/session-management.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/snapshot-refs.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/video-recording.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/authenticated-session.sh`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/capture-workflow.sh`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/form-automation.sh`
 
-Do not modify `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser-verify/SKILL.md` in this plan.
+Do not modify `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser-verify/SKILL.md` in this plan.
 
 Implementation commands below assume:
 
 ```bash
-SRC_ROOT="/Users/maxibon/.codex/.tmp/plugins"
+SRC_ROOT="$HOME/.codex/.tmp/plugins"
 SRC_SKILL="$SRC_ROOT/plugins/vercel/skills/agent-browser"
-CACHE_SKILL="/Users/maxibon/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser"
+CACHE_SKILL="$HOME/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser"
 cd "$SRC_ROOT"
 ```
 
 ### Task 1: Import the Installed Cache Package into the Git-Backed Source Plugin
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser`
-- Test: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references`
-- Test: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser`
+- Test: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references`
+- Test: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates`
 
 - [ ] **Step 1: Verify the source package is still the thin copy**
 
 Run:
 
 ```bash
-SRC_ROOT="/Users/maxibon/.codex/.tmp/plugins"
+SRC_ROOT="$HOME/.codex/.tmp/plugins"
 SRC_SKILL="$SRC_ROOT/plugins/vercel/skills/agent-browser"
 cd "$SRC_ROOT"
 test -d "$SRC_SKILL/references"
@@ -73,9 +73,9 @@ Expected: command exits with status `1` because the source package does not yet 
 Run:
 
 ```bash
-SRC_ROOT="/Users/maxibon/.codex/.tmp/plugins"
+SRC_ROOT="$HOME/.codex/.tmp/plugins"
 SRC_SKILL="$SRC_ROOT/plugins/vercel/skills/agent-browser"
-CACHE_SKILL="/Users/maxibon/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser"
+CACHE_SKILL="$HOME/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser"
 cd "$SRC_ROOT"
 rsync -a --delete "$CACHE_SKILL/" "$SRC_SKILL/"
 ```
@@ -87,7 +87,7 @@ Expected: no output and the source package now contains `references/` and `templ
 Run:
 
 ```bash
-SRC_ROOT="/Users/maxibon/.codex/.tmp/plugins"
+SRC_ROOT="$HOME/.codex/.tmp/plugins"
 SRC_SKILL="$SRC_ROOT/plugins/vercel/skills/agent-browser"
 cd "$SRC_ROOT"
 test -f "$SRC_SKILL/references/commands.md"
@@ -101,7 +101,7 @@ Expected: both commands exit with status `0`.
 Run:
 
 ```bash
-cd /Users/maxibon/.codex/.tmp/plugins
+cd ~/.codex/.tmp/plugins
 git add plugins/vercel/skills/agent-browser
 git commit -m "chore: import agent-browser skill baseline"
 ```
@@ -111,8 +111,8 @@ Expected: commit succeeds and records the imported package baseline.
 ### Task 2: Refresh the Top-Level `SKILL.md`
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`
-- Test: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`
+- Test: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`
 
 - [ ] **Step 1: Write the failing structural check for the missing official-doc routes and auth/session decision table**
 
@@ -121,7 +121,7 @@ Run:
 ```bash
 python3 - <<'PY'
 from pathlib import Path
-path = Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md")
+path = Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md").expanduser()
 text = path.read_text(encoding="utf-8")
 required = [
     "https://agent-browser.dev/quick-start",
@@ -141,7 +141,7 @@ Expected: `AssertionError` listing the missing strings.
 
 - [ ] **Step 2: Replace the `metadata.docs` list with the approved official-doc set**
 
-Update the YAML frontmatter in `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md` so the `docs:` block is exactly:
+Update the YAML frontmatter in `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md` so the `docs:` block is exactly:
 
 ```yaml
   docs:
@@ -165,7 +165,7 @@ Update the YAML frontmatter in `/Users/maxibon/.codex/.tmp/plugins/plugins/verce
 
 - [ ] **Step 3: Insert the new auth and session decision table plus the narrowed `batch` guidance**
 
-Add this section immediately after the authentication overview in `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`:
+Add this section immediately after the authentication overview in `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md`:
 
 ```md
 ## Which persistence mechanism should I use?
@@ -180,7 +180,7 @@ Use the smallest persistence surface that matches the job:
 | Save or load auth state explicitly as a file | `state save` / `state load` or `--state <path>` |
 | Log in without exposing the password to the model | auth vault: `auth save` / `auth login` |
 
-On this workstation, task ownership still comes from `--session <name>` and the local `/Users/maxibon/AGENTS.md` session contract.
+Locally, task ownership still comes from `--session <name>` and the local `~/AGENTS.md` session contract.
 ```
 
 Replace the absolute `batch` rule with this text:
@@ -191,7 +191,7 @@ Use the official core workflow by default: `open` -> `snapshot -i` -> interact -
 
 - [ ] **Step 4: Update the wait strategy and deep-dive table**
 
-Ensure the top-level wait guidance in `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md` says:
+Ensure the top-level wait guidance in `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md` says:
 
 ```md
 **Default wait strategy:** `open` already waits for the page `load` event. Do not add an extra wait by default. Prefer `wait <selector>`, `wait --text`, `wait --fn`, or a short fixed wait for async content. Reserve `wait --load networkidle` for pages that you know will go idle cleanly.
@@ -223,7 +223,7 @@ Run:
 ```bash
 python3 - <<'PY'
 from pathlib import Path
-path = Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md")
+path = Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/SKILL.md").expanduser()
 text = path.read_text(encoding="utf-8")
 required = [
     "https://agent-browser.dev/quick-start",
@@ -249,7 +249,7 @@ Expected: no output and exit status `0`.
 Run:
 
 ```bash
-cd /Users/maxibon/.codex/.tmp/plugins
+cd ~/.codex/.tmp/plugins
 git add plugins/vercel/skills/agent-browser/SKILL.md
 git commit -m "docs: refresh agent-browser skill entrypoint"
 ```
@@ -259,9 +259,9 @@ Expected: commit succeeds with only `SKILL.md` staged for this task.
 ### Task 3: Create `configuration.md`, `selectors.md`, and `diffing.md`
 
 **Files:**
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/configuration.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/selectors.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/diffing.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/configuration.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/selectors.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/diffing.md`
 - Test: same files
 
 - [ ] **Step 1: Verify the new reference files do not exist yet**
@@ -269,7 +269,7 @@ Expected: commit succeeds with only `SKILL.md` staged for this task.
 Run:
 
 ```bash
-SRC_SKILL="/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
+SRC_SKILL="$HOME/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
 test -f "$SRC_SKILL/references/configuration.md"
 ```
 
@@ -277,7 +277,7 @@ Expected: exit status `1`.
 
 - [ ] **Step 2: Create `configuration.md`**
 
-Write `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/configuration.md` with exactly:
+Write `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/configuration.md` with exactly:
 
 ````md
 # Configuration
@@ -347,7 +347,7 @@ env | rg '^AGENT_BROWSER_'
 
 - [ ] **Step 3: Create `selectors.md`**
 
-Write `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/selectors.md` with exactly:
+Write `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/selectors.md` with exactly:
 
 ````md
 # Selectors
@@ -408,7 +408,7 @@ agent-browser screenshot --annotate
 
 - [ ] **Step 4: Create `diffing.md`**
 
-Write `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/diffing.md` with exactly:
+Write `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/diffing.md` with exactly:
 
 ````md
 # Diffing
@@ -454,7 +454,7 @@ If the task says “verify”, do not stop at `click` or `fill`. Capture a basel
 Run:
 
 ```bash
-SRC_SKILL="/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
+SRC_SKILL="$HOME/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
 test -f "$SRC_SKILL/references/configuration.md"
 test -f "$SRC_SKILL/references/selectors.md"
 test -f "$SRC_SKILL/references/diffing.md"
@@ -468,7 +468,7 @@ Expected: all three `test -f` commands exit `0`, and `rg` prints matching lines 
 Run:
 
 ```bash
-cd /Users/maxibon/.codex/.tmp/plugins
+cd ~/.codex/.tmp/plugins
 git add \
   plugins/vercel/skills/agent-browser/references/configuration.md \
   plugins/vercel/skills/agent-browser/references/selectors.md \
@@ -481,8 +481,8 @@ Expected: commit succeeds with the three new reference files.
 ### Task 4: Create `security-and-confirmations.md` and `debug-observability.md`
 
 **Files:**
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/security-and-confirmations.md`
-- Create: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/debug-observability.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/security-and-confirmations.md`
+- Create: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/debug-observability.md`
 - Test: same files
 
 - [ ] **Step 1: Verify the new security reference does not exist yet**
@@ -490,7 +490,7 @@ Expected: commit succeeds with the three new reference files.
 Run:
 
 ```bash
-SRC_SKILL="/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
+SRC_SKILL="$HOME/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
 test -f "$SRC_SKILL/references/security-and-confirmations.md"
 ```
 
@@ -498,7 +498,7 @@ Expected: exit status `1`.
 
 - [ ] **Step 2: Create `security-and-confirmations.md`**
 
-Write `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/security-and-confirmations.md` with exactly:
+Write `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/security-and-confirmations.md` with exactly:
 
 ````md
 # Security And Confirmations
@@ -556,7 +556,7 @@ agent-browser --confirm-interactive click @e4
 
 - [ ] **Step 3: Create `debug-observability.md`**
 
-Write `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/debug-observability.md` with exactly:
+Write `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/debug-observability.md` with exactly:
 
 ````md
 # Debug And Observability
@@ -618,7 +618,7 @@ agent-browser stream status
 Run:
 
 ```bash
-SRC_SKILL="/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
+SRC_SKILL="$HOME/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
 test -f "$SRC_SKILL/references/security-and-confirmations.md"
 test -f "$SRC_SKILL/references/debug-observability.md"
 rg -n "AGENT_BROWSER_CONTENT_BOUNDARIES|agent-browser console|agent-browser trace start" \
@@ -633,7 +633,7 @@ Expected: `test -f` exits `0` for both files and `rg` prints the three expected 
 Run:
 
 ```bash
-cd /Users/maxibon/.codex/.tmp/plugins
+cd ~/.codex/.tmp/plugins
 git add \
   plugins/vercel/skills/agent-browser/references/security-and-confirmations.md \
   plugins/vercel/skills/agent-browser/references/debug-observability.md
@@ -645,13 +645,13 @@ Expected: commit succeeds with the two new reference files.
 ### Task 5: Refresh the Existing Reference Files
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/authentication.md`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/commands.md`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/profiling.md`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/proxy-support.md`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/session-management.md`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/snapshot-refs.md`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/video-recording.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/authentication.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/commands.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/profiling.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/proxy-support.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/session-management.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/snapshot-refs.md`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/video-recording.md`
 - Test: same files
 
 - [ ] **Step 1: Write the failing check for stale wait strategy and missing command coverage**
@@ -662,9 +662,9 @@ Run:
 python3 - <<'PY'
 from pathlib import Path
 files = {
-    "auth": Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/authentication.md"),
-    "commands": Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/commands.md"),
-    "session": Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/session-management.md"),
+    "auth": Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/authentication.md").expanduser(),
+    "commands": Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/commands.md").expanduser(),
+    "session": Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references/session-management.md").expanduser(),
 }
 auth = files["auth"].read_text(encoding="utf-8")
 commands = files["commands"].read_text(encoding="utf-8")
@@ -735,7 +735,7 @@ Make these exact content changes:
 +# These use the same default session
 +agent-browser open https://example.com
 +agent-browser snapshot -i
-+# Keep the owned session open by default on this workstation.
++# Keep the owned session open by default locally.
 ```
 
 - [ ] **Step 3: Refresh `snapshot-refs.md` and `commands.md`**
@@ -840,7 +840,7 @@ Make these exact content changes:
 +agent-browser wait --url "**/dashboard"
 @@
 -    agent-browser close 2>/dev/null || true
-+    # Keep the owned session open by default on this workstation.
++    # Keep the owned session open by default locally.
 ```
 
 ```diff
@@ -857,7 +857,7 @@ Run:
 ```bash
 python3 - <<'PY'
 from pathlib import Path
-root = Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references")
+root = Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/references").expanduser()
 auth = (root / "authentication.md").read_text(encoding="utf-8")
 commands = (root / "commands.md").read_text(encoding="utf-8")
 session = (root / "session-management.md").read_text(encoding="utf-8")
@@ -886,7 +886,7 @@ Expected: no output and exit status `0`.
 Run:
 
 ```bash
-cd /Users/maxibon/.codex/.tmp/plugins
+cd ~/.codex/.tmp/plugins
 git add plugins/vercel/skills/agent-browser/references
 git commit -m "docs: refresh agent-browser references"
 ```
@@ -896,10 +896,10 @@ Expected: commit succeeds with only the reference-file changes from this task.
 ### Task 6: Refresh Templates, Verify the Source Package, Sync to the Active Cache, and Smoke-Test It
 
 **Files:**
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/authenticated-session.sh`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/capture-workflow.sh`
-- Modify: `/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/form-automation.sh`
-- Modify: `/Users/maxibon/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser/**` via `rsync`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/authenticated-session.sh`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/capture-workflow.sh`
+- Modify: `~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates/form-automation.sh`
+- Modify: `~/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser/**` via `rsync`
 - Test: source package and active cache package
 
 - [ ] **Step 1: Write the failing template check**
@@ -909,7 +909,7 @@ Run:
 ```bash
 python3 - <<'PY'
 from pathlib import Path
-root = Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates")
+root = Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser/templates").expanduser()
 auth = (root / "authenticated-session.sh").read_text(encoding="utf-8")
 capture = (root / "capture-workflow.sh").read_text(encoding="utf-8")
 form = (root / "form-automation.sh").read_text(encoding="utf-8")
@@ -984,7 +984,7 @@ Run:
 ```bash
 python3 - <<'PY'
 from pathlib import Path
-root = Path("/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser")
+root = Path("~/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser").expanduser()
 required = [
     root / "SKILL.md",
     root / "references" / "configuration.md",
@@ -1019,7 +1019,7 @@ Expected: no output and exit status `0`.
 Run:
 
 ```bash
-cd /Users/maxibon/.codex/.tmp/plugins
+cd ~/.codex/.tmp/plugins
 git add plugins/vercel/skills/agent-browser
 git commit -m "docs: finalize agent-browser truth refresh"
 ```
@@ -1031,8 +1031,8 @@ Expected: commit succeeds and leaves the source repo clean.
 Run:
 
 ```bash
-SRC_SKILL="/Users/maxibon/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
-CACHE_SKILL="/Users/maxibon/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser"
+SRC_SKILL="$HOME/.codex/.tmp/plugins/plugins/vercel/skills/agent-browser"
+CACHE_SKILL="$HOME/.codex/plugins/cache/openai-curated/vercel/fb0a18376bcd9f2604047fbe7459ec5aed70c64b/skills/agent-browser"
 rsync -a --delete "$SRC_SKILL/" "$CACHE_SKILL/"
 diff -ru "$SRC_SKILL" "$CACHE_SKILL"
 ```

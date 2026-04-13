@@ -2,7 +2,7 @@
 
 ## Codex Dispatch Format
 
-Codex subagent prompts must use the verified packet shape for this workstation:
+Codex subagent prompts must use the verified packet shape for the local operator environment:
 
 ```yaml
 Codex subagent packet:
