@@ -1,44 +1,38 @@
-# Agent-Browser Skill Refresh Design
+# Agent-Browser Skill Truth Refresh Design
 
 Date: 2026-04-10
 Status: Approved design for implementation planning
 
 ## Summary
 
-Refresh the local `agent-browser` skill surface with a hard cut to the official `vercel-labs/agent-browser` package shape and current `0.25.x` command contract, then redesign `agent-browser-verify` as a thin local overlay for dev-server smoke checks instead of a second broad browser skill.
+Refresh the local `vercel:agent-browser` skill package against the current official `agent-browser.dev` docs and the installed `agent-browser 0.25.3` CLI surface.
 
-This design treats the official `agent-browser.dev` docs and upstream `skills/agent-browser/` package as the source of truth for the core browser lane. It does not attempt to preserve older patterns that have drifted from the current CLI. The local verification lane remains separate only where there is no official upstream equivalent.
+This is a truth refresh, not a package redesign. The goal is to remove stale guidance, fill the current documentation coverage gaps, and make the skill internally consistent with the local `~/AGENTS.md` session contract.
 
-No runtime upgrade is required at design time. The installed CLI already matches the current npm latest release observed during this design pass: `agent-browser 0.25.3`.
+The design doc is stored in `~/.codex/superpowers` because that repo contains the canonical `docs/superpowers/specs/` surface. The target `agent-browser` skill package under the plugin cache is not itself in a git repository.
 
 ## Goals
 
-- Align the local browser skill guidance to the official `agent-browser.dev` documentation and upstream skill package structure.
-- Replace stale or non-official guidance in the current local skill copies.
-- Add the missing `references/` and `templates/` needed for a usable guided lane.
-- Keep `agent-browser` focused on general browser automation and move dev-server smoke policy into a smaller `agent-browser-verify` overlay.
-- Encode the local session-ownership contract from `~/AGENTS.md` so browser runs are deterministic and reusable.
-- Define a validation bundle that can prove the skill refresh matches the current CLI and docs.
+- Ground the local skill in the current official docs at `https://agent-browser.dev/`.
+- Identify and remove stale or misleading guidance in `SKILL.md`, `references/`, and `templates/`.
+- Add the missing `references/` needed to cover the current official surface area.
+- Keep the package aligned with the current installed CLI behavior in the local environment.
+- Preserve the local deterministic session-ownership contract from `~/AGENTS.md`.
 
 ## Non-Goals
 
-- Upgrade the installed `agent-browser` binary during this design phase.
-- Implement the skill refresh in this design phase.
-- Preserve backward-compatibility examples that contradict the current CLI contract.
-- Turn `agent-browser-verify` into a full exploratory QA or dogfooding skill.
-- Patch the generated plugin cache in this phase.
+- Redesign the package structure beyond what is needed for documentation truthfulness.
+- Invent new browser workflows that are not grounded in the official docs or local environment policy.
+- Treat migration-era “native mode” transition details as a first-class agent workflow surface.
+- Implement the package refresh in this design phase.
 
 ## Current-State Findings
 
-### The local skill copies are materially thinner than upstream
+### 1. The current package is incomplete relative to the official docs surface
 
-The enabled local plugin skills are:
+The local `agent-browser` package already contains:
 
-- `agent-browser/SKILL.md` at 255 lines
-- `agent-browser-verify/SKILL.md` at 221 lines
-
-The current upstream `skills/agent-browser/SKILL.md` is 828 lines and ships with additional supporting files:
-
+- `SKILL.md`
 - `references/authentication.md`
 - `references/commands.md`
 - `references/profiling.md`
@@ -50,354 +44,304 @@ The current upstream `skills/agent-browser/SKILL.md` is 828 lines and ships with
 - `templates/capture-workflow.sh`
 - `templates/form-automation.sh`
 
-The local plugin cache currently contains only `SKILL.md` for both browser skills and therefore omits the reference and template material that the official skill expects to route into.
+That is materially better than an earlier thinner local copy, but it is still missing coverage for current first-class doc surfaces:
 
-### The installed runtime is already current
+- official Selectors guidance
+- official Snapshots guidance beyond the local ref note
+- official Diffing guidance
+- official Security and confirmation flows
+- official Configuration guidance
+- official Dashboard and Streaming observability guidance as a coherent reference lane
 
-The local workstation reports:
+### 2. The installed runtime is current enough for documentation alignment
+
+The local environment reports:
 
 - `agent-browser --version` -> `agent-browser 0.25.3`
-- `npm view agent-browser version dist-tags --json` -> `latest: 0.25.3`
+- `agent-browser --help` exposes the current command groups and options expected for the refresh
 
-That means the upgrade need is documentation and skill packaging, not the CLI binary.
+This means the main problem is skill accuracy and coverage, not a missing binary upgrade.
 
-### The current local guidance has drifted from the official command contract
+### 3. The package has internal contradictions that will mislead future sessions
 
-The current local skills still teach or imply patterns that should not remain first-class:
+The most important contradiction is wait strategy:
 
-- routine `wait --load networkidle` after `open`
-- console collection via `window.__consoleErrors`
-- unconditional `agent-browser close` at the end of verification
-- no use of `batch` as the preferred 2-plus-command sequence tool
-- no guidance for auth vault, `--profile`, `--session-name`, dashboard, streaming, or security boundaries
+- `SKILL.md` already warns against routine `wait --load networkidle`
+- several references and templates still use `wait --load networkidle` as a default step
 
-These omissions and stale examples matter because the current official docs now emphasize:
+The package also teaches session persistence in ways that conflict with the local AGENTS contract:
 
-- `batch` for sequential command execution
-- `snapshot -i --urls` to reduce re-navigation
-- auth vault and session persistence workflows
-- content boundaries, domain allowlists, and action policies
-- dashboard and runtime streaming
-- broader command coverage including `console`, `errors`, `network`, `dialog`, `tab`, `clipboard`, `stream`, `dashboard`, and provider selection
+- upstream-style examples still close sessions casually
+- local policy requires deterministic named-session ownership and reuse
 
-### `agent-browser-verify` is not an official upstream skill
+### 4. The current package under-documents the current CLI surface
 
-The official skills index includes:
+The live `--help` output includes high-value commands or groups that are either thinly covered or not organized clearly enough in the current package:
 
-- `agent-browser`
-- `agentcore`
-- `dogfood`
-- `electron`
-- `slack`
-- `vercel-sandbox`
+- `confirm` / `deny`
+- `console` / `errors`
+- `trace`
+- `stream`
+- `dashboard`
+- richer `state` management
+- `chat`
+- full security flags
+- full configuration precedence and environment variables
 
-There is no official upstream `agent-browser-verify` package to sync from. The local verification lane should therefore be treated as a repo-specific overlay, not as a forked copy of an upstream skill that happens to be missing files.
+### 5. The package should not overfit to transition-era native-mode framing
 
-### Local session policy overrides official close-on-exit examples
+The official homepage now presents agent-browser as a native Rust browser automation CLI. The older “native mode” transition story remains visible in release history, but the current local CLI help does not expose `--native` as an active top-level option.
 
-The official upstream skill recommends closing sessions when done. The local `~/AGENTS.md` contract is stricter and more specific:
-
-- one deterministic `--session <name>` per task
-- `agent-browser session list` before new `open` or `connect`
-- reuse the owned session when it already exists
-- only close the owned named session when cleanup is explicitly required, the user asks for cleanup, or the session is stale or failed
-- never close unrelated sessions
-
-This conflict must be resolved explicitly in favor of the local AGENTS contract.
+That means the skill should focus on the current command contract, not on preserving a migration narrative between Node and native paths.
 
 ## Design Decisions
 
-## 1. Use a hard-sync model for `agent-browser`
+## 1. Keep the current package structure and do a truth refresh in place
 
-Future implementation should not patch the current 255-line local file in place.
+The refresh should update the existing `agent-browser` package rather than re-architect it.
 
-Instead, the core design is:
+This includes:
 
-- treat the upstream `vercel-labs/agent-browser` `skills/agent-browser/` package as the canonical source
-- import its package structure wholesale
-- keep only the smallest possible local adaptations required by the local AGENTS contract and the host plugin surface
+- revising `SKILL.md`
+- refreshing stale `references/*.md`
+- adding the missing `references/*.md`
+- updating the existing templates
 
-This is a hard cutover. The local skill should stop teaching older patterns that predate the current CLI behavior.
+This does not include splitting the package into more sub-skills or adding new process layers.
 
-## 2. Keep `agent-browser-verify` as a slim local overlay
+## 2. Expand `metadata.docs` to match the official source surface
 
-`agent-browser-verify` should remain separate only because it serves a narrower workflow than the official core skill:
-
-- dev-server smoke verification
-- rapid gut checks on page load and obvious breakage
-- escalation into deeper investigation when errors are found
-
-It should not duplicate a general command reference, authentication catalog, or security catalog. Those belong in `agent-browser`.
-
-The verify skill should instead:
-
-- assume `agent-browser` is the general browser contract
-- link into the shared browser references where possible
-- add only the local verification-specific `references/` and `templates/` that upstream does not provide
-
-## 3. Import the full upstream `references/` and `templates/` inventory for `agent-browser`
-
-The following files should be added under the future refreshed `agent-browser` package:
-
-| Path | Role in the package |
-| --- | --- |
-| `references/authentication.md` | Auth vault, profile reuse, `--auto-connect`, state files, OAuth/SSO, 2FA, cookie and token guidance |
-| `references/commands.md` | Full command coverage for the current CLI surface |
-| `references/profiling.md` | DevTools profile capture and analysis workflows |
-| `references/proxy-support.md` | Proxy and geo-testing guidance |
-| `references/session-management.md` | Parallel sessions, state persistence, cleanup, reuse |
-| `references/snapshot-refs.md` | Snapshot structure, ref invalidation, region scoping, troubleshooting |
-| `references/video-recording.md` | Evidence capture and repro videos |
-| `templates/authenticated-session.sh` | Login-once and reuse-state scaffold |
-| `templates/capture-workflow.sh` | Page capture scaffold |
-| `templates/form-automation.sh` | Form automation scaffold |
-
-These should be imported as a package set, not selectively recreated from memory.
-
-## 4. Add new local `references/` for `agent-browser-verify`
-
-Because there is no upstream verify package, the local verify lane needs a small focused reference set:
-
-| Path | Purpose |
-| --- | --- |
-| `references/dev-server-smoke.md` | Canonical smoke flow for local dev servers and staging pages |
-| `references/framework-overlays.md` | Detection patterns for common dev overlay surfaces and obvious error states |
-| `references/console-network-diagnostics.md` | Use `console`, `errors`, `network requests`, and `network request <id>` instead of custom page globals |
-| `references/session-hygiene.md` | Local owned-session policy from `~/AGENTS.md` |
-| `references/vercel-sandbox-smoke.md` | Optional Vercel/Sandbox browser path when the target is not a local host page |
-| `templates/dev-server-smoke.sh` | One-page smoke template |
-| `templates/route-matrix-smoke.sh` | Optional multi-route smoke template when several routes need the same checks |
-
-This keeps the verify lane Tier-B-or-better without turning it into a second full command manual.
-
-## 5. Replace stale verification mechanics with official commands
-
-The current verify lane should stop teaching non-official console capture and default `networkidle` waits.
-
-The refreshed verification contract should use:
-
-- `agent-browser open <url>` as the initial navigation step
-- `agent-browser batch ...` for 2-plus sequential steps when no intermediate parsing is needed
-- `agent-browser snapshot -i` to confirm interactive structure
-- `agent-browser screenshot --annotate` for quick visual evidence
-- `agent-browser console` for browser console messages
-- `agent-browser errors` for page errors
-- `agent-browser network requests` and `agent-browser network request <id>` for request diagnosis
-- `agent-browser wait --text`, `agent-browser wait <selector>`, `agent-browser wait --fn`, or short fixed waits for async UI settle
-
-The verify lane should remove reliance on:
-
-- `window.__consoleErrors`
-- mandatory `wait --load networkidle` after every `open`
-- unconditional session close on success
-
-## 6. Default wait strategy must change
-
-The new default guidance should be:
-
-- `open` already covers page `load`
-- no extra wait by default on ordinary pages
-- use `wait 2000` or a targeted selector/text/function wait for slow SPAs
-- reserve `wait --load networkidle` for pages known to go idle cleanly
-
-This change is required because the official upstream skill now warns that `networkidle` can hang indefinitely on sites with analytics, ads, websockets, or background polling.
-
-## 7. Encode deterministic session ownership in both skills
-
-Both browser skills should explicitly teach the local session rules:
-
-1. choose one deterministic session name per task
-2. run `agent-browser session list` before opening or connecting
-3. reuse the owned session if it already exists
-4. if the owned session is stale or failed, close that same session before reopening
-5. keep the owned session available for follow-up work by default
-6. close only the owned session, never unrelated sessions
-
-This is the local override to the official examples that say to close when done.
-
-## 8. Add the modern security surface to the core skill
-
-The refreshed core skill should explicitly teach the security features now documented officially:
-
-- `--content-boundaries`
-- `AGENT_BROWSER_ALLOWED_DOMAINS`
-- `AGENT_BROWSER_ACTION_POLICY`
-- `AGENT_BROWSER_MAX_OUTPUT`
-
-These are especially relevant when the skill is used on arbitrary external pages or when page output could otherwise be injected into LLM context without clear boundaries.
-
-The verify lane may reference these briefly, but the detailed guidance belongs in the core skill.
-
-## 9. Expand the core skill to cover the current high-value surface area
-
-The refreshed core skill should explicitly document or link to guidance for:
-
-- `batch`
-- `snapshot -i --urls`
-- auth vault
-- `--profile`
-- `--session-name`
-- `--auto-connect`
-- dashboard
-- stream enable or disable
-- dialogs
-- tabs
-- downloads
-- network inspection
-- `--engine lightpanda`
-- cloud providers only where officially supported in the upstream skill
-
-The current local file does not cover enough of the current CLI surface to act as a reliable guided lane.
-
-## 10. Update the doc metadata to point at the official browser docs
-
-The current local `metadata.docs` field points at an OpenAI Codex announcement page, which is not the source of truth for the browser CLI itself.
-
-The refreshed design should point documentation routing toward the official browser docs:
+The docs list in `SKILL.md` should explicitly include the official pages that now matter for truthful routing and source-backed maintenance:
 
 - `https://agent-browser.dev/`
 - `https://agent-browser.dev/installation`
-- `https://agent-browser.dev/commands`
-- `https://agent-browser.dev/configuration`
-- `https://agent-browser.dev/sessions`
-- `https://agent-browser.dev/security`
-- `https://agent-browser.dev/dashboard`
-- `https://agent-browser.dev/streaming`
-- `https://agent-browser.dev/cdp-mode`
-- `https://agent-browser.dev/next`
-- `https://agent-browser.dev/changelog`
-
-If the future target surface is a local overlay package rather than the plugin cache, the frontmatter should stay minimal and valid while any plugin-specific discovery metadata stays in the platform surface that actually consumes it.
-
-## Package Shape
-
-## Future `agent-browser` package shape
-
-The future refreshed package should look like:
-
-```text
-agent-browser/
-  SKILL.md
-  references/
-    authentication.md
-    commands.md
-    profiling.md
-    proxy-support.md
-    session-management.md
-    snapshot-refs.md
-    video-recording.md
-  templates/
-    authenticated-session.sh
-    capture-workflow.sh
-    form-automation.sh
-```
-
-## Future `agent-browser-verify` package shape
-
-The future refreshed verify package should look like:
-
-```text
-agent-browser-verify/
-  SKILL.md
-  references/
-    console-network-diagnostics.md
-    dev-server-smoke.md
-    framework-overlays.md
-    session-hygiene.md
-    vercel-sandbox-smoke.md
-  templates/
-    dev-server-smoke.sh
-    route-matrix-smoke.sh
-```
-
-## Verification Flow Contract
-
-The future verify skill should teach one canonical smoke path:
-
-1. Determine the target URL and deterministic session name.
-2. Run `agent-browser session list`.
-3. Reuse the owned session if present, or close only that owned stale session before reopening.
-4. Open the page.
-5. Take an annotated screenshot.
-6. Run `snapshot -i`.
-7. Collect `console` and `errors`.
-8. Check `network requests` when the page appears stuck or partially rendered.
-9. Verify one or more key routes only when the app structure makes that obvious.
-10. Keep the session open unless explicit cleanup is required.
-
-The default success report should include:
-
-- final URL
-- whether meaningful content rendered
-- whether an error overlay was detected
-- whether console or page errors were present
-- whether interactive elements were discovered
-- whether the owned session remains open for follow-up
-
-## Acceptance Criteria
-
-The future implementation is acceptable only if all of the following are true:
-
-- The core browser skill imports the upstream `references/` and `templates/` inventory instead of recreating a partial local approximation.
-- The local browser skill examples align to the current `0.25.x` command contract.
-- The verify skill no longer mentions `window.__consoleErrors`.
-- The verify skill no longer treats `wait --load networkidle` as the default settle strategy.
-- Both skills encode deterministic owned-session behavior aligned to `~/AGENTS.md`.
-- The core skill points to official `agent-browser.dev` docs instead of unrelated Codex announcement docs.
-- The future validation bundle proves CLI parity before skill content is declared refreshed.
-
-## Validation Bundle For Future Implementation
-
-Before declaring the refresh complete, the implementation pass should gather:
-
-- `which -a agent-browser`
-- `agent-browser --version`
-- `npm view agent-browser version dist-tags --json`
-- a package-structure diff showing the local core skill matches the upstream `skills/agent-browser/` inventory
-- a smoke run such as:
-  - `agent-browser open about:blank`
-  - `agent-browser snapshot -i`
-  - `agent-browser screenshot --annotate`
-  - `agent-browser console`
-  - `agent-browser errors`
-  - `agent-browser session list`
-- a verify-lane smoke run against a disposable URL or local page using the new deterministic session flow
-
-## Risks
-
-### Plugin cache overwrite risk
-
-If implementation patches the generated plugin cache directly, a plugin refresh may overwrite the work. A future implementation plan should therefore decide explicitly whether the target is:
-
-- a controlled local overlay, preferred
-- or the generated plugin cache, only if that is the authoritative enabled surface in this environment
-
-### Upstream drift risk
-
-Because the official upstream package is moving, future implementation should pin the content refresh to the observed CLI version and official package state used during that implementation wave.
-
-### Session leak risk
-
-The local AGENTS contract intentionally keeps owned sessions alive for follow-up work. That improves continuity but creates a higher risk of idle session buildup if session naming and ownership rules are not followed exactly. The refresh must therefore make `session list` and owned-session cleanup explicit, not optional.
-
-## Source Index
-
-The design is grounded in the official browser docs and upstream package:
-
-- `https://agent-browser.dev/`
-- `https://agent-browser.dev/installation`
+- `https://agent-browser.dev/quick-start`
 - `https://agent-browser.dev/skills`
 - `https://agent-browser.dev/commands`
 - `https://agent-browser.dev/configuration`
+- `https://agent-browser.dev/selectors`
+- `https://agent-browser.dev/snapshots`
+- `https://agent-browser.dev/diffing`
 - `https://agent-browser.dev/sessions`
 - `https://agent-browser.dev/security`
 - `https://agent-browser.dev/dashboard`
 - `https://agent-browser.dev/streaming`
-- `https://agent-browser.dev/cdp-mode`
+- `https://agent-browser.dev/profiler`
 - `https://agent-browser.dev/next`
 - `https://agent-browser.dev/changelog`
-- `https://github.com/vercel-labs/agent-browser/tree/main/skills/agent-browser`
 
-## Transition
+Do not add pages to the skill metadata unless they are part of the current official docs surface.
 
-After user review of this spec, the next phase is `writing-plans`. No implementation edits belong in this brainstorming phase.
+## 3. Add the missing `references/` files
+
+The following new references should be added:
+
+| Path | Purpose |
+| --- | --- |
+| `references/selectors.md` | Refs vs CSS selectors vs semantic locators, grounded in the official Selectors and Commands docs |
+| `references/diffing.md` | `diff snapshot`, `diff screenshot`, `diff url`, and “verify the action changed the page” workflows |
+| `references/security-and-confirmations.md` | `--content-boundaries`, `--allowed-domains`, `--action-policy`, `--confirm-actions`, `--confirm-interactive`, and non-TTY auto-deny |
+| `references/debug-observability.md` | `trace`, `profiler`, `record`, `console`, `errors`, `stream`, and `dashboard` as one observability lane |
+| `references/configuration.md` | Config precedence, boolean overrides, common configs, AI-agent safety config, env vars |
+
+These are the highest-value additions because they cover areas where the current package either has no local reference or spreads important guidance too thinly.
+
+## 4. Refresh the existing references instead of treating them as already correct
+
+The existing references should remain, but they must be updated against the current official docs and local CLI help:
+
+- `references/commands.md`
+- `references/authentication.md`
+- `references/session-management.md`
+- `references/snapshot-refs.md`
+- `references/profiling.md`
+- `references/video-recording.md`
+- `references/proxy-support.md`
+
+Specific refresh requirements:
+
+- remove default `networkidle` patterns from normal flows
+- align command examples to the current help text
+- align security notes to the official Security page
+- align dashboard and streaming statements to the current official behavior
+- keep local session-policy overrides explicit where they diverge from upstream examples
+
+## 5. Normalize the top-level `SKILL.md` around the official core workflow
+
+The top-level skill should present the core workflow in this order:
+
+1. `open`
+2. `snapshot -i`
+3. interact using refs or semantic locators
+4. re-snapshot only when the page state changed
+
+Then it should layer on local guidance:
+
+- deterministic session ownership
+- auth decision table
+- targeted waits over blanket `networkidle`
+- when to use `batch`
+- when to use debug or observability commands
+- when to add security boundaries
+
+The skill should treat `batch` as a local orchestration optimization, not as a replacement for the official core workflow narrative.
+
+## 6. Add a short auth and session decision table near the top of `SKILL.md`
+
+Future sessions need a compact answer to “which persistence mechanism should I use?”
+
+The decision table should distinguish:
+
+- `--session`
+  - isolate one task from another
+- `--session-name`
+  - auto-save and restore cookies and localStorage by name
+- `--profile`
+  - reuse an existing Chrome profile or persistent custom profile
+- `--state`
+  - explicit manual save/load file path
+- auth vault
+  - credential storage and login-by-name without exposing the password to the LLM
+
+This reduces confusion between task isolation and auth persistence, which the current skill mixes too loosely.
+
+## 7. Make the local AGENTS session contract a first-class override
+
+Both `SKILL.md` and `references/session-management.md` should explicitly encode the local environment rules:
+
+1. use one deterministic `--session <name>` per task
+2. run `agent-browser session list` before new `open` or `connect`
+3. reuse the owned session if it already exists
+4. close only the owned named session when cleanup is explicit, the session is stale or failed, or the user asks for cleanup
+5. never close unrelated sessions
+
+This override is necessary because some official examples assume close-on-exit behavior that is not valid under the local environment contract.
+
+## 8. Change the default wait strategy package-wide
+
+The package-wide default should be:
+
+- `open` already covers page `load`
+- do not add an extra wait by default
+- prefer `wait <selector>`, `wait --text`, `wait --fn`, or a short fixed delay for slow async content
+- reserve `wait --load networkidle` for cases where the page is known to become idle cleanly
+
+This change must be reflected consistently in:
+
+- `SKILL.md`
+- `references/authentication.md`
+- `references/session-management.md`
+- `references/profiling.md`
+- `references/video-recording.md`
+- `templates/authenticated-session.sh`
+- `templates/capture-workflow.sh`
+- `templates/form-automation.sh`
+
+## 9. Remove or demote stale guidance
+
+The following guidance is stale, misleading, or should no longer be taught as a default:
+
+- mandatory `wait --load networkidle` after `open`
+- casual session closing in local examples
+- “always use batch” phrasing
+- any implication that native-mode migration details are central to normal usage
+- command coverage that omits `confirm` / `deny`, `console`, `errors`, `trace`, `dashboard`, `stream`, or current configuration precedence
+
+Demotion is acceptable where a command remains valid but should no longer be taught as the normal first move.
+
+## 10. Keep provider-specific and iOS guidance light unless backed by current docs
+
+The official docs navigation clearly includes provider and iOS surfaces, but the current package does not need a large provider matrix to answer the most common local usage patterns.
+
+The truth-refresh default should be:
+
+- mention supported providers and iOS paths where the official docs and CLI help do
+- keep core package focus on local browser automation, sessions, auth, observability, and safety
+- add dedicated provider references only if there is an actual repeated local need
+
+This keeps the skill from bloating into a catalog of rarely used advanced modes.
+
+## Reference Inventory After Refresh
+
+The target `references/` set should be:
+
+- `authentication.md`
+- `commands.md`
+- `configuration.md`
+- `debug-observability.md`
+- `diffing.md`
+- `profiling.md`
+- `proxy-support.md`
+- `security-and-confirmations.md`
+- `selectors.md`
+- `session-management.md`
+- `snapshot-refs.md`
+- `video-recording.md`
+
+No separate `native-mode.md` is required for the initial truth refresh.
+
+## Template Changes
+
+The existing templates should stay, but with these changes:
+
+### `templates/authenticated-session.sh`
+
+- remove default `networkidle` waits
+- keep the session open by default under the local AGENTS contract
+- prefer targeted success checks such as URL, selector, or snapshot evidence
+
+### `templates/capture-workflow.sh`
+
+- remove unconditional `networkidle`
+- keep capture flow grounded in `open`, `get title`, `get url`, `snapshot -i`, `screenshot`, and `pdf`
+- leave session cleanup explicit
+
+### `templates/form-automation.sh`
+
+- remove unconditional `networkidle`
+- preserve the snapshot-interact-verify pattern
+- make post-submit waits targeted rather than blanket
+
+No new templates are required for the truth-refresh scope.
+
+## Validation Bundle
+
+Implementation should be considered correct only if all of the following pass:
+
+1. File inventory matches the designed `references/` set and existing `templates/` set.
+2. `SKILL.md` frontmatter remains valid and the package still reads as one coherent skill.
+3. Local examples do not conflict with `~/AGENTS.md`.
+4. Stale `networkidle` defaults are removed from the package except where explicitly justified.
+5. The docs list in `SKILL.md` points only at current official docs pages.
+6. The written command coverage is checked against the current `agent-browser --help` output in the local environment.
+7. A quick `rg` scan confirms the removed stale patterns are actually gone from the package.
+
+Suggested verification commands for implementation:
+
+```bash
+agent-browser --version
+agent-browser --help
+rg -n "networkidle|close --all|agent-browser close  #|always use batch|--native" \
+  /path/to/skills/agent-browser
+rg --files /path/to/skills/agent-browser
+```
+
+If a package-local validator exists at implementation time, it should be run as well. If none exists, the quick-check bundle above is the minimum acceptable evidence.
+
+## Risks
+
+- Official docs can continue to evolve, so the refresh should avoid overfitting to one release note unless the behavior is also present in the current docs or local help output.
+- Provider- and iOS-specific details may drift faster than the local core browser surface; keep them secondary unless there is a strong usage signal.
+- The plugin cache is not versioned, so implementation should be careful about where durable design and validation artifacts live.
+
+## Outcome
+
+The refreshed `vercel:agent-browser` skill should become:
+
+- source-backed against the official docs
+- internally consistent
+- aligned to the current local CLI surface
+- safer for agent use on arbitrary pages
+- compliant with the local session-ownership contract
+
+This is sufficient to move to implementation planning.
