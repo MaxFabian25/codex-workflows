@@ -23,9 +23,11 @@ This is a hard cutover in process guidance. The repo should stop describing brai
 - Integrate `request_user_input` where it adds the most value during brainstorming without turning the whole design flow into a form-based workflow.
 - Preserve the current ownership boundary where `brainstorming` owns design and `dispatching-parallel-agents` owns read-only decomposition.
 - Align process docs and prompt contracts with the active local Codex runtime:
-  - `codex-cli 0.119.0-alpha.29`
+  - `codex-cli 0.121.0-alpha.1`
+  - latest alpha source tag: `rust-v0.121.0-alpha.1`
   - `default_mode_request_user_input = true`
   - `multi_agent_v2 = true`
+  - this local superpowers implementation requires explicit outer `agent_type` on every multi-agent dispatch
 - Keep the parent agent responsible for arbitration, assumptions, and final synthesis.
 
 ## Non-Goals
@@ -65,7 +67,7 @@ That is the correct Codex-native read-only decomposition lane. The missing piece
 
 `skills/using-superpowers/references/codex-tools.md` documents:
 
-- `spawn_agent(...)`
+- `spawn_agent(task_name=..., agent_type="...", message="...")`
 - `wait_agent(...)`
 - `close_agent(...)`
 - `update_plan(...)`
@@ -81,15 +83,9 @@ It does not document several currently active local tools that matter to process
 
 That leaves process skills with an incomplete view of the actual runtime surface they are supposed to target.
 
-### The prompt-packet contract lags the verified role surface
+### The prompt-packet contract lags the verified local dispatch contract
 
-`contract/prompt-packet.md` still describes the Codex subagent packet role set as:
-
-- `worker`
-- `explorer`
-- `default`
-
-But the current repo and current runtime already rely on richer roles such as:
+`contract/prompt-packet.md` still under-described the dispatch contract at the time of this design. On `codex-cli 0.121.0-alpha.1` / `rust-v0.121.0-alpha.1`, the surfaced Codex tool schema requires `task_name` and `message`, while the upstream handler still treats `agent_type` as optional metadata; the local superpowers layer intentionally requires explicit outer `agent_type` and already relies on richer roles such as:
 
 - `parallel_explorer`
 - `implementer`
@@ -97,19 +93,20 @@ But the current repo and current runtime already rely on richer roles such as:
 - `code_quality_reviewer`
 - `final_reviewer`
 
-The prompt-packet contract should match the role surface the rest of the process-family skills now assume.
+The prompt-packet contract should match both the surfaced schema and the stricter local requirement the rest of the process-family skills now assume.
 
 ### Upstream runtime constraints shape the design
 
-Inspection of `openai/codex` source for `rust-v0.119.0-alpha.29` and current `main` shows:
+Inspection of the latest alpha `openai/codex` source tag `rust-v0.121.0-alpha.1` shows:
 
 - `request_user_input` is root-thread only
 - subagents cannot call it directly
 - the tool expects structured options
 - the tool is gated by collaboration mode and feature flags
 - the local machine currently has Default-mode availability enabled
+- the surfaced Codex tool schema requires `task_name` and `message`, while the upstream handler still leaves `agent_type` optional
 
-This means the right integration is parent-mediated elicitation, not “let child agents ask the user questions.”
+This means the right integration is parent-mediated elicitation, not “let child agents ask the user questions,” while the local skill layer separately enforces explicit `agent_type`.
 
 ## Design Decisions
 
@@ -173,17 +170,18 @@ This lets `dispatching-parallel-agents` stay read-only while still contributing 
 Update the shared Codex tool mapping to include the active elicitation and MultiAgentV2 surfaces:
 
 - `request_user_input(...)`
-- `spawn_agent(...)`
+- `spawn_agent(task_name=..., agent_type="...", message="...")`
 - `send_message(...)`
 - `followup_task(...)`
 - `wait_agent(...)`
 - `close_agent(...)`
 - `list_agents(...)`
 
-Also add a runtime preflight note so process skills can verify that:
+Also add a runtime note so process skills can verify feature-gated surfaces with `codex features list` when a relevant tool is absent from the surfaced session, while still treating this repo as V2-only on this machine:
 
-- `default_mode_request_user_input` is enabled when they want to use structured elicitation in Default mode
-- `multi_agent_v2` is enabled when they expect the V2 child-agent surface
+- `default_mode_request_user_input` gates structured elicitation in Default mode
+- `multi_agent_v2` gates the V2 child-agent surface
+- the local superpowers layer still requires explicit `agent_type` on every dispatch even though upstream V2 leaves it optional
 
 ## 6. The prompt-packet contract must acknowledge the current role set
 

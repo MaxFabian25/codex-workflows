@@ -27,7 +27,7 @@ The process family owns one canonical phase order:
 ## Root-Owned Elicitation
 
 - The root thread owns all user decisions.
-- When available, use `request_user_input` for discrete branch-point decisions.
+- Use `request_user_input` for discrete branch-point decisions.
 - Child agents never ask the user directly.
 - Child agents return unresolved decisions to the parent using a `decision_needed` handoff.
 

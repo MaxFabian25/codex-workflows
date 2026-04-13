@@ -1386,6 +1386,30 @@ EOF
     "$tmpdir/process-family-contract-brief-question-user" \
     'contract/process-family.md contains forbidden root-owned elicitation text `- Ask one brief clarifying question to the user if blocked.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-contract-when-available-request-user-input"
+  append_text \
+    "$tmpdir/process-family-contract-when-available-request-user-input/contract/process-family.md" \
+    $'\n- When available, use `request_user_input` for discrete branch-point decisions.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-contract-when-available-request-user-input" \
+    'contract/process-family.md contains stale request_user_input availability fallback text `- When available, use `request_user_input` for discrete branch-point decisions.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-brainstorming-plain-text-fallback"
+  append_text \
+    "$tmpdir/process-family-brainstorming-plain-text-fallback/skills/brainstorming/SKILL.md" \
+    $'\n- If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-brainstorming-plain-text-fallback" \
+    'skills/brainstorming/SKILL.md contains stale request_user_input fallback guidance `- If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-codex-tools-default-mode-request-user-input"
+  append_text \
+    "$tmpdir/process-family-codex-tools-default-mode-request-user-input/skills/using-superpowers/references/codex-tools.md" \
+    $'\n- `request_user_input` is root-thread only, and Default-mode availability depends on `default_mode_request_user_input`.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-codex-tools-default-mode-request-user-input" \
+    'skills/using-superpowers/references/codex-tools.md contains stale request_user_input availability guidance ``request_user_input` is root-thread only, and Default-mode availability depends on `default_mode_request_user_input`.``'
+
   echo "PASS: codex public fork self-tests"
 }
 

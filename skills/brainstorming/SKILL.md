@@ -87,7 +87,7 @@ This skill stops after spec approval. Isolation is the next phase and is handled
 
 The root thread owns user decisions and user-facing elicitation.
 
-When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.
+Use `request_user_input` for discrete branch-point decisions instead of writing a plain-text multiple-choice question.
 
 Use it for wedge-lock questions, approach selection, section approval, and the written-spec approval gate.
 
@@ -97,11 +97,10 @@ If the user asked for subagents and the request decomposes cleanly into read-onl
 
 Use normal prose for explanatory discussion, editorial feedback, and rich free text that does not fit a discrete branch.
 
-## Fallback Ladder
+## Local Runtime Rule
 
-- Use `request_user_input` first for discrete branch points when the runtime supports it.
-- If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.
-- If the session is non-interactive or child-scoped, return a blocker or make a documented assumption only when the risk is acceptable.
+- In this local runtime, use `request_user_input` for every eligible discrete branch-point decision in the root thread.
+- Do not replace an eligible branch-point question with a plain-text fallback or plain-text multiple-choice prompt.
 - Keep the written-spec approval gate explicit even when the final approval arrives in prose.
 
 ## Overuse Guardrails
