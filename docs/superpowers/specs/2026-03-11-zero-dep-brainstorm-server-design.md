@@ -38,7 +38,7 @@ XOR-unmask payload using 4-byte mask key. Return `{ opcode, payload, bytesConsum
 
 Three routes:
 
-1. **`GET /`** — Serve newest `.html` from screen directory by mtime. Detect full documents vs fragments, wrap fragments in frame template, inject helper.js. Return `text/html`. When no `.html` files exist, serve a hardcoded waiting page ("Waiting for Claude to push a screen...") with helper.js injected.
+1. **`GET /`** — Serve newest `.html` from screen directory by mtime. Detect full documents vs fragments, wrap fragments in frame template, inject helper.js. Return `text/html`. When no `.html` files exist, serve a hardcoded waiting page ("Waiting for the agent to push a screen...") with helper.js injected.
 2. **`GET /files/*`** — Serve static files from screen directory with MIME type lookup from a hardcoded extension map (html, css, js, png, jpg, gif, svg, json). Return 404 if not found.
 3. **Everything else** — 404.
 
@@ -59,8 +59,8 @@ Environment variables (all optional):
 2. Load frame template and helper.js from `__dirname`
 3. Start HTTP server on configured host/port
 4. Start `fs.watch` on `SCREEN_DIR`
-5. On successful listen, log `server-started` JSON to stdout: `{ type, port, host, url_host, url, screen_dir }`
-6. Write the same JSON to `SCREEN_DIR/.server-info` so agents can find connection details when stdout is hidden (background execution)
+5. On successful listen, log `server-started` JSON to stdout: `{ type, port, host, url_host, url, screen_dir, state_dir }`
+6. Write the same JSON to `STATE_DIR/server-info` so agents can find connection details when stdout is hidden (background execution)
 
 ### Application-Level WebSocket Messages
 
@@ -68,14 +68,14 @@ When a TEXT frame arrives from a client:
 
 1. Parse as JSON. If parsing fails, log to stderr and continue.
 2. Log to stdout as `{ source: 'user-event', ...event }`.
-3. If the event contains a `choice` property, append the JSON to `SCREEN_DIR/.events` (one line per event).
+3. If the event contains a `choice` property, append the JSON to `STATE_DIR/events` (one line per event).
 
 ### File Watching
 
 `fs.watch(SCREEN_DIR)` replaces chokidar. On HTML file events:
 
-- On new file (`rename` event for a file that exists): delete `.events` file if present (`unlinkSync`), log `screen-added` to stdout as JSON
-- On file change (`change` event): log `screen-updated` to stdout as JSON (do NOT clear `.events`)
+- On new file (`rename` event for a file that exists): delete `STATE_DIR/events` if present (`unlinkSync`), log `screen-added` to stdout as JSON
+- On file change (`change` event): log `screen-updated` to stdout as JSON (do NOT clear `STATE_DIR/events`)
 - Both events: send `{ type: 'reload' }` to all connected WebSocket clients
 
 Debounce per-filename with ~100ms timeout to prevent duplicate events (common on macOS and Linux).
@@ -109,7 +109,7 @@ Debounce per-filename with ~100ms timeout to prevent duplicate events (common on
 
 - `server.js` uses only cross-platform Node built-ins
 - `fs.watch` is reliable for single flat directories on macOS, Linux, and Windows
-- Shell scripts require bash (Git Bash on Windows, which is required for Claude Code)
+- Shell scripts require bash (for example Git Bash on Windows or any comparable bash-capable terminal-agent environment)
 
 ## Testing
 

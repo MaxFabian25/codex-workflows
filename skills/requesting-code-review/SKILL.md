@@ -30,8 +30,8 @@ Dispatch a focused read-only review child to catch issues before they cascade. T
 - Both roles are read-only. Do not use write-capable child roles for review.
 
 Dispatch them differently:
-- `code_quality_reviewer`: fill `code-reviewer.md`, then paste that entire filled template into `../subagent-driven-development/code-quality-reviewer-prompt.md` and dispatch the filled wrapper packet. Use the wrapper because it adds the extra task-quality checks that apply only to this role.
-- `final_reviewer`: fill `code-reviewer.md` and dispatch that filled shared template directly with `spawn_agent(..., agent_type="final_reviewer", message="...")`.
+- `code_quality_reviewer`: fill `code-reviewer.md`, then paste that entire filled template into `../subagent-driven-development/code-quality-reviewer-prompt.md` and dispatch the filled message template. Use that template because it adds the extra task-quality checks that apply only to this role.
+- `final_reviewer`: fill `code-reviewer.md` and dispatch that filled shared template directly with `spawn_agent(task_name=..., agent_type="final_reviewer", message="...")`.
 
 ## How to Request
 
@@ -60,7 +60,7 @@ Use a saved pre-task SHA or another explicit task-start commit for task-level re
 **Task-level `code_quality_reviewer`:**
 - Fill the shared template at `code-reviewer.md`.
 - Paste the entire filled shared template into `../subagent-driven-development/code-quality-reviewer-prompt.md`.
-- Dispatch the full filled wrapper packet with `spawn_agent(task_name=..., agent_type="code_quality_reviewer", message="...")`.
+- Dispatch the full filled message template with `spawn_agent(task_name=..., agent_type="code_quality_reviewer", message="...")`.
 
 **Whole-change `final_reviewer`:**
 - Fill the shared template at `code-reviewer.md`.
@@ -93,11 +93,11 @@ You: Let me request code review before proceeding.
 BASE_SHA=$TASK_2_START_SHA
 HEAD_SHA=$(git rev-parse HEAD)
 
-The actual `message=` payload must be the entire filled `../subagent-driven-development/code-quality-reviewer-prompt.md` wrapper packet. The block below is an excerpt showing the dispatch shape only. Do not send only this excerpt.
+The actual `message=` payload must be the entire filled `../subagent-driven-development/code-quality-reviewer-prompt.md` message template. The block below is an excerpt showing the dispatch shape only. Do not send only this excerpt.
 
-spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", message="[full filled code-quality-reviewer-prompt.md wrapper packet for Task 2]")
+spawn_agent(task_name="task_2_code_review", agent_type="code_quality_reviewer", message="[full filled code-quality-reviewer-prompt.md message template for Task 2]")
 
-  Excerpt from the actual wrapper payload:
+  Excerpt from the actual message payload:
   <filled-shared-review-template>
   # Code Review Agent
 

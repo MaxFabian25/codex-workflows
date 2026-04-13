@@ -728,26 +728,27 @@ Use this file as the Codex-native translation layer for skill instructions.
 
 | Skill references | Codex equivalent |
 |---|---|
-| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="worker" | "explorer" | "implementer" | "spec_reviewer" | "code_quality_reviewer" | "parallel_explorer" | "final_reviewer", message="...")` |
-| Multiple `Task` calls (parallel) | Multiple `spawn_agent(...)` calls |
+| `Task` tool (dispatch subagent) | `spawn_agent(task_name=..., agent_type="<required local role such as default|worker|explorer|parallel_explorer|implementer|spec_reviewer|code_quality_reviewer|final_reviewer>", message="...")` |
+| Multiple `Task` calls (parallel) | Multiple `spawn_agent(task_name=..., agent_type="...", message="...")` calls |
 | Wait for child result | `wait_agent(...)` |
 | Close completed child | `close_agent(...)` |
-| `TodoWrite` | `update_plan` |
+| `TodoWrite` | `update_plan(...)` |
 | `Skill` tool | Read the relevant `SKILL.md` from the plugin and follow it |
 | File edits | `apply_patch` |
 | Shell commands | `exec_command` |
 
 ## Runtime checks
 
-Before relying on plugin or subagent workflows, verify the live runtime:
+Before relying on plugin or subagent workflows, verify the latest-alpha runtime on this machine:
 
 ```bash
-codex features list | rg '^(plugins|multi_agent|multi_agent_v2)[[:space:]]+'
+codex features list | rg '^(plugins|multi_agent_v2|default_mode_request_user_input)[[:space:]]+'
 ```
 
 ## Dispatch rules
 
 - Always pass a stable lowercase `task_name`.
+- Always pass explicit `agent_type` on local multi-agent dispatch.
 - Keep the parent session responsible for user clarification, escalation, and synthesis.
 - Use read-only roles for review and exploration.
 - Do not pass `model` or `reasoning_effort` unless the user explicitly requests an override.

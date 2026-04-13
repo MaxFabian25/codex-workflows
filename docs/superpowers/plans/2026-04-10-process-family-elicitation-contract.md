@@ -161,25 +161,23 @@ Expected: `FAIL` with missing required text for `skills/using-superpowers/refere
 
 - [ ] **Step 3: Expand `skills/using-superpowers/references/codex-tools.md` to reflect the active local tool surface**
 
-```diff
-@@
- | `Task` tool or subagent dispatch | `spawn_agent(task_name=..., agent_type=worker|explorer|implementer|spec_reviewer|code_quality_reviewer|parallel_explorer|final_reviewer, message="...")` |
- | Multiple `Task` calls | Multiple `spawn_agent(...)` calls |
-+| Structured user decision | `request_user_input(questions=[...])` |
-+| Add message to live child | `send_message(...)` |
-+| Wake a live child with new work | `followup_task(...)` |
- | Wait for child result | `wait_agent(...)` |
- | Close completed child | `close_agent(...)` |
-+| List live child agents | `list_agents(...)` |
-@@
--codex features list | rg '^(plugins|multi_agent|multi_agent_v2)[[:space:]]+'
-+codex features list | rg '^(plugins|multi_agent_v2|default_mode_request_user_input)[[:space:]]+'
-+
-+- Use `request_user_input` in Default mode only when `default_mode_request_user_input` is enabled.
-+- Use the V2 child-agent surface only when `multi_agent_v2` is enabled.
-@@
- - The parent owns clarification, escalation, and final synthesis.
-+- The root thread owns user elicitation.
+```markdown
+| `Task` tool or subagent dispatch | `spawn_agent(task_name=..., agent_type="<required local role such as default|worker|explorer|parallel_explorer|implementer|spec_reviewer|code_quality_reviewer|final_reviewer>", message="...")` |
+| Multiple `Task` calls | Multiple `spawn_agent(task_name=..., agent_type="...", message="...")` calls |
+| Structured user decision | `request_user_input(questions=[...])` |
+| Add message to live child | `send_message(...)` |
+| Wake a live child with new work | `followup_task(...)` |
+| Wait for child result | `wait_agent(...)` |
+| Close completed child | `close_agent(...)` |
+| List live child agents | `list_agents(...)` |
+
+codex features list | rg '^(plugins|multi_agent_v2|default_mode_request_user_input)[[:space:]]+'
+
+- Use latest-alpha feature preflight only when a relevant gated tool is absent from the surfaced session.
+- This local implementation assumes the V2 child-agent surface on this machine.
+- This local implementation requires explicit `agent_type` on every multi-agent dispatch.
+- The parent owns clarification, escalation, and final synthesis.
+- The root thread owns user elicitation.
 ```
 
 - [ ] **Step 4: Update `skills/brainstorming/SKILL.md` to distinguish structured decisions from prose discussion**

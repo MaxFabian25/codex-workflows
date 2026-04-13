@@ -58,10 +58,7 @@ PROMPT_TARGETS = [
 ]
 
 PROMPT_REQUIRED_SUBSTRINGS = [
-    "Codex subagent packet:",
-    "items:",
-    '- type: "text"',
-    "text: |",
+    'Pass the following content directly as the `message` string in `spawn_agent(task_name="...", agent_type="...", message="...")`:',
     "Your task is to perform the following.",
     "Follow the instructions below exactly.",
     "<agent-instructions>",
@@ -69,19 +66,15 @@ PROMPT_REQUIRED_SUBSTRINGS = [
     "Execute this now. Output ONLY the structured",
 ]
 
-PROMPT_AGENT_TYPE_REQUIREMENTS = {
-    "skills/brainstorming/spec-document-reviewer-prompt.md": 'agent_type: "explorer"',
-    "skills/writing-plans/plan-document-reviewer-prompt.md": 'agent_type: "explorer"',
-    "skills/subagent-driven-development/implementer-prompt.md": 'agent_type: "worker"',
-    "skills/subagent-driven-development/spec-reviewer-prompt.md": 'agent_type: "explorer"',
-    "skills/subagent-driven-development/code-quality-reviewer-prompt.md": 'agent_type: "explorer"',
-}
-
 PROMPT_FORBIDDEN_STRINGS = [
-    "Codex subagent packet (preferred v2):",
+    "Pass the following content directly as the `message` string in `spawn_agent(...)`:",
+    "Codex subagent packet:",
+    "items:",
+    '- type: "text"',
+    "text: |",
     "Task tool (general-purpose):",
     "task_name:",
-    'agent_type: "reviewer"',
+    "agent_type:",
 ]
 
 PROCESS_FAMILY_SKILL_CROSS_REFERENCES = [
@@ -129,7 +122,7 @@ CHILD_ELICITATION_FORBIDDEN_LINE_PATTERNS = [
 ]
 
 ROOT_OWNED_CONTRACT_ALLOWED_LINES = {
-    "- When available, use `request_user_input` for discrete branch-point decisions.",
+    "- Use `request_user_input` for discrete branch-point decisions.",
     "- Child agents never ask the user directly.",
     "- Child packets must not instruct the child to call `request_user_input`.",
 }
@@ -160,48 +153,62 @@ TARGETED_REQUIRED_SUBSTRINGS = {
     "contract/process-family.md": [
         "## Root-Owned Elicitation",
         "The root thread owns all user decisions.",
-        "When available, use `request_user_input` for discrete branch-point decisions.",
+        "Use `request_user_input` for discrete branch-point decisions.",
         "not write-owning execution or direct user elicitation.",
         "Child agents never ask the user directly.",
         "Child agents return unresolved decisions to the parent using a `decision_needed` handoff.",
     ],
     "contract/prompt-packet.md": [
-        "`parallel_explorer`",
-        "`implementer`",
-        "`spec_reviewer`",
-        "`code_quality_reviewer`",
-        "`final_reviewer`",
-        'Current wrapper packet templates for read-only review still use inner `agent_type: "explorer"` until packet-level bindings are verified end-to-end.',
+        "passed directly as the outer `message=` string on `spawn_agent(task_name=..., agent_type=\"...\", message=\"...\")`",
+        "Do not wrap the message in an inner YAML packet",
+        "Do not wrap the message in an inner YAML packet, nested `items:` list, or inner `agent_type:` field.",
+        "On the latest alpha V2 surface, `task_name` and `message` are the required dispatch fields in the raw schema, but this local superpowers implementation additionally requires explicit outer `agent_type`",
+        "Pass the message body directly to `spawn_agent(task_name=\"...\", agent_type=\"...\", message=\"...\")`.",
+        "For this local implementation, always set `agent_type` explicitly on multi-agent dispatch.",
+        "The current built-in roles on this machine include",
         "Child packets must not instruct the child to call `request_user_input`.",
         "If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.",
         "Keep parent-owned arbitration and user-facing clarification in the root thread.",
     ],
     "skills/using-superpowers/references/codex-tools.md": [
+        "The surfaced tool list in the active session is the runtime truth for the current turn.",
+        "This reference is aligned to the latest alpha Codex CLI surface on this machine",
+        "It intentionally assumes the V2 multi-agent surface on this machine",
         "`request_user_input(...)`",
         "`request_user_input(questions=[...])`",
         "`send_message(...)`",
         "`followup_task(...)`",
         "`list_agents(...)`",
-        "default_mode_request_user_input",
-        "multi_agent_v2",
-        "codex features list | rg '^(plugins|multi_agent_v2|default_mode_request_user_input)[[:space:]]+'",
-        "Use `request_user_input` in Default mode only when `default_mode_request_user_input` is enabled.",
-        "Use the V2 child-agent surface (`send_message(...)`, `followup_task(...)`, `list_agents(...)`) only when `multi_agent_v2` is enabled.",
+        "`update_plan(...)`",
+        "`multi_tool_use.parallel(...)`",
+        "For latest-alpha preflight on this machine, verify feature-gated surfaces with `codex features list`",
+        "`request_user_input` is root-thread only and enabled in this local runtime for root-thread elicitation.",
+        "Treat it as the local structured-decision surface for eligible discrete branch-point questions.",
+        "This reference intentionally targets the V2 child-agent surface gated by `multi_agent_v2`.",
+        "On `codex-cli 0.121.0-alpha.1` / `rust-v0.121.0-alpha.1`, this surfaced Codex tool schema requires `task_name` and `message`; the upstream handler still treats `agent_type` as optional metadata.",
+        "This local superpowers implementation requires explicit `agent_type` on every multi-agent dispatch because role selection is part of the contract.",
+        "The built-in `image_generation` tool is a real Codex CLI surface, but it is still gated by runtime feature/model/auth checks and may not appear in every session.",
         "The root thread owns user elicitation.",
+    ],
+    "skills/brainstorming/spec-document-reviewer-prompt.md": [
+        'Dispatch this packet with `agent_type="parallel_explorer"` in the local V2-only contract.',
+    ],
+    "skills/writing-plans/plan-document-reviewer-prompt.md": [
+        'Dispatch this packet with `agent_type="parallel_explorer"` in the local V2-only contract.',
     ],
     "skills/brainstorming/SKILL.md": [
         "3. **Ask clarifying questions / branch-point questions** — one at a time; use `request_user_input` for discrete decisions and prose when the user needs rich feedback",
         '"Ask clarifying questions / branch-point questions" [shape=box];',
         "## Structured Elicitation In Codex",
         "The root thread owns user decisions and user-facing elicitation.",
-        "When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question.",
+        "Use `request_user_input` for discrete branch-point decisions instead of writing a plain-text multiple-choice question.",
         "Use it for wedge-lock questions, approach selection, section approval, and the written-spec approval gate.",
         "Keep it to one decision per tool call unless two choices are inseparable and the user cannot answer one without the other.",
         "If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before asking the next wedge-lock question.",
         "Use normal prose for explanatory discussion, editorial feedback, and rich free text that does not fit a discrete branch.",
-        "## Fallback Ladder",
-        "If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.",
-        "If the session is non-interactive or child-scoped, return a blocker or make a documented assumption only when the risk is acceptable.",
+        "## Local Runtime Rule",
+        "In this local runtime, use `request_user_input` for every eligible discrete branch-point decision in the root thread.",
+        "Do not replace an eligible branch-point question with a plain-text fallback or plain-text multiple-choice prompt.",
         "## Overuse Guardrails",
         "Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.",
         "Do not use `request_user_input` when rich prose is the real need.",
@@ -229,12 +236,6 @@ NO_BACKWARD_COMPAT_TARGETS = [
 ]
 
 STALE_DISPATCH_GUIDANCE = {
-    "skills/dispatching-parallel-agents/SKILL.md": [
-        (re.compile(r'fork_turns="all"'), 'fork_turns="all"'),
-    ],
-    "skills/subagent-driven-development/SKILL.md": [
-        (re.compile(r'fork_turns="all"'), 'fork_turns="all"'),
-    ],
     "skills/requesting-code-review/SKILL.md": [
         (re.compile(r'`assign_task`'), "assign_task"),
         (re.compile(r'agent_type="reviewer"'), 'agent_type="reviewer"'),
@@ -282,6 +283,18 @@ TARGETED_CONTENT_GUARDS = {
             re.compile(r"\*\*Multiple choice preferred\*\*"),
             'contains stale `Multiple choice preferred` guidance after the structured elicitation cutover',
         ),
+        (
+            re.compile(r"When `request_user_input` is available, use it for discrete branch-point decisions instead of writing a plain-text multiple-choice question\."),
+            'contains stale request_user_input availability fallback guidance',
+        ),
+        (
+            re.compile(r"## Fallback Ladder"),
+            'contains stale request_user_input fallback section heading',
+        ),
+        (
+            re.compile(r"If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking\."),
+            'contains stale request_user_input fallback guidance `- If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.`',
+        ),
     ],
     "skills/brainstorming/visual-companion.md": [
         (
@@ -295,6 +308,18 @@ TARGETED_CONTENT_GUARDS = {
         (
             re.compile(r"Bash tool call"),
             'contains stale `Bash tool call` guidance',
+        ),
+    ],
+    "contract/process-family.md": [
+        (
+            re.compile(r"When available, use `request_user_input` for discrete branch-point decisions\."),
+            'contains stale request_user_input availability fallback text `- When available, use `request_user_input` for discrete branch-point decisions.`',
+        ),
+    ],
+    "skills/using-superpowers/references/codex-tools.md": [
+        (
+            re.compile(r"`request_user_input` is root-thread only, and Default-mode availability depends on `default_mode_request_user_input`\."),
+            'contains stale request_user_input availability guidance ``request_user_input` is root-thread only, and Default-mode availability depends on `default_mode_request_user_input`.``',
         ),
     ],
 }
@@ -400,9 +425,6 @@ def validate_family(root: Path, family: str) -> list[str]:
         for required in PROMPT_REQUIRED_SUBSTRINGS:
             if required not in text:
                 issues.append(f"{rel_path} is missing required prompt text `{required}`")
-        agent_type = PROMPT_AGENT_TYPE_REQUIREMENTS[rel_path]
-        if agent_type not in text:
-            issues.append(f"{rel_path} is missing required prompt text `{agent_type}`")
         for forbidden in PROMPT_FORBIDDEN_STRINGS:
             if forbidden in text:
                 issues.append(f"{rel_path} contains forbidden prompt text `{forbidden}`")

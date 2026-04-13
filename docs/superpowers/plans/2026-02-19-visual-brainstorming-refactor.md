@@ -4,9 +4,9 @@
 
 **Goal:** Refactor visual brainstorming from blocking TUI feedback model to non-blocking "Browser Displays, Terminal Commands" architecture.
 
-**Architecture:** Browser becomes an interactive display; terminal stays the conversation channel. Server writes user events to a per-screen `.events` file that Claude reads on its next turn. Eliminates `wait-for-feedback.sh` and all `TaskOutput` blocking.
+**Architecture:** Browser becomes an interactive display; terminal stays the conversation channel. Server writes user events to `state_dir/events`, which the agent reads on its next turn. Eliminates `wait-for-feedback.sh` and all `TaskOutput` blocking.
 
-**Tech Stack:** Node.js (Express, ws, chokidar), vanilla HTML/CSS/JS
+**Tech Stack:** Node.js, browser HTML/CSS/JS, current live server surface under `skills/brainstorming/scripts/`
 
 **Spec:** `docs/superpowers/specs/2026-02-19-visual-brainstorming-refactor-design.md`
 
@@ -16,10 +16,10 @@
 
 | File | Action | Responsibility |
 |------|--------|---------------|
-| `lib/brainstorm-server/index.js` | Modify | Server: add `.events` file writing, clear on new screen, replace `wrapInFrame` |
-| `lib/brainstorm-server/frame-template.html` | Modify | Template: remove feedback footer, add content placeholder + selection indicator |
-| `lib/brainstorm-server/helper.js` | Modify | Client JS: remove send/feedback functions, narrow to click capture + indicator updates |
-| `lib/brainstorm-server/wait-for-feedback.sh` | Delete | No longer needed |
+| `skills/brainstorming/scripts/server.cjs` | Modify | Server: add `state_dir/events` writing, clear on new screen, replace `wrapInFrame` |
+| `skills/brainstorming/scripts/frame-template.html` | Modify | Template: remove feedback footer, add content placeholder + selection indicator |
+| `skills/brainstorming/scripts/helper.js` | Modify | Client JS: remove send/feedback functions, narrow to click capture + indicator updates |
+| `skills/brainstorming/scripts/wait-for-feedback.sh` | Delete | Historical helper no longer needed |
 | `skills/brainstorming/visual-companion.md` | Modify | Skill instructions: rewrite loop to non-blocking flow |
 | `tests/brainstorm-server/server.test.js` | Modify | Tests: update for new template structure and helper.js API |
 
@@ -30,7 +30,7 @@
 ### Task 1: Update `frame-template.html`
 
 **Files:**
-- Modify: `lib/brainstorm-server/frame-template.html`
+- Modify: `skills/brainstorming/scripts/frame-template.html`
 
 - [ ] **Step 1: Remove the feedback footer HTML**
 
@@ -85,7 +85,7 @@ Expected: Tests 1-5 should still pass. Tests 6-8 may fail (expected — they ass
 - [ ] **Step 4: Commit**
 
 ```bash
-git add lib/brainstorm-server/frame-template.html
+git add skills/brainstorming/scripts/frame-template.html
 git commit -m "Replace feedback footer with selection indicator bar in brainstorm template"
 ```
 
@@ -94,7 +94,7 @@ git commit -m "Replace feedback footer with selection indicator bar in brainstor
 ### Task 2: Update `index.js` — content injection and `.events` file
 
 **Files:**
-- Modify: `lib/brainstorm-server/index.js`
+- Modify: `skills/brainstorming/scripts/server.cjs`
 
 - [ ] **Step 1: Write failing test for `.events` file writing**
 
@@ -109,8 +109,8 @@ Add to `tests/brainstorm-server/server.test.js` after Test 4 area — a new test
     ws3.send(JSON.stringify({ type: 'click', choice: 'a', text: 'Option A' }));
     await sleep(300);
 
-    const eventsFile = path.join(TEST_DIR, '.events');
-    assert(fs.existsSync(eventsFile), '.events file should exist after choice click');
+    const eventsFile = path.join(TEST_STATE_DIR, 'events');
+    assert(fs.existsSync(eventsFile), 'state_dir/events should exist after choice click');
     const lines = fs.readFileSync(eventsFile, 'utf-8').trim().split('\n');
     const event = JSON.parse(lines[lines.length - 1]);
     assert.strictEqual(event.choice, 'a', 'Event should contain choice');
@@ -153,7 +153,7 @@ Expected: New test FAILS — `.events` not cleared on screen push.
 In the WebSocket `message` handler (line 74-77 of `index.js`), after the `console.log`, add:
 
 ```javascript
-    // Write user events to .events file for Claude to read
+    // Write user events to state_dir/events for the agent to read
     if (event.choice) {
       const eventsFile = path.join(SCREEN_DIR, '.events');
       fs.appendFileSync(eventsFile, JSON.stringify(event) + '\n');
@@ -193,8 +193,8 @@ Expected: New `.events` tests PASS. Existing tests may still have failures from 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add lib/brainstorm-server/index.js tests/brainstorm-server/server.test.js
-git commit -m "Add .events file writing and comment-based content injection to brainstorm server"
+git add skills/brainstorming/scripts/server.cjs tests/brainstorm-server/server.test.js
+git commit -m "Add state_dir events writing and comment-based content injection to brainstorm server"
 ```
 
 ---
@@ -202,7 +202,7 @@ git commit -m "Add .events file writing and comment-based content injection to b
 ### Task 3: Simplify `helper.js`
 
 **Files:**
-- Modify: `lib/brainstorm-server/helper.js`
+- Modify: `skills/brainstorming/scripts/helper.js`
 
 - [ ] **Step 1: Remove `sendToClaude` function**
 
@@ -272,7 +272,7 @@ cd "$(git rev-parse --show-toplevel)" && node tests/brainstorm-server/server.tes
 - [ ] **Step 9: Commit**
 
 ```bash
-git add lib/brainstorm-server/helper.js
+git add skills/brainstorming/scripts/helper.js
 git commit -m "Simplify helper.js: remove feedback functions, narrow to choice capture + indicator"
 ```
 
@@ -328,7 +328,7 @@ Replace Test 8 (lines 145-149) — `sendToClaude` no longer exists. Test the ind
     // Test 8: Indicator bar uses CSS variables (theme support)
     console.log('Test 8: Indicator bar uses CSS variables');
     const templateContent = fs.readFileSync(
-      path.join(__dirname, '../../lib/brainstorm-server/frame-template.html'), 'utf-8'
+      path.join(__dirname, '../../skills/brainstorming/scripts/frame-template.html'), 'utf-8'
     );
     assert(templateContent.includes('indicator-bar'), 'Template should have indicator bar');
     assert(templateContent.includes('indicator-text'), 'Template should have indicator text element');
@@ -354,7 +354,7 @@ git commit -m "Update brainstorm server tests for new template structure and hel
 ### Task 5: Delete `wait-for-feedback.sh`
 
 **Files:**
-- Delete: `lib/brainstorm-server/wait-for-feedback.sh`
+- Delete: `skills/brainstorming/scripts/wait-for-feedback.sh`
 
 - [ ] **Step 1: Verify no other files import or reference `wait-for-feedback.sh`**
 
@@ -368,7 +368,7 @@ Expected references: only `visual-companion.md` (rewritten in Task 6) and possib
 - [ ] **Step 2: Delete the file**
 
 ```bash
-rm lib/brainstorm-server/wait-for-feedback.sh
+rm skills/brainstorming/scripts/wait-for-feedback.sh
 ```
 
 - [ ] **Step 3: Run tests to confirm nothing breaks**
@@ -381,8 +381,8 @@ Expected: All tests PASS (no test referenced this file).
 - [ ] **Step 4: Commit**
 
 ```bash
-git add -u lib/brainstorm-server/wait-for-feedback.sh
-git commit -m "Delete wait-for-feedback.sh: replaced by .events file"
+git add -u skills/brainstorming/scripts/wait-for-feedback.sh
+git commit -m "Delete wait-for-feedback.sh: replaced by state_dir events"
 ```
 
 ---
@@ -427,7 +427,7 @@ Replace the entire "The Loop" section with:
    - Ask them to respond in the terminal: "Take a look and let me know what you think. Click to select an option if you'd like."
 
 3. **On your next turn** — after the user responds in the terminal:
-   - Read `$SCREEN_DIR/.events` if it exists — this contains the user's browser interactions (clicks, selections) as JSON lines
+   - Read `$STATE_DIR/events` if it exists — this contains the user's browser interactions (clicks, selections) as JSON lines
    - Merge with the user's terminal text to get the full picture
    - The terminal message is the primary feedback; `.events` provides structured interaction data
 
@@ -443,7 +443,7 @@ Replace with:
 ```markdown
 ## Browser Events Format
 
-When the user clicks options in the browser, their interactions are recorded to `$SCREEN_DIR/.events` (one JSON object per line). The file is cleared automatically when you push a new screen.
+When the user clicks options in the browser, their interactions are recorded to `$STATE_DIR/events` (one JSON object per line). The file is cleared automatically when you push a new screen.
 
 ```jsonl
 {"type":"click","choice":"a","text":"Option A - Simple Layout","timestamp":1706000101}
@@ -471,8 +471,8 @@ Remove the helper.js reference description about "JS API" — the API is now min
 ```markdown
 ## Reference
 
-- Frame template (CSS reference): `${CLAUDE_PLUGIN_ROOT}/lib/brainstorm-server/frame-template.html`
-- Helper script (client-side): `${CLAUDE_PLUGIN_ROOT}/lib/brainstorm-server/helper.js`
+- Frame template (CSS reference): `skills/brainstorming/scripts/frame-template.html`
+- Helper script (client-side): `skills/brainstorming/scripts/helper.js`
 ```
 
 - [ ] **Step 7: Commit**
@@ -498,13 +498,13 @@ Expected: ALL tests PASS.
 Start the server manually and verify the flow works end-to-end:
 
 ```bash
-cd "$(git rev-parse --show-toplevel)" && lib/brainstorm-server/start-server.sh --project-dir /tmp/brainstorm-smoke-test
+cd "$(git rev-parse --show-toplevel)" && skills/brainstorming/scripts/start-server.sh --project-dir /tmp/brainstorm-smoke-test
 ```
 
 Write a test fragment, open in browser, click an option, verify `.events` file is written, verify indicator bar updates. Then stop the server:
 
 ```bash
-lib/brainstorm-server/stop-server.sh <screen_dir from start output>
+skills/brainstorming/scripts/stop-server.sh <screen_dir from start output>
 ```
 
 - [ ] **Step 3: Verify no stale references remain**

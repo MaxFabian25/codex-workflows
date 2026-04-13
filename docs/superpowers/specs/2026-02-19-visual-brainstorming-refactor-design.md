@@ -2,13 +2,13 @@
 
 **Date:** 2026-02-19
 **Status:** Approved
-**Scope:** `lib/brainstorm-server/`, `skills/brainstorming/visual-companion.md`, `tests/brainstorm-server/`
+**Scope:** `skills/brainstorming/scripts/`, `skills/brainstorming/visual-companion.md`, `tests/brainstorm-server/`
 
 ## Problem
 
-During visual brainstorming, Claude runs `wait-for-feedback.sh` as a background task and blocks on `TaskOutput(block=true, timeout=600s)`. This seizes the TUI entirely — the user cannot type to Claude while visual brainstorming is running. The browser becomes the only input channel.
+During visual brainstorming, the agent ran `wait-for-feedback.sh` as a background task and blocked on `TaskOutput(block=true, timeout=600s)`. This seized the TUI entirely — the user could not type in the terminal while visual brainstorming was running. The browser became the only input channel.
 
-Claude Code's execution model is turn-based. There is no way for Claude to listen on two channels simultaneously within a single turn. The blocking `TaskOutput` pattern was the wrong primitive — it simulates event-driven behavior the platform doesn't support.
+The terminal-agent execution model is turn-based. There is no way for the agent to listen on two channels simultaneously within a single turn. The blocking `TaskOutput` pattern was the wrong primitive — it simulates event-driven behavior the platform does not support.
 
 ## Design
 
@@ -24,18 +24,18 @@ Claude Code's execution model is turn-based. There is no way for Claude to liste
 2. Server detects it via chokidar, pushes WebSocket reload to the browser (unchanged)
 3. Claude ends its turn — tells the user to check the browser and respond in the terminal
 4. User looks at browser, optionally clicks to select an option, then types feedback in the terminal
-5. On the next turn, Claude reads `$SCREEN_DIR/.events` for the browser interaction stream (clicks, selections), merges with the terminal text
+5. On the next turn, the agent reads `$STATE_DIR/events` for the browser interaction stream (clicks, selections), merges it with the terminal text
 6. Iterate or advance
 
 No background tasks. No `TaskOutput` blocking. No polling scripts.
 
 ### Key Deletion: `wait-for-feedback.sh`
 
-Deleted entirely. Its purpose was to bridge "server logs events to stdout" and "Claude needs to receive those events." The `.events` file replaces this — the server writes user interaction events directly, and Claude reads them with whatever file-reading mechanism the platform provides.
+Deleted entirely. Its purpose was to bridge "server logs events to stdout" and "the agent needs to receive those events." The `state_dir/events` file replaces this — the server writes user interaction events directly, and the agent reads them with whatever file-reading mechanism the runtime provides.
 
-### Key Addition: `.events` File (Per-Screen Event Stream)
+### Key Addition: `state_dir/events` (Per-Session Event Stream)
 
-The server writes all user interaction events to `$SCREEN_DIR/.events`, one JSON object per line. This gives Claude the full interaction stream for the current screen — not just the final selection, but the user's exploration path (clicked A, then B, settled on C).
+The server writes all user interaction events to `$STATE_DIR/events`, one JSON object per line. This gives the agent the full interaction stream for the current screen — not just the final selection, but the user's exploration path (clicked A, then B, settled on C).
 
 Example contents after a user explores options:
 
@@ -47,21 +47,21 @@ Example contents after a user explores options:
 
 - Append-only within a screen. Each user event is appended as a new line.
 - The file is cleared (deleted) when chokidar detects a new HTML file (new screen pushed), preventing stale events from carrying over.
-- If the file doesn't exist when Claude reads it, no browser interaction occurred — Claude uses only the terminal text.
+- If the file doesn't exist when the agent reads it, no browser interaction occurred — the terminal text stands on its own.
 - The file contains only user events (`click`, etc.) — not server lifecycle events (`server-started`, `screen-added`). This keeps it small and focused.
-- Claude can read the full stream to understand the user's exploration pattern, or just look at the last `choice` event for the final selection.
+- The agent can read the full stream to understand the user's exploration pattern, or just look at the last `choice` event for the final selection.
 
 ## Changes by File
 
-### `index.js` (server)
+### `server.cjs` (server)
 
-**A. Write user events to `.events` file.**
+**A. Write user events to `state_dir/events`.**
 
-In the WebSocket `message` handler, after logging the event to stdout: append the event as a JSON line to `$SCREEN_DIR/.events` via `fs.appendFileSync`. Only write user interaction events (those with `source: 'user-event'`), not server lifecycle events.
+In the WebSocket `message` handler, after logging the event to stdout: append the event as a JSON line to `$STATE_DIR/events` via `fs.appendFileSync`. Only write user interaction events (those with `source: 'user-event'`), not server lifecycle events.
 
-**B. Clear `.events` on new screen.**
+**B. Clear `state_dir/events` on new screen.**
 
-In the chokidar `add` handler (new `.html` file detected), delete `$SCREEN_DIR/.events` if it exists. This is the definitive "new screen" signal — better than clearing on GET `/` which fires on every reload.
+In the chokidar `add` handler (new `.html` file detected), delete `$STATE_DIR/events` if it exists. This is the definitive "new screen" signal — better than clearing on GET `/` which fires on every reload.
 
 **C. Replace `wrapInFrame` content injection.**
 
@@ -143,9 +143,9 @@ Tests that need updating:
 
 ## Platform Compatibility
 
-The server code (`index.js`, `helper.js`, `frame-template.html`) is fully platform-agnostic — pure Node.js and browser JavaScript. No Claude Code-specific references. Already proven to work on Codex via background terminal interaction.
+The server code (`server.cjs`, `helper.js`, `frame-template.html`) is fully platform-agnostic — pure Node.js and browser JavaScript. No agent-brand-specific references are required.
 
-The skill instructions (`visual-companion.md`) are the platform-adaptive layer. Each platform's Claude uses its own tools to start the server, read `.events`, etc. The non-blocking model works naturally across platforms since it doesn't depend on any platform-specific blocking primitive.
+The skill instructions (`visual-companion.md`) are the platform-adaptive layer. Each agent runtime uses its own tools to start the server, read `state_dir/events`, and manage the long-lived process. The non-blocking model works naturally across runtimes since it doesn't depend on any platform-specific blocking primitive.
 
 ## What This Enables
 
@@ -153,7 +153,7 @@ The skill instructions (`visual-companion.md`) are the platform-adaptive layer. 
 - **Mixed input** — click in browser + type in terminal, naturally merged
 - **Graceful degradation** — browser down or user doesn't open it? Terminal still works
 - **Simpler architecture** — no background tasks, no polling scripts, no timeout management
-- **Cross-platform** — same server code works on Claude Code, Codex, and any future platform
+- **Cross-platform** — the same server code works on Codex and any future terminal-agent platform
 
 ## What This Drops
 
