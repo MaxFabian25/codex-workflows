@@ -55,14 +55,55 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
    }
    ```
 
-3. Restart Codex.
+3. Install the local cmux launcher.
+
+   ```bash
+   python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+   ```
+
+4. Install the Superpowers SessionStart hook.
+
+   ```bash
+   python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+   ```
+
+5. Install the cmux Codex hooks.
+
+   ```bash
+   cmux codex install-hooks
+   ```
+
+6. Enable Codex hooks in persistent config.
+
+   The launcher and `cmux-superpowers doctor` read the persisted setting from `~/.codex/config.toml`, so set it there instead of relying on a one-shot flag.
+
+   Persistent config:
+
+   ```toml
+   [features]
+   codex_hooks = true
+   ```
+
+7. Restart Codex.
 
 ## Verify
+
+Confirm the local launcher is installed and the workstation is ready:
+
+```bash
+command -v cmux-superpowers
+cmux-superpowers doctor
+```
+
+`cmux-superpowers doctor` verifies both the `cmux` binary and a live `cmux list-workspaces` runtime probe, not just PATH discovery.
 
 Run:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
+codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'
+test -f ~/.codex/hooks.json
+rg 'loading superpowers|session-start' ~/.codex/hooks.json
 ```
 
 Then start a new session with:
@@ -79,10 +120,22 @@ git -C ~/plugins/superpowers-codex pull
 
 Restart Codex after updating.
 
-## Uninstall
-
-Remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`, then delete the clone:
+If you moved the clone to a different path, rerun:
 
 ```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+```
+
+## Uninstall
+
+First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
+
+Then remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, and delete the clone:
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+cmux codex uninstall-hooks
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 rm -rf ~/plugins/superpowers-codex
 ```

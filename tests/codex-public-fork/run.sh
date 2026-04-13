@@ -29,6 +29,10 @@ forbidden_stale_hooks_path() {
   join_fragments "~/.config/" "superpowers/hooks/"
 }
 
+forbidden_no_hook_bootstrap_wording() {
+  join_fragments "does not depend on " "Codex hook bootstrap"
+}
+
 expected_release_version() {
   printf '%s' '5.0.6-codex.1'
 }
@@ -54,6 +58,55 @@ expected_issue() {
   join_fragments "$rel_path" " contains forbidden snippet: " "$snippet"
 }
 
+require_path() {
+  local rel_path="$1"
+
+  if [[ ! -e "$ROOT/$rel_path" ]]; then
+    printf 'Expected required path %s to exist.\n' "$rel_path" >&2
+    return 1
+  fi
+}
+
+require_pattern() {
+  local pattern="$1"
+  shift
+
+  if ! rg -n "$pattern" "$@" >/dev/null; then
+    printf 'Expected pattern %s in: %s\n' "$pattern" "$*" >&2
+    return 1
+  fi
+}
+
+reject_pattern() {
+  local pattern="$1"
+  shift
+
+  if rg -n "$pattern" "$@" >/dev/null; then
+    printf 'Forbidden pattern %s found in: %s\n' "$pattern" "$*" >&2
+    return 1
+  fi
+}
+
+require_fixed() {
+  local needle="$1"
+  shift
+
+  if ! rg -F -n -- "$needle" "$@" >/dev/null; then
+    printf 'Expected literal %s in: %s\n' "$needle" "$*" >&2
+    return 1
+  fi
+}
+
+reject_fixed() {
+  local needle="$1"
+  shift
+
+  if rg -F -n -- "$needle" "$@" >/dev/null; then
+    printf 'Forbidden literal %s found in: %s\n' "$needle" "$*" >&2
+    return 1
+  fi
+}
+
 prepare_fixture() {
   local fixture_root="$1"
 
@@ -67,21 +120,61 @@ prepare_fixture() {
     "$fixture_root/.codex" \
     "$fixture_root/.github/ISSUE_TEMPLATE" \
     "$fixture_root/docs" \
+    "$fixture_root/hooks" \
+    "$fixture_root/tests/cmux-superpowers" \
     "$fixture_root/skills/sample" \
     "$fixture_root/contract" \
     "$fixture_root/_shared/validators" \
     "$fixture_root/tests/codex-public-fork"
 
   cp "$ROOT/scripts/validate_codex_public_fork.py" "$fixture_root/scripts/validate_codex_public_fork.py"
+  cp "$ROOT/scripts/install_codex_hooks.py" "$fixture_root/scripts/install_codex_hooks.py"
+  cp "$ROOT/scripts/install_cmux_superpowers_launcher.py" "$fixture_root/scripts/install_cmux_superpowers_launcher.py"
+  cp "$ROOT/scripts/cmux_superpowers_team.py" "$fixture_root/scripts/cmux_superpowers_team.py"
+  cp "$ROOT/hooks/hooks.json" "$fixture_root/hooks/hooks.json"
+  cp "$ROOT/hooks/session-start" "$fixture_root/hooks/session-start"
 
   cat >"$fixture_root/README.md" <<'EOF'
-Codex-only package README.
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- Set `[features].codex_hooks = true` in ~/.codex/config.toml
+- cmux-superpowers doctor
+
+Uninstall with:
+- Remove the `superpowers-codex` entry from ~/.agents/plugins/marketplace.json
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+- cmux codex uninstall-hooks
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 EOF
   cat >"$fixture_root/.codex/INSTALL.md" <<'EOF'
-Install docs for Codex users.
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- Set `[features].codex_hooks = true` in ~/.codex/config.toml
+- cmux-superpowers doctor
+
+Uninstall with:
+- Remove the `superpowers-codex` entry from ~/.agents/plugins/marketplace.json
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+- cmux codex uninstall-hooks
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 EOF
   cat >"$fixture_root/docs/README.codex.md" <<'EOF'
-Codex docs surface.
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- Set `[features].codex_hooks = true` in ~/.codex/config.toml
+- cmux-superpowers doctor
+
+Uninstall with:
+- Remove the `superpowers-codex` entry from ~/.agents/plugins/marketplace.json
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+- cmux codex uninstall-hooks
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 EOF
   cat >"$fixture_root/SECURITY.md" <<'EOF'
 Security policy.
@@ -138,6 +231,21 @@ EOF
 echo fixture
 EOF
   chmod +x "$fixture_root/tests/codex-public-fork/run.sh"
+  cat >"$fixture_root/tests/cmux-superpowers/install.sh" <<'EOF'
+#!/usr/bin/env bash
+echo fixture
+EOF
+  chmod +x "$fixture_root/tests/cmux-superpowers/install.sh"
+  cat >"$fixture_root/tests/cmux-superpowers/doctor.sh" <<'EOF'
+#!/usr/bin/env bash
+echo fixture
+EOF
+  chmod +x "$fixture_root/tests/cmux-superpowers/doctor.sh"
+  cat >"$fixture_root/tests/cmux-superpowers/team_smoke.sh" <<'EOF'
+#!/usr/bin/env bash
+echo fixture
+EOF
+  chmod +x "$fixture_root/tests/cmux-superpowers/team_smoke.sh"
   cat >"$fixture_root/skills/sample/SKILL.md" <<'EOF'
 # Sample skill
 EOF
@@ -189,6 +297,7 @@ EOF
     "skills",
     "contract",
     "_shared",
+    "hooks",
     "scripts",
     "tests",
     "README.md",
@@ -204,7 +313,8 @@ EOF
   ],
   "scripts": {
     "validate:public-fork": "bash tests/codex-public-fork/run.sh",
-    "validate:process-family": "python3 _shared/validators/validate_skill_library.py --root . --family process"
+    "validate:process-family": "python3 _shared/validators/validate_skill_library.py --root . --family process",
+    "validate:cmux-superpowers": "bash tests/cmux-superpowers/install.sh && bash tests/cmux-superpowers/doctor.sh && bash tests/cmux-superpowers/team_smoke.sh"
   }
 }
 EOF
@@ -247,6 +357,399 @@ expect_fixture_fails_with() {
     printf 'Expected validator output to contain %q, but saw:\n%s\n' "$expected_fragment" "$output" >&2
     return 1
   fi
+}
+
+run_fixture_hook_installer() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  (
+    cd "$fixture_root"
+    python3 scripts/install_codex_hooks.py --codex-home "$codex_home"
+  )
+}
+
+run_fixture_hook_remover() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  (
+    cd "$fixture_root"
+    python3 scripts/install_codex_hooks.py --codex-home "$codex_home" --remove
+  )
+}
+
+expect_fixture_hook_installer_writes_codex_hooks() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  prepare_fixture "$fixture_root"
+  mkdir -p "$codex_home"
+  if ! output="$(run_fixture_hook_installer "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to succeed, but it failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+hooks_path = codex_home / "hooks.json"
+data = json.loads(hooks_path.read_text(encoding="utf-8"))
+group = data["hooks"]["SessionStart"][0]
+handler = group["hooks"][0]
+
+assert group["matcher"] == "startup|resume|clear"
+assert handler["type"] == "command"
+assert handler["statusMessage"] == "loading superpowers"
+
+command = handler["command"]
+expected_script = str(fixture_root / "hooks" / "session-start")
+if expected_script not in command:
+    raise SystemExit(f"hooks.json command does not point at {expected_script}: {command}")
+PY
+}
+
+expect_fixture_hook_installer_preserves_unrelated_sessionstart_hooks() {
+  local fixture_root="$1"
+  local codex_home="$2"
+
+  prepare_fixture "$fixture_root"
+  mkdir -p "$codex_home"
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "/tmp/another-plugin/hooks/session-start",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+  if ! output="$(run_fixture_hook_installer "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to preserve unrelated hooks, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+hooks_path = codex_home / "hooks.json"
+data = json.loads(hooks_path.read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 2, session_groups
+
+commands = [group["hooks"][0]["command"] for group in session_groups]
+assert "/tmp/another-plugin/hooks/session-start" in commands
+
+expected_script = str(fixture_root / "hooks" / "session-start")
+matching = [
+    group
+    for group in session_groups
+    if expected_script in group["hooks"][0]["command"]
+]
+assert len(matching) == 1, session_groups
+assert matching[0]["hooks"][0]["statusMessage"] == "loading superpowers"
+PY
+
+  if ! output="$(run_fixture_hook_remover "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to preserve unrelated hooks, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+handler = session_groups[0]["hooks"][0]
+assert handler["command"] == "/tmp/another-plugin/hooks/session-start"
+assert handler["statusMessage"] == "loading superpowers"
+PY
+}
+
+expect_fixture_hook_installer_replaces_prior_superpowers_clone_path() {
+  local current_fixture_root="$1"
+  local prior_fixture_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$current_fixture_root"
+  prepare_fixture "$prior_fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+prior_fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {prior_fixture_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+  if ! output="$(run_fixture_hook_installer "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to replace a prior Superpowers clone hook, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$current_fixture_root" "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+current_fixture_root = Path(sys.argv[1])
+prior_fixture_root = Path(sys.argv[2])
+codex_home = Path(sys.argv[3])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+command = session_groups[0]["hooks"][0]["command"]
+assert str(current_fixture_root / "hooks" / "session-start") in command, command
+assert str(prior_fixture_root / "hooks" / "session-start") not in command, command
+PY
+
+  if ! output="$(run_fixture_hook_remover "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to remove the migrated Superpowers hook, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+assert "SessionStart" not in data["hooks"], data
+PY
+}
+
+expect_fixture_hook_installer_replaces_deleted_prior_superpowers_clone_path() {
+  local current_fixture_root="$1"
+  local prior_fixture_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$current_fixture_root"
+  prepare_fixture "$prior_fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+prior_fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {prior_fixture_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+  rm -rf "$prior_fixture_root"
+
+  if ! output="$(run_fixture_hook_installer "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to replace a deleted prior Superpowers clone hook, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$current_fixture_root" "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+current_fixture_root = Path(sys.argv[1])
+prior_fixture_root = Path(sys.argv[2])
+codex_home = Path(sys.argv[3])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+command = session_groups[0]["hooks"][0]["command"]
+assert str(current_fixture_root / "hooks" / "session-start") in command, command
+assert str(prior_fixture_root / "hooks" / "session-start") not in command, command
+PY
+}
+
+expect_fixture_hook_remover_removes_deleted_prior_superpowers_clone_path() {
+  local current_fixture_root="$1"
+  local prior_fixture_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$current_fixture_root"
+  prepare_fixture "$prior_fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$prior_fixture_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+prior_fixture_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {prior_fixture_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+  rm -rf "$prior_fixture_root"
+
+  if ! output="$(run_fixture_hook_remover "$current_fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to remove a deleted prior Superpowers clone hook, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+codex_home = Path(sys.argv[1])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+assert "SessionStart" not in data["hooks"], data
+PY
+}
+
+expect_fixture_hook_installer_preserves_deleted_unrelated_missing_sessionstart_sidecar() {
+  local fixture_root="$1"
+  local deleted_sidecar_root="$2"
+  local codex_home="$3"
+
+  prepare_fixture "$fixture_root"
+  mkdir -p "$codex_home"
+
+  python3 - <<'PY' "$deleted_sidecar_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+deleted_sidecar_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+payload = {
+    "hooks": {
+        "SessionStart": [
+            {
+                "matcher": "startup|resume|clear",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": f"python3 {deleted_sidecar_root / 'hooks' / 'session-start'}",
+                        "statusMessage": "loading superpowers",
+                    }
+                ],
+            }
+        ]
+    }
+}
+(codex_home / "hooks.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+PY
+
+  if ! output="$(run_fixture_hook_installer "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook installer to preserve a deleted unrelated SessionStart sidecar, but install failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$fixture_root" "$deleted_sidecar_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+fixture_root = Path(sys.argv[1])
+deleted_sidecar_root = Path(sys.argv[2])
+codex_home = Path(sys.argv[3])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 2, session_groups
+
+commands = [group["hooks"][0]["command"] for group in session_groups]
+assert f"python3 {deleted_sidecar_root / 'hooks' / 'session-start'}" in commands, commands
+assert any(str(fixture_root / "hooks" / "session-start") in command for command in commands), commands
+PY
+
+  if ! output="$(run_fixture_hook_remover "$fixture_root" "$codex_home" 2>&1)"; then
+    printf 'Expected Codex hook remover to preserve a deleted unrelated SessionStart sidecar, but remove failed:\n%s\n' "$output" >&2
+    return 1
+  fi
+
+  python3 - <<'PY' "$deleted_sidecar_root" "$codex_home"
+import json
+import sys
+from pathlib import Path
+
+deleted_sidecar_root = Path(sys.argv[1])
+codex_home = Path(sys.argv[2])
+data = json.loads((codex_home / "hooks.json").read_text(encoding="utf-8"))
+session_groups = data["hooks"]["SessionStart"]
+assert len(session_groups) == 1, session_groups
+command = session_groups[0]["hooks"][0]["command"]
+assert command == f"python3 {deleted_sidecar_root / 'hooks' / 'session-start'}", command
+PY
 }
 
 prepare_process_family_fixture() {
@@ -440,8 +943,127 @@ run_self_tests() {
   expect_fixture_passes "$tmpdir/no-hook-doc-wording"
   append_text \
     "$tmpdir/no-hook-doc-wording/docs/README.codex.md" \
-    $'\nThis package does not depend on hook bootstrap.\n'
-  expect_fixture_passes "$tmpdir/no-hook-doc-wording"
+    "$(printf '\nThis public fork %s.\n' "$(forbidden_no_hook_bootstrap_wording)")"
+  expect_fixture_fails_with \
+    "$tmpdir/no-hook-doc-wording" \
+    "$(expected_issue "docs/README.codex.md" "$(forbidden_no_hook_bootstrap_wording)")"
+
+  expect_fixture_passes "$tmpdir/hook-template-required"
+  rm "$tmpdir/hook-template-required/hooks/hooks.json"
+  expect_fixture_fails_with "$tmpdir/hook-template-required" 'Missing required path: hooks/hooks.json'
+
+  expect_fixture_passes "$tmpdir/package-hook-surface"
+  python3 - <<'PY' "$tmpdir/package-hook-surface/package.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["files"] = [item for item in data["files"] if item != "hooks"]
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  expect_fixture_fails_with \
+    "$tmpdir/package-hook-surface" \
+    'package.json `files` must include `hooks`'
+
+  expect_fixture_passes "$tmpdir/package-cmux-script"
+  python3 - <<'PY' "$tmpdir/package-cmux-script/package.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text(encoding="utf-8"))
+data["scripts"].pop("validate:cmux-superpowers", None)
+path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+PY
+  expect_fixture_fails_with \
+    "$tmpdir/package-cmux-script" \
+    'package.json script `validate:cmux-superpowers` must be `bash tests/cmux-superpowers/install.sh && bash tests/cmux-superpowers/doctor.sh && bash tests/cmux-superpowers/team_smoke.sh`'
+
+  expect_fixture_passes "$tmpdir/package-cmux-pack-surface"
+  mkdir -p "$tmpdir/package-cmux-pack-surface/tests"
+  cat >"$tmpdir/package-cmux-pack-surface/tests/.npmignore" <<'EOF'
+cmux-superpowers/team_smoke.sh
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-cmux-pack-surface" \
+    '`npm pack --dry-run --json` must include `tests/cmux-superpowers/team_smoke.sh`'
+
+  expect_fixture_passes "$tmpdir/package-hook-installer-pack-surface"
+  mkdir -p "$tmpdir/package-hook-installer-pack-surface/scripts"
+  cat >"$tmpdir/package-hook-installer-pack-surface/scripts/.npmignore" <<'EOF'
+install_codex_hooks.py
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-hook-installer-pack-surface" \
+    '`npm pack --dry-run --json` must include `scripts/install_codex_hooks.py`'
+
+  expect_fixture_passes "$tmpdir/package-hooks-json-pack-surface"
+  mkdir -p "$tmpdir/package-hooks-json-pack-surface/hooks"
+  cat >"$tmpdir/package-hooks-json-pack-surface/hooks/.npmignore" <<'EOF'
+hooks.json
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-hooks-json-pack-surface" \
+    '`npm pack --dry-run --json` must include `hooks/hooks.json`'
+
+  expect_fixture_passes "$tmpdir/package-session-start-pack-surface"
+  mkdir -p "$tmpdir/package-session-start-pack-surface/hooks"
+  cat >"$tmpdir/package-session-start-pack-surface/hooks/.npmignore" <<'EOF'
+session-start
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/package-session-start-pack-surface" \
+    '`npm pack --dry-run --json` must include `hooks/session-start`'
+
+  expect_fixture_passes "$tmpdir/launcher-script-required"
+  rm "$tmpdir/launcher-script-required/scripts/install_cmux_superpowers_launcher.py"
+  expect_fixture_fails_with \
+    "$tmpdir/launcher-script-required" \
+    'Missing required path: scripts/install_cmux_superpowers_launcher.py'
+
+  expect_fixture_passes "$tmpdir/doc-contract"
+  cat >"$tmpdir/doc-contract/README.md" <<'EOF'
+Install with:
+- python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+- python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+- cmux codex install-hooks
+- cmux-superpowers doctor
+EOF
+  expect_fixture_fails_with \
+    "$tmpdir/doc-contract" \
+    'README.md must mention `cmux codex uninstall-hooks`'
+
+  expect_fixture_hook_installer_writes_codex_hooks "$tmpdir/hook-installer" "$tmpdir/hook-installer-home"
+  expect_fixture_hook_installer_preserves_unrelated_sessionstart_hooks \
+    "$tmpdir/hook-installer-preserves-sidecar" \
+    "$tmpdir/hook-installer-preserves-sidecar-home"
+  expect_fixture_hook_installer_replaces_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-migration-current" \
+    "$tmpdir/hook-installer-migration-prior" \
+    "$tmpdir/hook-installer-migration-home"
+  expect_fixture_hook_installer_replaces_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-migration-current" \
+    "$tmpdir/deleted-prior/superpowers" \
+    "$tmpdir/hook-installer-deleted-migration-home"
+  expect_fixture_hook_installer_replaces_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-migration-current-codex" \
+    "$tmpdir/deleted-prior-codex/superpowers-codex" \
+    "$tmpdir/hook-installer-deleted-migration-home-codex"
+  expect_fixture_hook_remover_removes_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-remove-current" \
+    "$tmpdir/deleted-remove/superpowers" \
+    "$tmpdir/hook-installer-deleted-remove-home"
+  expect_fixture_hook_remover_removes_deleted_prior_superpowers_clone_path \
+    "$tmpdir/hook-installer-deleted-remove-current-codex" \
+    "$tmpdir/deleted-remove-codex/superpowers-codex" \
+    "$tmpdir/hook-installer-deleted-remove-home-codex"
+  expect_fixture_hook_installer_preserves_deleted_unrelated_missing_sessionstart_sidecar \
+    "$tmpdir/hook-installer-preserves-deleted-sidecar" \
+    "$tmpdir/superpowers-sidecar" \
+    "$tmpdir/hook-installer-preserves-deleted-sidecar-home"
 
   expect_fixture_passes "$tmpdir/published-validator-scan"
   append_text \
@@ -767,6 +1389,33 @@ EOF
   echo "PASS: codex public fork self-tests"
 }
 
+run_repo_contract_checks() {
+  local tmpdir
+  tmpdir="$(mktemp -d)"
+  trap 'rm -rf "$tmpdir"' RETURN
+
+  require_path "hooks/hooks.json"
+  require_path "hooks/session-start"
+  require_path "scripts/install_codex_hooks.py"
+
+  python3 scripts/install_codex_hooks.py --codex-home "$tmpdir/codex-home" >/dev/null
+  test -f "$tmpdir/codex-home/hooks.json"
+
+  python3 scripts/install_codex_hooks.py --codex-home "$tmpdir/codex-home" --remove >/dev/null
+
+  require_pattern 'install_cmux_superpowers_launcher\.py' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'install_cmux_superpowers_launcher\.py --remove' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'install_codex_hooks\.py' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'install_codex_hooks\.py --remove' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'cmux codex install-hooks' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'cmux codex uninstall-hooks' README.md docs/README.codex.md .codex/INSTALL.md
+  require_pattern 'cmux-superpowers doctor' README.md docs/README.codex.md .codex/INSTALL.md
+  require_fixed "codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'" README.md docs/README.codex.md .codex/INSTALL.md
+  require_fixed 'the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`' README.md docs/README.codex.md .codex/INSTALL.md
+  reject_pattern 'does not depend on (Codex )?hook bootstrap' README.md docs/README.codex.md .codex/INSTALL.md
+  reject_fixed 'codex --enable codex_hooks' README.md docs/README.codex.md .codex/INSTALL.md
+}
+
 if [[ "${1:-}" == "self-test" ]]; then
   run_self_tests
   exit 0
@@ -775,6 +1424,7 @@ fi
 cd "$ROOT"
 
 run_self_tests
+run_repo_contract_checks
 
 python3 scripts/validate_codex_public_fork.py
 python3 _shared/validators/validate_skill_library.py --root "$ROOT" --family process

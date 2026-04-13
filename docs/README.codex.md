@@ -55,25 +55,64 @@ If `~/.agents/plugins/marketplace.json` already exists, append this object insid
 }
 ```
 
-### 3. Restart Codex
+### 3. Install the local cmux launcher
 
-Quit and relaunch Codex after the plugin registration change.
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+```
+
+### 4. Install the Superpowers SessionStart hook
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+```
+
+### 5. Install the cmux Codex hooks
+
+```bash
+cmux codex install-hooks
+```
+
+### 6. Enable Codex hooks in persistent config
+
+The launcher and `cmux-superpowers doctor` read the persisted setting from `~/.codex/config.toml`, so set it there instead of relying on a one-shot flag.
+
+Persistent config:
+
+```toml
+[features]
+codex_hooks = true
+```
+
+### 7. Restart Codex
+
+Quit and relaunch Codex after the plugin registration or hook change.
 
 ## Verify
+
+Confirm the local launcher is installed and the workstation is ready:
+
+```bash
+command -v cmux-superpowers
+cmux-superpowers doctor
+```
 
 Confirm the plugin manifest exists:
 
 ```bash
 test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
+test -f ~/.codex/hooks.json
+rg 'loading superpowers|session-start' ~/.codex/hooks.json
 ```
 
-Confirm plugin support is enabled:
+Confirm plugin and hook support is enabled:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
+codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'
 ```
 
-This public fork does not depend on Codex hook bootstrap. Start new sessions with:
+`cmux-superpowers doctor` only goes green when the launcher is on `PATH`, the `cmux` binary and live runtime are reachable, the Superpowers SessionStart hook is installed, the cmux Codex hooks are installed, and `codex_hooks` is enabled. Start new sessions with:
 
 ```text
 Use superpowers:using-superpowers before we start.
@@ -89,6 +128,12 @@ Use superpowers:using-superpowers before we start.
 
 Use `subagent-driven-development` when the task benefits from bounded implementation slices with review gates. Use `executing-plans` when you want the same plan executed sequentially in one session.
 
+For a pane-based local team session in cmux, use:
+
+```bash
+cmux-superpowers team --worker review --worker implement "Implement the approved plan in this repository"
+```
+
 ## Updating
 
 Pull the local clone:
@@ -99,11 +144,23 @@ git -C ~/plugins/superpowers-codex pull
 
 Restart Codex after updating so the refreshed plugin and skill content are loaded into new sessions.
 
-## Uninstalling
-
-Remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`, then delete the local clone:
+If you moved the clone to a different path, rerun:
 
 ```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+```
+
+## Uninstalling
+
+First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
+
+Then remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, and delete the local clone:
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
+cmux codex uninstall-hooks
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 rm -rf ~/plugins/superpowers-codex
 ```
 
@@ -129,6 +186,24 @@ codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
 ```
 
 If that command prints nothing, update Codex to a build with stable plugin support before relying on the plugin install.
+
+### SessionStart or doctor still failing
+
+Check that `~/.codex/hooks.json` exists and still points at your current plugin clone:
+
+```bash
+test -f ~/.codex/hooks.json
+rg 'loading superpowers|session-start' ~/.codex/hooks.json
+```
+
+Then rerun the three install steps and re-check the doctor output:
+
+```bash
+python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
+cmux codex install-hooks
+cmux-superpowers doctor
+```
 
 ### Skills not routing as expected
 
