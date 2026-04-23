@@ -7,7 +7,7 @@ description: Use when executing a written implementation plan in a separate or s
 
 ## Overview
 
-Load plan, review critically, execute all tasks, report when complete.
+Execute a written implementation plan sequentially when `subagent-driven-development` is not the right fit.
 
 **Contract alignment:** This skill owns sequential or separate-session implementation when `subagent-driven-development` is not the right fit.
 
@@ -15,56 +15,53 @@ Load plan, review critically, execute all tasks, report when complete.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
-**Note:** Tell your human partner that Superpowers works much better with access to subagents. If this Codex session has subagent support, use superpowers:subagent-driven-development instead of this skill.
+Use `superpowers:using-git-worktrees` before implementation unless the user explicitly approved working on the current branch.
 
-## The Process
+## Required Flow
 
-### Step 1: Load and Review Plan
-1. Read plan file
-2. Review critically - identify any questions or concerns about the plan
-3. If concerns: Raise them with your human partner before starting
-4. If no concerns: Create `update_plan(...)` tracking and proceed
+### 1. Load and review the plan
 
-### Step 2: Execute Tasks
+- Read the plan completely before editing.
+- Identify missing context, unsafe assumptions, or task-order problems.
+- If the plan has critical gaps, stop and surface the exact blocker before implementation.
+- If the plan is executable, create `update_plan(...)` tracking.
+
+### 2. Execute tasks sequentially
 
 For each task:
-1. Mark as in_progress
-2. Follow each step exactly (plan has bite-sized steps)
-3. Run verifications as specified
-4. Mark as completed
+- mark it `in_progress`;
+- follow the task steps exactly unless verification proves the plan is wrong;
+- run the specified verification commands;
+- inspect failures instead of skipping or weakening verification;
+- mark the task complete only after verification passes or the remaining limitation is explicitly documented.
 
-### Step 3: Complete Development
+### 3. Handle blockers
+
+- If a discrete root-thread branch decision blocks execution, use `request_user_input`.
+- If the blocker needs rich context or plan repair rather than a discrete choice, stop and explain it in prose.
+- If verification fails repeatedly, stop and use the appropriate debugging or review skill instead of guessing.
+
+### 4. Complete development
 
 After all tasks complete and verified:
-- Announce: "I'm using the finishing-a-development-branch skill to complete this work."
 - **REQUIRED SUB-SKILL:** Use superpowers:finishing-a-development-branch
-- Follow that skill to verify tests, present options, execute choice
+- Follow that skill for test verification and closeout decisions
 
-## When to Stop and Ask for Help
+## Stop Conditions
 
-**STOP executing immediately when:**
 - Hit a blocker (missing dependency, test fails, instruction unclear)
 - Plan has critical gaps preventing starting
 - You don't understand an instruction
 - Verification fails repeatedly
+- The work would start on `main` or `master` without explicit user consent
 
-**Ask for clarification rather than guessing.**
+## Revisit the Plan When
 
-## When to Revisit Earlier Steps
-
-**Return to Review (Step 1) when:**
 - Partner updates the plan based on your feedback
 - Fundamental approach needs rethinking
+- The implementation reveals a missing task or invalid task order
 
-**Don't force through blockers** - stop and ask.
-
-## Remember
-- Review plan critically first
-- Follow plan steps exactly
-- Don't skip verifications
-- Reference skills when plan says to
-- Stop when blocked, don't guess
-- Never start implementation on main/master branch without explicit user consent
+Do not force through blockers. Revise the plan or route the decision through the root thread.
 
 ## Integration
 

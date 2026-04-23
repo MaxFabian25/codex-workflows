@@ -1410,6 +1410,94 @@ EOF
     "$tmpdir/process-family-codex-tools-default-mode-request-user-input" \
     'skills/using-superpowers/references/codex-tools.md contains stale request_user_input availability guidance ``request_user_input` is root-thread only, and Default-mode availability depends on `default_mode_request_user_input`.``'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-using-git-worktrees-plain-text-menu"
+  append_text \
+    "$tmpdir/process-family-using-git-worktrees-plain-text-menu/skills/using-git-worktrees/SKILL.md" \
+    $'\nWhich would you prefer?\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-using-git-worktrees-plain-text-menu" \
+    'skills/using-git-worktrees/SKILL.md contains stale plain-text directory-choice menu text `Which would you prefer?`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-writing-plans-plain-text-menu"
+  append_text \
+    "$tmpdir/process-family-writing-plans-plain-text-menu/skills/writing-plans/SKILL.md" \
+    $'\nWhich approach?\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-writing-plans-plain-text-menu" \
+    'skills/writing-plans/SKILL.md contains stale plain-text execution-choice menu text `Which approach?`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-finishing-branch-plain-text-menu"
+  append_text \
+    "$tmpdir/process-family-finishing-branch-plain-text-menu/skills/finishing-a-development-branch/SKILL.md" \
+    $'\nPresent exactly these 4 options:\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-finishing-branch-plain-text-menu" \
+    'skills/finishing-a-development-branch/SKILL.md contains stale plain-text closeout-menu guidance `Present exactly these 4 options:`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-subagent-driven-example-workflow"
+  append_text \
+    "$tmpdir/process-family-subagent-driven-example-workflow/skills/subagent-driven-development/SKILL.md" \
+    $'\n## Example Workflow\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-subagent-driven-example-workflow" \
+    'skills/subagent-driven-development/SKILL.md contains stale tutorial section heading `## Example Workflow`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-dispatching-real-example"
+  append_text \
+    "$tmpdir/process-family-dispatching-real-example/skills/dispatching-parallel-agents/SKILL.md" \
+    $'\n## Real Example from Session\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-dispatching-real-example" \
+    'skills/dispatching-parallel-agents/SKILL.md contains stale tutorial section heading `## Real Example from Session`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-dispatching-key-benefits"
+  append_text \
+    "$tmpdir/process-family-dispatching-key-benefits/skills/dispatching-parallel-agents/SKILL.md" \
+    $'\n## Key Benefits\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-dispatching-key-benefits" \
+    'skills/dispatching-parallel-agents/SKILL.md contains stale tutorial section heading `## Key Benefits`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-executing-plans-plain-clarification"
+  append_text \
+    "$tmpdir/process-family-executing-plans-plain-clarification/skills/executing-plans/SKILL.md" \
+    $'\nAsk for clarification rather than guessing.\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-executing-plans-plain-clarification" \
+    'skills/executing-plans/SKILL.md contains stale plain-text clarification guidance `Ask for clarification rather than guessing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-systematic-debugging-iron-law"
+  append_text \
+    "$tmpdir/process-family-systematic-debugging-iron-law/skills/systematic-debugging/SKILL.md" \
+    $'\n## The Iron Law\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-systematic-debugging-iron-law" \
+    'skills/systematic-debugging/SKILL.md contains stale tutorial section heading `## The Iron Law`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-systematic-debugging-rationalizations"
+  append_text \
+    "$tmpdir/process-family-systematic-debugging-rationalizations/skills/systematic-debugging/SKILL.md" \
+    $'\n## Common Rationalizations\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-systematic-debugging-rationalizations" \
+    'skills/systematic-debugging/SKILL.md contains stale tutorial section heading `## Common Rationalizations`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-systematic-debugging-human-partner"
+  append_text \
+    "$tmpdir/process-family-systematic-debugging-human-partner/skills/systematic-debugging/SKILL.md" \
+    $'\n## your human partner'\''s Signals You'\''re Doing It Wrong\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-systematic-debugging-human-partner" \
+    "skills/systematic-debugging/SKILL.md contains stale user-specific section heading \`## your human partner's Signals You're Doing It Wrong\`"
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-systematic-debugging-real-world-impact"
+  append_text \
+    "$tmpdir/process-family-systematic-debugging-real-world-impact/skills/systematic-debugging/SKILL.md" \
+    $'\n## Real-World Impact\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-systematic-debugging-real-world-impact" \
+    'skills/systematic-debugging/SKILL.md contains stale tutorial section heading `## Real-World Impact`'
+
   echo "PASS: codex public fork self-tests"
 }
 

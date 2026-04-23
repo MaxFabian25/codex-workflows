@@ -1,6 +1,6 @@
 # Codex Execution Plans (ExecPlans):
 
-Use this file as the canonical planning standard when checking `.agent/PLANS.md` into a repository.
+Use this file as the canonical planning standard when checking `.agents/PLANS.md` into a repository.
 
 This document describes the requirements for an execution plan ("ExecPlan"), a design document that a coding agent can follow to deliver a working feature or system change. Treat the reader as a complete beginner to this repository: they have only the current working tree and the single ExecPlan file you provide. There is no memory of prior plans and no external context.
 
@@ -178,7 +178,7 @@ When you revise a plan, you must ensure your changes are comprehensively reflect
 ---
 # ExecPlans
 
-Use an ExecPlan (as described in `.agent/PLANS.md`) for multi-hour work, complex features, significant refactors, or milestone/sub-agent execution.
+Use an ExecPlan (as described in `.agents/PLANS.md`) for multi-hour work, complex features, significant refactors, or milestone/sub-agent execution.
 
 Treat the ExecPlan as a living document from design through implementation. Keep these required sections up to date at every stopping point: `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective`.
 

@@ -48,24 +48,20 @@ Stop. Don't proceed to Step 2.
 git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 ```
 
-Or ask: "This branch split from main - is that correct?"
+If the merge-base is ambiguous or both candidate base branches exist, confirm the intended base branch in the root thread before continuing.
 
-### Step 3: Present Options
+### Step 3: Root-Thread Closeout Choice
 
-Present exactly these 4 options:
+Use `request_user_input` for the normal non-destructive closeout choice.
 
-```
-Implementation complete. What would you like to do?
+Offer:
+- `Merge locally` - integrate into `<base-branch>` now and clean up the branch/worktree
+- `Push and create PR` - publish the branch for remote review and keep the worktree
+- `Keep branch as-is` - leave the branch and worktree untouched for later follow-up
 
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
-4. Discard this work
+The client provides an `Other` path for free-form follow-up. Use that if the user wants something outside the standard choices.
 
-Which option?
-```
-
-**Don't add explanation** - keep options concise.
+Do not replace this decision with a plain-text numbered menu.
 
 ### Step 4: Execute Choice
 
@@ -115,7 +111,9 @@ Report: "Keeping branch <name>. Worktree preserved at <path>."
 
 **Don't cleanup worktree.**
 
-#### Option 4: Discard
+#### Discard
+
+Use this destructive path only when the user explicitly asks to discard the branch or selects an equivalent free-form option. Keep discard as a separate destructive confirmation flow.
 
 **Confirm first:**
 ```
@@ -160,7 +158,7 @@ git worktree remove <worktree-path>
 | 1. Merge locally | ✓ | - | - | ✓ |
 | 2. Create PR | - | ✓ | ✓ | - |
 | 3. Keep as-is | - | - | ✓ | - |
-| 4. Discard | - | - | - | ✓ (force) |
+| Discard | - | - | - | ✓ (force) |
 
 ## Common Mistakes
 
@@ -168,9 +166,9 @@ git worktree remove <worktree-path>
 - **Problem:** Merge broken code, create failing PR
 - **Fix:** Always verify tests before offering options
 
-**Open-ended questions**
-- **Problem:** "What should I do next?" → ambiguous
-- **Fix:** Present exactly 4 structured options
+**Plain-text multiple-choice prompt**
+- **Problem:** Breaks the structured root-thread decision contract
+- **Fix:** Use `request_user_input` for the normal non-destructive choice
 
 **Automatic worktree cleanup**
 - **Problem:** Remove worktree when might need it (Option 2, 3)
@@ -187,11 +185,12 @@ git worktree remove <worktree-path>
 - Merge without verifying tests on result
 - Delete work without confirmation
 - Force-push without explicit request
+- Replace the root-thread closeout choice with a plain-text numbered menu
 
 **Always:**
 - Verify tests before offering options
-- Present exactly 4 options
-- Get typed confirmation for Option 4
+- Use `request_user_input` for the normal non-destructive closeout choice
+- Get typed confirmation for discard
 - Clean up worktree for Options 1 & 4 only
 
 ## Integration

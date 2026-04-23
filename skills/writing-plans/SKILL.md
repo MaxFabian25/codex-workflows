@@ -7,13 +7,13 @@ description: Use when you have an approved spec for a multi-step task and need a
 
 ## Overview
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write comprehensive implementation plans assuming the engineer has limited local context and will rely on the plan as the execution contract. Document the files to touch, boundaries to preserve, code to write, verification to run, and any repo-specific docs or tools they need to consult. Keep the work split into bite-sized tasks. Apply DRY, YAGNI, TDD, and frequent commits where they fit the repo.
 
 **Contract alignment:** This skill owns the `plan` phase only. It does not create worktrees or dispatch implementation work.
 
 **Contract references:** Follow `../../contract/process-family.md`, `../../contract/prompt-packet.md`, and `../../contract/package-standards.md` for phase ownership, dispatch packet format, and package structure.
 
-Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
+Assume they are a skilled developer who does not yet know this codebase, toolchain, or domain. Make the local conventions and verification expectations explicit.
 
 **Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
@@ -28,7 +28,7 @@ If the spec covers multiple independent subsystems, it should have been broken i
 
 ## PLANS.md / ExecPlan Interop
 
-If the repository already uses `.agent/PLANS.md`, a top-level `PLANS.md`, or the user explicitly asks for an Execution-Plan / ExecPlan, keep this skill as the plan-phase owner but switch to the compatible references in this package:
+If the repository already uses `.agents/PLANS.md`, a top-level `PLANS.md`, or the user explicitly asks for an Execution-Plan / ExecPlan, keep this skill as the plan-phase owner but switch to the compatible references in this package:
 
 - `references/execplan-interop.md`
 - `references/PLANS.md`
@@ -159,17 +159,13 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After the plan is approved, the next required step is isolation. Use `superpowers:using-git-worktrees` to create the isolated workspace before either execution mode.
 
-After saving the plan, offer execution choice:
+After saving the plan, use `request_user_input` to offer the execution choice.
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+Offer:
+- `Subagent-Driven (Recommended)` - dispatch a fresh subagent per task with review between tasks
+- `Inline Execution` - execute tasks in this session with `executing-plans` checkpoints
 
-**Required next step before execution:** Use `superpowers:using-git-worktrees` to create the isolated workspace for this plan.
-
-**1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
-
-**2. Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints
-
-**Which approach?"**
+Do not write this as a plain-text numbered menu.
 
 **If Subagent-Driven chosen:**
 - First use `superpowers:using-git-worktrees` to create the isolated workspace
@@ -184,7 +180,7 @@ After saving the plan, offer execution choice:
 ## References in this skill
 
 - `plan-document-reviewer-prompt.md`: Review packet template for plan-quality checks before finalizing.
-- `references/execplan-interop.md`: Distilled guidance for repos that already require `.agent/PLANS.md` / ExecPlan output.
+- `references/execplan-interop.md`: Distilled guidance for repos that already require `.agents/PLANS.md` / ExecPlan output.
 - `references/PLANS.md`: Canonical ExecPlan standard text for repo bootstrap or compatibility checks.
 - `references/AGENTS.execplans.snippet.md`: Minimal `AGENTS.md` snippet enabling ExecPlan workflows.
 - `references/execplan.example.valid.md`: Passing ExecPlan example.

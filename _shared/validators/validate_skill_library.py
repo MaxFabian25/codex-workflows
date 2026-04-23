@@ -216,16 +216,41 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "- **Structured decisions preferred** - Use `request_user_input` for discrete branches and prose when the user needs nuance",
     ],
     "skills/dispatching-parallel-agents/SKILL.md": [
-        "### 5. Return unresolved decisions to the parent",
+        "### 4. Return unresolved decisions to the parent",
         "`decision_needed`",
         "`decision_id`",
         "`recommended_option`",
         "Children may recommend options but may not ask the user directly.",
     ],
+    "skills/subagent-driven-development/SKILL.md": [
+        "Fresh implementer per task, then spec review, then code-quality review.",
+        "Never re-dispatch unchanged after an escalation.",
+        "After all tasks are complete, dispatch `final_reviewer` with the filled shared `../requesting-code-review/code-reviewer.md` template directly.",
+    ],
+    "skills/executing-plans/SKILL.md": [
+        "Execute a written implementation plan sequentially when `subagent-driven-development` is not the right fit.",
+        "If a discrete root-thread branch decision blocks execution, use `request_user_input`.",
+        "Use superpowers:finishing-a-development-branch",
+    ],
     "skills/brainstorming/visual-companion.md": [
         "Launch this with `exec_command` and keep the session alive.",
         "no extra background flag is required",
         "Use `apply_patch` or another non-heredoc file-write path",
+    ],
+    "skills/using-git-worktrees/SKILL.md": [
+        "Use `request_user_input` in the root thread for this directory choice.",
+    ],
+    "skills/writing-plans/SKILL.md": [
+        "After saving the plan, use `request_user_input` to offer the execution choice.",
+    ],
+    "skills/finishing-a-development-branch/SKILL.md": [
+        "Use `request_user_input` for the normal non-destructive closeout choice.",
+    ],
+    "skills/systematic-debugging/SKILL.md": [
+        "Evidence first, one hypothesis at a time, fix the cause rather than the symptom.",
+        "In multi-component systems, collect evidence at each boundary before choosing a component to change.",
+        "If two fix attempts fail, pause before attempting another.",
+        "Do not keep adding fixes on top of failed hypotheses.",
     ],
 }
 
@@ -258,6 +283,26 @@ TARGETED_CONTENT_GUARDS = {
         (
             re.compile(r'items=\['),
             'contains stale `items=[...]` dispatch guidance instead of `message=`',
+        ),
+        (
+            re.compile(r"## Real Example from Session"),
+            'contains stale tutorial section heading `## Real Example from Session`',
+        ),
+        (
+            re.compile(r"## Key Benefits"),
+            'contains stale tutorial section heading `## Key Benefits`',
+        ),
+    ],
+    "skills/subagent-driven-development/SKILL.md": [
+        (
+            re.compile(r"## Example Workflow"),
+            'contains stale tutorial section heading `## Example Workflow`',
+        ),
+    ],
+    "skills/executing-plans/SKILL.md": [
+        (
+            re.compile(r"Ask for clarification rather than guessing\."),
+            'contains stale plain-text clarification guidance `Ask for clarification rather than guessing.`',
         ),
     ],
     "skills/requesting-code-review/code-reviewer.md": [
@@ -320,6 +365,46 @@ TARGETED_CONTENT_GUARDS = {
         (
             re.compile(r"`request_user_input` is root-thread only, and Default-mode availability depends on `default_mode_request_user_input`\."),
             'contains stale request_user_input availability guidance ``request_user_input` is root-thread only, and Default-mode availability depends on `default_mode_request_user_input`.``',
+        ),
+    ],
+    "skills/using-git-worktrees/SKILL.md": [
+        (
+            re.compile(r"Which would you prefer\?"),
+            'contains stale plain-text directory-choice menu text `Which would you prefer?`',
+        ),
+    ],
+    "skills/writing-plans/SKILL.md": [
+        (
+            re.compile(r"Which approach\?"),
+            'contains stale plain-text execution-choice menu text `Which approach?`',
+        ),
+    ],
+    "skills/finishing-a-development-branch/SKILL.md": [
+        (
+            re.compile(r"Present exactly these 4 options:"),
+            'contains stale plain-text closeout-menu guidance `Present exactly these 4 options:`',
+        ),
+        (
+            re.compile(r"Which option\?"),
+            'contains stale plain-text closeout prompt text `Which option?`',
+        ),
+    ],
+    "skills/systematic-debugging/SKILL.md": [
+        (
+            re.compile(r"## The Iron Law"),
+            'contains stale tutorial section heading `## The Iron Law`',
+        ),
+        (
+            re.compile(r"## Common Rationalizations"),
+            'contains stale tutorial section heading `## Common Rationalizations`',
+        ),
+        (
+            re.compile(r"## your human partner's Signals You're Doing It Wrong"),
+            "contains stale user-specific section heading `## your human partner's Signals You're Doing It Wrong`",
+        ),
+        (
+            re.compile(r"## Real-World Impact"),
+            'contains stale tutorial section heading `## Real-World Impact`',
         ),
     ],
 }

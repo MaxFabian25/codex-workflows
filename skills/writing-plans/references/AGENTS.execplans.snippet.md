@@ -1,6 +1,6 @@
 ## Execution-Planning
 
-Use an ExecPlan (as described in `.agent/PLANS.md`) for multi-hour work, complex features, significant refactors, or milestone/sub-agent execution.
+Use an ExecPlan (as described in `.agents/PLANS.md`) for multi-hour work, complex features, significant refactors, or milestone/sub-agent execution.
 
 Treat the ExecPlan as a living document from design through implementation. Keep these required sections up to date at every stopping point: `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective`.
 

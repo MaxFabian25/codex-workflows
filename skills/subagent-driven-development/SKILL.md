@@ -5,86 +5,63 @@ description: Use when executing an implementation plan with write-owning task wo
 
 # Subagent-Driven Development
 
-Execute plan by dispatching fresh subagent per task, with two-stage review after each: spec compliance review first, then code quality review.
+Execute an implementation plan by dispatching one fresh write-owning implementer per task, then reviewing that task with two read-only passes: spec compliance first, code quality second.
 
-**Why subagents:** You delegate tasks to specialized agents with isolated or selectively forked context. By precisely crafting their instructions and context, you ensure they stay focused and succeed at their task. Prefer a bounded dispatch packet by default, and only use full-history fork mode when a child genuinely needs the same thread history. This also preserves your own context for coordination work.
+Prefer bounded dispatch packets. Use full-history fork mode only when the child genuinely needs the same conversation history.
 
-**Core principle:** Fresh subagent per task + two-stage review (spec then quality) = high quality, fast iteration
+**Core principle:** Fresh implementer per task, then spec review, then code-quality review.
 
 **Contract references:** Follow [../../contract/process-family.md](../../contract/process-family.md), [../../contract/package-standards.md](../../contract/package-standards.md), and [../../contract/prompt-packet.md](../../contract/prompt-packet.md) when writing or updating this workflow.
 
 ## When to Use
 
-```dot
-digraph when_to_use {
-    "Have implementation plan?" [shape=diamond];
-    "Tasks mostly independent?" [shape=diamond];
-    "Stay in this session?" [shape=diamond];
-    "subagent-driven-development" [shape=box];
-    "executing-plans" [shape=box];
-    "Manual execution or brainstorm first" [shape=box];
-
-    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
-    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
-    "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
-    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
-    "Stay in this session?" -> "subagent-driven-development" [label="yes"];
-    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
-}
-```
-
-**vs. Executing Plans (parallel session):**
-- Same session (no context switch)
-- Fresh subagent per task (no context pollution)
-- Two-stage review after each task: spec compliance first, then code quality
-- Faster iteration (no human-in-loop between tasks)
+- Use after a written implementation plan is approved and an isolated worktree exists.
+- Use when tasks can be executed task-by-task by a single active write-owning child.
+- Use `executing-plans` instead when execution must stay inline or in a separate sequential session.
+- Return to planning when tasks are tightly coupled, underspecified, or cannot be reviewed independently.
 
 ## The Process
 
-```dot
-digraph process {
-    rankdir=TB;
+### 1. Initialize controller state
 
-    subgraph cluster_per_task {
-        label="Per Task";
-        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
-        "Implementer subagent asks questions?" [shape=diamond];
-        "Answer questions, provide context" [shape=box];
-        "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
-        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
-        "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
-        "Implementer subagent fixes spec gaps" [shape=box];
-        "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" [shape=box];
-        "Code quality reviewer subagent approves?" [shape=diamond];
-        "Implementer subagent fixes quality issues" [shape=box];
-        "Mark task complete in update_plan(...)" [shape=box];
-    }
+- Read the full plan once.
+- Extract each task with its files, requirements, and verification commands.
+- Record the task-start SHA before dispatching each implementation task.
+- Initialize or update parent `update_plan(...)` tracking.
 
-    "Read plan, extract all tasks with full text, note context, initialize update_plan(...)" [shape=box];
-    "More tasks remain?" [shape=diamond];
-    "Dispatch final_reviewer subagent (filled ../requesting-code-review/code-reviewer.md template directly) for whole-change review" [shape=box];
-    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+### 2. Dispatch one implementer
 
-    "Read plan, extract all tasks with full text, note context, initialize update_plan(...)" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
-    "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
-    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
-    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
-    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
-    "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
-    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
-    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" [label="yes"];
-    "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" -> "Code quality reviewer subagent approves?";
-    "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
-    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (filled ./code-quality-reviewer-prompt.md packet)" [label="re-review"];
-    "Code quality reviewer subagent approves?" -> "Mark task complete in update_plan(...)" [label="yes"];
-    "Mark task complete in update_plan(...)" -> "More tasks remain?";
-    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final_reviewer subagent (filled ../requesting-code-review/code-reviewer.md template directly) for whole-change review" [label="no"];
-    "Dispatch final_reviewer subagent (filled ../requesting-code-review/code-reviewer.md template directly) for whole-change review" -> "Use superpowers:finishing-a-development-branch";
-}
-```
+- Fill `./implementer-prompt.md` with exactly one task, relevant plan context, current branch/worktree context, and required verification.
+- Dispatch with `spawn_agent(task_name=..., agent_type="implementer", message="...")`.
+- Keep only one write-owning implementer active for the current task.
+
+### 3. Handle implementer status
+
+- `DONE`: inspect the summary and proceed to spec review.
+- `DONE_WITH_CONCERNS`: read concerns first; resolve correctness or scope concerns before review.
+- `NEEDS_CONTEXT`: add the missing context and re-dispatch a revised bounded packet.
+- `BLOCKED`: change the plan, scope, context, or ownership before any re-dispatch.
+
+Never re-dispatch unchanged after an escalation.
+
+### 4. Run task reviews
+
+- Dispatch `spec_reviewer` with `./spec-reviewer-prompt.md`.
+- If spec review finds gaps, send the implementer a bounded fix packet and repeat spec review.
+- After spec review passes, fill the shared `../requesting-code-review/code-reviewer.md` template, embed it in `./code-quality-reviewer-prompt.md`, and dispatch `code_quality_reviewer`.
+- If code-quality review finds blocking issues, send the implementer a bounded fix packet and repeat the relevant review.
+
+### 5. Complete the task
+
+- Verify the required command evidence in the parent thread.
+- Mark the task complete only after implementation, spec review, code-quality review, and parent verification are done.
+- Repeat from step 2 for the next task.
+
+### 6. Finish the change
+
+- After all tasks are complete, dispatch `final_reviewer` with the filled shared `../requesting-code-review/code-reviewer.md` template directly.
+- Resolve final-review findings before closeout.
+- Use `superpowers:finishing-a-development-branch` for merge, PR, keep, or discard decisions.
 
 ## Child Config Inheritance and Role Mapping
 
@@ -99,24 +76,6 @@ Child agents inherit the parent session config by default. Preserve that inherit
 - Reviewers stay read-only.
 - The parent remains responsible for user clarification, packet refinement, arbitration, and final synthesis.
 
-## Handling Implementer Status
-
-Implementer subagents report one of four statuses. Handle each appropriately:
-
-**DONE:** Proceed to spec compliance review.
-
-**DONE_WITH_CONCERNS:** The implementer completed the work but flagged doubts. Read the concerns before proceeding. If the concerns are about correctness or scope, address them before review. If they're observations (e.g., "this file is getting large"), note them and proceed to review.
-
-**NEEDS_CONTEXT:** The implementer needs information that wasn't provided. Provide the missing context and re-dispatch.
-
-**BLOCKED:** The implementer cannot complete the task. Assess the blocker:
-1. If it's a context problem, provide more context and re-dispatch with the same inherited config
-2. If the task needs more reasoning, tighten the scope, improve the plan, or route it to a more appropriate role; only override child config if the user explicitly requested that
-3. If the task is too large, break it into smaller pieces
-4. If the plan itself is wrong, escalate to the human
-
-**Never** ignore an escalation or re-dispatch unchanged. If the implementer said it's stuck, something about context, scope, ownership, or the plan needs to change.
-
 ## Prompt Templates
 
 - `./implementer-prompt.md` - Dispatch implementer subagent
@@ -124,141 +83,13 @@ Implementer subagents report one of four statuses. Handle each appropriately:
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
 - `../requesting-code-review/code-reviewer.md` - Shared read-only review template; `code_quality_reviewer` embeds the filled template inside `./code-quality-reviewer-prompt.md`, while `final_reviewer` receives the filled shared template directly
 
-## Example Workflow
+## Guardrails
 
-```
-You: I'm using Subagent-Driven Development to execute this plan.
-
-[Read plan file once: docs/superpowers/plans/feature-plan.md]
-[Extract all 5 tasks with full text and context]
-[Create update_plan(...) tracking with all tasks]
-
-Task 1: Codex plugin manifest validator
-
-[Get Task 1 text and context (already extracted)]
-[Dispatch implementation subagent with full task text + context]
-
-Implementer: "Before I begin - should a missing `.codex-plugin/plugin.json` be treated as a hard failure or a warning?"
-
-You: "Hard failure. The public fork must always ship a Codex plugin manifest."
-
-Implementer: "Got it. Implementing now..."
-[Later] Implementer:
-  - Implemented plugin-manifest validation
-  - Added tests, 5/5 passing
-  - Self-review: Found I missed the version check, added it
-  - Committed
-
-[Dispatch spec compliance reviewer]
-Spec reviewer: ✅ Spec compliant - all requirements met, nothing extra
-
-[Get git SHAs from the saved task-start boundary, dispatch code quality reviewer with the filled ./code-quality-reviewer-prompt.md wrapper]
-Code reviewer:
-  ### Strengths
-  - Good test coverage and clean separation of concerns.
-  ### Issues
-  #### Critical (Must Fix)
-  None.
-  #### Important (Should Fix)
-  None.
-  #### Minor (Nice to Have)
-  None.
-  ### Recommendations
-  - No additional recommendations for this task.
-  ### Assessment
-  **Ready for requested review scope?** Yes
-  **Reasoning:** The implementation is clean, well-tested, and ready to proceed to Task 2.
-
-[Mark Task 1 complete]
-
-Task 2: Recovery modes
-
-[Get Task 2 text and context (already extracted)]
-[Dispatch implementation subagent with full task text + context]
-
-Implementer: [No questions, proceeds]
-Implementer:
-  - Added verify/repair modes
-  - 8/8 tests passing
-  - Self-review: All good
-  - Committed
-
-[Dispatch spec compliance reviewer]
-Spec reviewer: ❌ Issues:
-  - Missing: Progress reporting (spec says "report every 100 items")
-  - Extra: Added --json flag (not requested)
-
-[Implementer fixes issues]
-Implementer: Removed --json flag, added progress reporting
-
-[Spec reviewer reviews again]
-Spec reviewer: ✅ Spec compliant now
-
-[Dispatch code quality reviewer with the filled ./code-quality-reviewer-prompt.md wrapper]
-Code reviewer:
-  ### Strengths
-  - Solid repair flow with clear test coverage.
-  ### Issues
-  #### Critical (Must Fix)
-  None.
-  #### Important (Should Fix)
-  1. **Magic reporting interval**
-     - File: `src/indexer.ts:130`
-     - What's wrong: `100` is hard-coded in the progress reporting path.
-     - Why it matters: The reporting contract is harder to maintain and test.
-     - How to fix: Extract a named constant such as `PROGRESS_INTERVAL`.
-  #### Minor (Nice to Have)
-  None.
-  ### Recommendations
-  - Extract the reporting interval before marking Task 2 complete.
-  ### Assessment
-  **Ready for requested review scope?** With fixes
-  **Reasoning:** The task is close, but the interval constant should be extracted before proceeding.
-
-[Implementer fixes]
-Implementer: Extracted PROGRESS_INTERVAL constant
-
-[Code reviewer reviews again]
-Code reviewer:
-  ### Strengths
-  - Clear reporting constant and focused repair flow.
-  ### Issues
-  #### Critical (Must Fix)
-  None.
-  #### Important (Should Fix)
-  None.
-  #### Minor (Nice to Have)
-  None.
-  ### Recommendations
-  - No additional recommendations for this task.
-  ### Assessment
-  **Ready for requested review scope?** Yes
-  **Reasoning:** The task-level review scope is satisfied, and the implementation is ready to proceed.
-
-[Mark Task 2 complete]
-
-...
-
-[After all tasks]
-[Dispatch final_reviewer using the filled ../requesting-code-review/code-reviewer.md template directly for the whole-change review, with BASE_SHA set to $(git merge-base HEAD origin/main) or $(git merge-base HEAD origin/<target-branch>)]
-Final reviewer:
-  ### Strengths
-  - The full change matches the plan and keeps the implementation boundaries clean.
-  ### Issues
-  #### Critical (Must Fix)
-  None.
-  #### Important (Should Fix)
-  None.
-  #### Minor (Nice to Have)
-  None.
-  ### Recommendations
-  - No additional recommendations before merge or handoff.
-  ### Assessment
-  **Ready for requested review scope?** Yes
-  **Reasoning:** The whole change is well-structured, verified, and ready to merge or hand off.
-
-Done!
-```
+- Do not let child agents ask the user directly or call `request_user_input`.
+- Do not use write-capable reviewers.
+- Do not proceed from a task with unresolved spec or Important/Critical quality issues.
+- Do not let review replace parent-side verification.
+- Do not broaden a child packet beyond one task unless the plan has been revised to make that scope explicit.
 
 ## Advantages
 

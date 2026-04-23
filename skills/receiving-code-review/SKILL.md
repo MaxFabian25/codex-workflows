@@ -17,75 +17,30 @@ Code review requires technical evaluation, not emotional performance.
 
 ## The Response Pattern
 
-```
-WHEN receiving code review feedback:
-
-1. READ: Complete feedback without reacting
-2. UNDERSTAND: Restate requirement in own words (or ask)
-3. VERIFY: Check against codebase reality
-4. EVALUATE: Technically sound for THIS codebase?
-5. RESPOND: Technical acknowledgment or reasoned pushback
-6. IMPLEMENT: One item at a time, test each
-```
-
-## Forbidden Responses
-
-**NEVER:**
-- "You're absolutely right!" (explicit instruction-file violation)
-- "Great point!" / "Excellent feedback!" (performative)
-- "Let me implement that now" (before verification)
-
-**INSTEAD:**
-- Restate the technical requirement
-- Ask clarifying questions
-- Push back with technical reasoning if wrong
-- Just start working (actions > words)
+1. Read the full review before acting on any single point.
+2. Restate the requirement or concern in technical terms.
+3. Verify it against the code, tests, spec, and current branch state.
+4. Decide whether to fix, push back, or escalate.
+5. Implement one item at a time and verify each change.
+6. Reply factually with the result.
 
 ## Handling Unclear Feedback
 
-```
-IF any item is unclear:
-  STOP - do not implement anything yet
-  ASK for clarification on unclear items
-
-WHY: Items may be related. Partial understanding = wrong implementation.
-```
-
-**Example:**
-```
-your human partner: "Fix 1-6"
-You understand 1,2,3,6. Unclear on 4,5.
-
-❌ WRONG: Implement 1,2,3,6 now, ask about 4,5 later
-✅ RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
-```
+If any item is unclear, stop and clarify before implementing dependent changes. Partial understanding is how review feedback turns into a new bug.
 
 ## Source-Specific Handling
 
 ### From your human partner
 - **Trusted** - implement after understanding
 - **Still ask** if scope unclear
-- **No performative agreement**
-- **Skip to action** or technical acknowledgment
+- **No performative agreement required**
+- **Skip to action** or give a brief technical acknowledgment
 
 ### From External Reviewers
-```
-BEFORE implementing:
-  1. Check: Technically correct for THIS codebase?
-  2. Check: Breaks existing functionality?
-  3. Check: Reason for current implementation?
-  4. Check: Works on all platforms/versions?
-  5. Check: Does reviewer understand full context?
-
-IF suggestion seems wrong:
-  Push back with technical reasoning
-
-IF can't easily verify:
-  Say so: "I can't verify this without [X]. Should I [investigate/ask/proceed]?"
-
-IF conflicts with your human partner's prior decisions:
-  Stop and discuss with your human partner first
-```
+- Verify the suggestion against this codebase, not against generic best practice.
+- Check whether it breaks current behavior, support contracts, or explicit prior decisions.
+- If it conflicts with the user's architecture or scope decisions, stop and escalate in the root thread before changing code.
+- If you cannot verify it cheaply, say what is missing and ask how to proceed.
 
 **your human partner's rule:** "External feedback - be skeptical, but check carefully"
 
@@ -130,38 +85,20 @@ Push back when:
 - Reference working tests/code
 - Involve your human partner if architectural
 
-**Signal if uncomfortable pushing back out loud:** "Strange things are afoot at the Circle K"
-
 ## Acknowledging Correct Feedback
 
 When feedback IS correct:
-```
-✅ "Fixed. [Brief description of what changed]"
-✅ "Good catch - [specific issue]. Fixed in [location]."
-✅ [Just fix it and show in the code]
+- `Fixed in <file>` plus the key change
+- `Verified and keeping current approach because <reason>`
+- `Need clarification on item <n> before changing code`
 
-❌ "You're absolutely right!"
-❌ "Great point!"
-❌ "Thanks for catching that!"
-❌ "Thanks for [anything]"
-❌ ANY gratitude expression
-```
-
-**Why no thanks:** Actions speak. Just fix it. The code itself shows you heard the feedback.
-
-**If you catch yourself about to write "Thanks":** DELETE IT. State the fix instead.
+Avoid blanket praise, gratitude padding, or agreement before verification. The important part is the technical disposition, not the social flourish.
 
 ## Gracefully Correcting Your Pushback
 
 If you pushed back and were wrong:
-```
-✅ "You were right - I checked [X] and it does [Y]. Implementing now."
-✅ "Verified this and you're correct. My initial understanding was wrong because [reason]. Fixing."
-
-❌ Long apology
-❌ Defending why you pushed back
-❌ Over-explaining
-```
+ - `Verified this and you're correct. Fixing now.`
+ - `Checked <evidence>; my earlier read was wrong. Updated in <file>.`
 
 State the correction factually and move on.
 
@@ -177,36 +114,17 @@ State the correction factually and move on.
 | Partial implementation | Clarify all items first |
 | Can't verify, proceed anyway | State limitation, ask for direction |
 
-## Real Examples
-
-**Performative Agreement (Bad):**
-```
-Reviewer: "Remove legacy code"
-❌ "You're absolutely right! Let me remove that..."
-```
-
-**Technical Verification (Good):**
-```
-Reviewer: "Remove legacy code"
-✅ "Checking... build target is 10.15+, this API needs 13+. Need the documented pre-13 support contract. Current impl has the wrong bundle ID - fix it or drop pre-13 support?"
-```
-
-**YAGNI (Good):**
-```
-Reviewer: "Implement proper metrics tracking with database, date filters, CSV export"
-✅ "Grepped codebase - nothing calls this endpoint. Remove it (YAGNI)? Or is there usage I'm missing?"
-```
-
-**Unclear Item (Good):**
-```
-your human partner: "Fix items 1-6"
-You understand 1,2,3,6. Unclear on 4,5.
-✅ "Understand 1,2,3,6. Need clarification on 4 and 5 before implementing."
-```
-
 ## GitHub Thread Replies
 
 When replying to inline review comments on GitHub, reply in the comment thread (`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`), not as a top-level PR comment.
+
+## Red Flags
+
+- Implementing feedback you do not understand
+- Treating review comments as automatically correct without checking
+- Adding compatibility shims or fallback paths that were not requested
+- Replying with social filler instead of a technical disposition
+- Skipping verification after applying a fix
 
 ## The Bottom Line
 
@@ -214,4 +132,4 @@ When replying to inline review comments on GitHub, reply in the comment thread (
 
 Verify. Question. Then implement.
 
-No performative agreement. Technical rigor always.
+Keep the reply brief, technical, and tied to evidence.

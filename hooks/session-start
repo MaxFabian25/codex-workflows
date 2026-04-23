@@ -2,38 +2,31 @@
 
 import json
 import sys
-from pathlib import Path
 
 
-PLUGIN_ROOT = Path(__file__).resolve().parent.parent
-USING_SUPERPOWERS_PATH = PLUGIN_ROOT / "skills" / "using-superpowers" / "SKILL.md"
-
-
-def build_session_context(skill_text: str) -> str:
+def build_session_context() -> str:
     return (
         "<EXTREMELY_IMPORTANT>\n"
         "You have superpowers.\n\n"
-        "Below is the full content of your `superpowers-codex:using-superpowers` skill. "
-        "Use it to route this session before responding.\n\n"
-        f"{skill_text}\n"
+        "Use `superpowers-codex:using-superpowers` as the session router before responding.\n\n"
+        "Session routing contract:\n"
+        "- User and repo instructions win over superpowers skills, which win over defaults.\n"
+        "- If a requested or relevant skill may apply, load that `SKILL.md` before acting.\n"
+        "- Follow `contract/process-family.md` when choosing process skills: process skills route first, implementation skills second.\n"
+        "- This fork is Codex-only and skills live under `skills/`.\n"
+        "- Use `skills/using-superpowers/references/codex-tools.md` when a skill mentions a platform-specific Codex tool.\n"
+        "- If you are a dispatched subagent executing a bounded task, skip this session router.\n"
         "</EXTREMELY_IMPORTANT>"
     )
 
 
 def main() -> int:
-    try:
-        skill_text = USING_SUPERPOWERS_PATH.read_text(encoding="utf-8").strip()
-    except OSError as exc:
-        payload = {
-            "systemMessage": f"Superpowers SessionStart hook could not read {USING_SUPERPOWERS_PATH}: {exc}"
+    payload = {
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": build_session_context(),
         }
-    else:
-        payload = {
-            "hookSpecificOutput": {
-                "hookEventName": "SessionStart",
-                "additionalContext": build_session_context(skill_text),
-            }
-        }
+    }
 
     json.dump(payload, sys.stdout)
     sys.stdout.write("\n")

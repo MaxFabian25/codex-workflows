@@ -21,7 +21,7 @@ Use this as the shared inner template for both review scopes:
 **Your task:**
 1. Review {WHAT_WAS_IMPLEMENTED}
 2. Compare against {PLAN_OR_REQUIREMENTS}
-3. Check code quality, architecture, and testing
+3. Check correctness, architecture, and testing
 4. Categorize issues by severity
 5. Assess readiness for the requested review scope
 
@@ -43,40 +43,13 @@ git diff --stat {BASE_SHA}..{HEAD_SHA}
 git diff {BASE_SHA}..{HEAD_SHA}
 ```
 
-## Review Checklist
+## Review Focus
 
-**Code Quality:**
-- Clean separation of concerns?
-- Proper error handling?
-- Type safety (if applicable)?
-- DRY principle followed?
-- Edge cases handled?
-
-**Architecture:**
-- Sound design decisions?
-- Maintainable file and interface boundaries?
-- Performance implications?
-- Security concerns?
-
-**Testing:**
-- Tests actually test logic rather than mocks?
-- Edge cases covered?
-- Integration tests where needed?
-- TDD evidence present where code changed?
-- All relevant tests passing?
-
-**Requirements:**
-- All plan or requirement items met?
-- Implementation matches spec?
-- No unrequested scope creep?
-- No unsupported contract drift?
-
-**Requested Review Scope Readiness:**
-- For task-level reviews, is the implementation ready to proceed?
-- For whole-change reviews, is the implementation ready to merge or hand off?
-- Documentation complete where needed?
-- No obvious bugs or regressions?
-- Operational or migration risks called out?
+- Correctness, regressions, and edge-case handling
+- Plan or requirement alignment, including omitted or extra scope
+- Test quality, verification coverage, and TDD evidence where applicable
+- File boundaries, maintainability, and readability
+- Security, performance, migration, or operational risks when relevant
 
 ## Output Format
 
@@ -103,70 +76,10 @@ git diff {BASE_SHA}..{HEAD_SHA}
 Write `None.` for any severity bucket with no issues.
 
 ### Recommendations
-[Improvements for code quality, architecture, or process]
+[Only include high-signal next steps.]
 
 ### Assessment
 
 **Ready for requested review scope?** [Yes/No/With fixes]
 
 **Reasoning:** [Technical assessment in 1-2 sentences. For task-level reviews, state whether it is ready to proceed. For final reviews, state whether it is ready to merge or hand off.]
-
-## Critical Rules
-
-**DO:**
-- Categorize by actual severity
-- Be specific (file:line, not vague)
-- Explain why issues matter
-- Acknowledge strengths
-- Give a clear verdict
-
-**DON'T:**
-- Say "looks good" without checking
-- Mark nitpicks as Critical
-- Give feedback on code you did not review
-- Be vague ("improve error handling")
-- Avoid giving a clear verdict
-
-## Example Output
-
-```
-### Strengths
-- Clean database schema with proper migrations (db.ts:15-42)
-- Comprehensive test coverage (18 tests, all edge cases)
-- Good error handling with fallbacks (summarizer.ts:85-92)
-
-### Issues
-
-#### Critical (Must Fix)
-None.
-
-#### Important (Should Fix)
-1. **Missing help text in CLI wrapper**
-   - File: `index-conversations:1-31`
-   - What's wrong: No `--help` flag is exposed, so users cannot discover `--concurrency`.
-   - Why it matters: Operators may miss required usage details and invoke the command incorrectly.
-   - How to fix: Add a `--help` case with usage examples.
-
-2. **Date validation missing**
-   - File: `search.ts:25-27`
-   - What's wrong: Invalid dates silently return no results.
-   - Why it matters: Users receive misleading empty results instead of actionable feedback.
-   - How to fix: Validate ISO format and throw an error with an example.
-
-#### Minor (Nice to Have)
-1. **Progress indicators**
-   - File: `indexer.ts:130`
-   - What's wrong: No "X of Y" counter is shown for long operations.
-   - Why it matters: Users do not know how long to wait during large indexing runs.
-   - How to fix: Add a periodic progress counter tied to processed item counts.
-
-### Recommendations
-- Add progress reporting for user experience
-- Consider config file for excluded projects (portability)
-
-### Assessment
-
-**Ready for requested review scope?** With fixes
-
-**Reasoning:** Core implementation is solid with good architecture and tests. Important issues (help text, date validation) are easily fixed before moving forward with the requested review scope.
-```

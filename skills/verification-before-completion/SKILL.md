@@ -7,137 +7,70 @@ description: Use when about to claim work is complete, fixed, or passing, before
 
 ## Overview
 
-Claiming work is complete without verification is dishonesty, not efficiency.
+Do not claim success until a fresh command proves the claim.
 
 **Core principle:** Evidence before claims, always.
-
-**Violating the letter of this rule is violating the spirit of this rule.**
 
 **Contract alignment:** This skill ends at verified evidence. It does not decide merge, cleanup, or branch-finish actions; those belong to `finishing-a-development-branch`.
 
 **Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
 
-## The Iron Law
+## Required Flow
 
-```
-NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
-```
+Before claiming a result:
 
-If you haven't run the verification command in this message, you cannot claim it passes.
+1. Identify the command or checklist that proves the claim.
+2. Run it fresh for the current code state.
+3. Read the output, exit code, and failure counts.
+4. State the actual result, not the hoped-for result.
+5. If you did not verify, say that directly.
 
-## The Gate Function
+Old output, partial output, or a child's success report do not count as fresh proof.
 
-```
-BEFORE claiming any status or expressing satisfaction:
+## Minimum Evidence
 
-1. IDENTIFY: What command proves this claim?
-2. RUN: Execute the FULL command (fresh, complete)
-3. READ: Full output, check exit code, count failures
-4. VERIFY: Does output confirm the claim?
-   - If NO: State actual status with evidence
-   - If YES: State claim WITH evidence
-5. ONLY THEN: Make the claim
+| Claim | Fresh proof required | Not enough |
+|-------|----------------------|------------|
+| Tests pass | Full test command with zero failures | Previous run, partial subset, "should pass" |
+| Linter/typecheck clean | Relevant linter/typecheck command exits cleanly | Passing tests only |
+| Build succeeds | Build/package command exits 0 | Linter passing |
+| Bug fixed | Reproduction no longer fails, or regression test now passes | Code changed, manual confidence |
+| Requirements met | Plan/spec checklist reviewed against implementation | "Tests pass" alone |
+| Child work completed | Parent verifies diff plus required commands | Child says "done" |
 
-Skip any step = lying, not verifying
-```
+## Special Cases
 
-## Common Failures
+### Regression fixes
 
-| Claim | Requires | Not Sufficient |
-|-------|----------|----------------|
-| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
-| Linter clean | Linter output: 0 errors | Partial check, extrapolation |
-| Build succeeds | Build command: exit 0 | Linter passing, logs look good |
-| Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
-| Regression test works | Red-green cycle verified | Test passes once |
-| Agent completed | VCS diff shows changes | Agent reports "success" |
-| Requirements met | Line-by-line checklist | Tests passing |
+- For bug fixes, verify the original symptom is covered by an automated test when practical.
+- If you claim a regression test exists, confirm the red/green evidence or say that the test was added after the fix and therefore is coverage, not TDD proof.
 
-## Red Flags - STOP
+### Requirements coverage
 
-- Using "should", "probably", "seems to"
-- Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
-- About to commit/push/PR without verification
-- Trusting agent success reports
-- Relying on partial verification
-- Thinking "just this once"
-- Tired and wanting work over
-- **ANY wording implying success without having run verification**
+- Re-read the plan, ticket, or spec before final completion claims.
+- Report gaps explicitly instead of collapsing them into a generic "done."
 
-## Rationalization Prevention
+### Delegated work
 
-| Excuse | Reality |
-|--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Linter passed" | Linter ≠ compiler |
-| "Agent said success" | Verify independently |
-| "I'm tired" | Exhaustion ≠ excuse |
-| "Partial check is enough" | Partial proves nothing |
-| "Different words so rule doesn't apply" | Spirit over letter |
+- Inspect the resulting diff and run the required verification yourself in the parent thread.
+- Treat a child review or implementation summary as input, not proof.
 
-## Key Patterns
+## Reporting Pattern
 
-**Tests:**
-```
-✅ [Run test command] [See: 34/34 pass] "All tests pass"
-❌ "Should pass now" / "Looks correct"
-```
+When you report status, include:
+- the command or checklist you ran;
+- the result, including exit status or pass/fail counts when relevant;
+- the most important evidence line(s);
+- any remaining gaps or unverified areas.
 
-**Regression tests (TDD Red-Green):**
-```
-✅ Write → Run (pass) → Revert fix → Run (MUST FAIL) → Restore → Run (pass)
-❌ "I've written a regression test" (without red-green verification)
-```
+## Red Flags
 
-**Build:**
-```
-✅ [Run build] [See: exit 0] "Build passes"
-❌ "Linter passed" (linter doesn't check compilation)
-```
+- Using "should", "probably", or "seems fixed" as a substitute for evidence
+- Reporting success from memory instead of a fresh run
+- Claiming a build passed after only running lint or tests
+- Moving to commit/PR/closeout without a current verification pass
+- Trusting delegated work without parent-side checks
 
-**Requirements:**
-```
-✅ Re-read plan → Create checklist → Verify each → Report gaps or completion
-❌ "Tests pass, phase complete"
-```
+## Bottom Line
 
-**Agent delegation:**
-```
-✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
-❌ Trust agent report
-```
-
-## Why This Matters
-
-From 24 failure memories:
-- your human partner said "I don't believe you" - trust broken
-- Undefined functions shipped - would crash
-- Missing requirements shipped - incomplete features
-- Time wasted on false completion → redirect → rework
-- Violates: "Honesty is a core value. If you lie, you'll be replaced."
-
-## When To Apply
-
-**ALWAYS before:**
-- ANY variation of success/completion claims
-- ANY expression of satisfaction
-- ANY positive statement about work state
-- Committing, PR creation, task completion
-- Moving to next task
-- Delegating to agents
-
-**Rule applies to:**
-- Exact phrases
-- Paraphrases and synonyms
-- Implications of success
-- ANY communication suggesting completion/correctness
-
-## The Bottom Line
-
-**No shortcuts for verification.**
-
-Run the command. Read the output. THEN claim the result.
-
-This is non-negotiable.
+Run the command, read the result, and report the actual state. If verification did not happen, say so plainly.

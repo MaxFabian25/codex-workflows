@@ -3,7 +3,8 @@
 ## Codex Dispatch Format
 
 Codex subagent prompts must be passed directly as the outer `message=` string on `spawn_agent(task_name=..., agent_type="...", message="...")`.
-Do not wrap the message in an inner YAML packet, nested `items:` list, or inner `agent_type:` field. On the latest alpha V2 surface, `task_name` and `message` are the required dispatch fields in the raw schema, but this local superpowers implementation additionally requires explicit outer `agent_type` because role selection is part of the contract.
+Do not wrap the message in an inner YAML packet, nested `items:` list, or inner `agent_type:` field.
+On the latest alpha V2 surface, `task_name` and `message` are the required dispatch fields in the raw schema, but this local superpowers implementation additionally requires explicit outer `agent_type` because role selection is part of the contract.
 
 ```md
 Your task is to perform the following.
@@ -24,16 +25,16 @@ specified in the instructions above.
 
 ## Legacy Formats Are Forbidden
 
-- Do not use the legacy `Task tool (general-purpose)` format anywhere in live prompt templates.
-- If a historical note or archived example still shows that format, treat it as stale and update it before reuse.
+Do not use the legacy `Task tool (general-purpose)` format in live prompt templates.
+Treat any archived example that still uses it as stale before reuse.
 
 ## Child Config Rule
 
-- Preserve inherited child config by default.
-- Do not set `model` or `reasoning_effort` unless the user explicitly asks.
+Preserve inherited child config by default.
+Do not set `model` or `reasoning_effort` unless the user explicitly asks.
 
 ## Child Elicitation Rule
 
 - Child packets must not instruct the child to call `request_user_input`.
-- If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.
-- Keep parent-owned arbitration and user-facing clarification in the root thread.
+If a child discovers ambiguity, it must return a `decision_needed` handoff to the parent.
+Keep parent-owned arbitration and user-facing clarification in the root thread.

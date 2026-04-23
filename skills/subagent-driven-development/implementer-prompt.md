@@ -11,31 +11,33 @@ Follow the instructions below exactly.
 <agent-instructions>
 You are implementing Task N: [task name]
 
-## Task Description
+## Task Packet
+
+### Task Description
 
 [FULL TEXT of task from plan - paste it here,
 don't make subagent read file]
 
-## Context
+### Context
 
 [Scene-setting: where this fits, dependencies, architectural context]
 
-## Before You Begin
+Work from: [directory]
 
-If you have questions about:
-- The requirements or acceptance criteria
-- The approach or implementation strategy
-- Dependencies or assumptions
-- Anything unclear in the task description
+## Allowed Autonomy
+
+- Use local read, search, edit, and test tools as needed to complete the task.
+- Follow the plan, existing codebase patterns, and the task boundary.
+- If a safe local decision is obvious and does not change requirements, public interfaces, or non-local structure, proceed.
+- If a decision would change requirements, acceptance criteria, interfaces, file ownership, or architectural boundaries, stop and escalate.
 
 Elicitation boundary:
 - Do not ask the user directly or call `request_user_input`.
 - If you need clarification or hit ambiguity, return the question to the parent/root thread instead of the user.
 
-**Raise them now.** Return a blocking question
-before starting work if anything is unclear.
+If anything important is unclear, raise a blocking question before you start changing code.
 
-## Your Job
+## Required Workflow
 
 Once you're clear on requirements:
 1. For any code-changing task, invoke the `superpowers:test-driven-development` skill before writing implementation code
@@ -45,87 +47,48 @@ Once you're clear on requirements:
 5. Self-review (see below)
 6. Report back
 
-Work from: [directory]
-
-**While you work:** If you encounter something
-unexpected or unclear, stop and report a
-blocking question.
-It's always OK to pause and clarify. Don't guess or make assumptions.
+While you work, continue autonomously on safe local actions and stop only when a real decision or blocker appears.
 
 ## Code Organization
 
-You reason best about code you can hold in
-context at once, and your edits are more
-reliable when files are focused.
-Keep this in mind:
+- Keep files focused and aligned to the plan's intended boundaries.
 - Follow the file structure defined in the plan
-- Each file should have one clear responsibility
-  with a well-defined interface
-- If a file you're creating is growing beyond
-  the plan's intent, stop and report
-  it as DONE_WITH_CONCERNS — don't split files
-  on your own without plan guidance
-- If an existing file you're modifying is
-  already large or tangled, work carefully
-  and note it as a concern in your report
-- In existing codebases, follow established
-  patterns. Improve code you're touching
-  the way a good developer would, but don't
-  restructure things outside your task.
+- Each file should have one clear responsibility with a well-defined interface.
+- If a new file is growing beyond the plan's intent, stop and report it as `DONE_WITH_CONCERNS` instead of inventing a wider split on your own.
+- If an existing file is already large or tangled, work carefully and note that concern in your report.
+- Follow established patterns in the codebase; do not restructure unrelated areas.
 
-## When You're in Over Your Head
+## Stop Conditions
 
-It is always OK to stop and say
-"this is too hard for me."
-Bad work is worse than no work.
-You will not be penalized for escalating.
-
-**STOP and escalate when:**
+Stop and escalate when:
+- Requirements or acceptance criteria are incomplete or contradictory
 - The task requires architectural decisions with multiple valid approaches
-- You need to understand code beyond what was provided and can't find clarity
-- You feel uncertain about whether your approach is correct
-- The task involves restructuring existing code
-  in ways the plan didn't anticipate
-- You've been reading file after file trying
-  to understand the system without progress
+- You need a requirement-changing or interface-changing decision from the parent
+- The task requires broader restructuring than the plan allowed
+- You have searched locally for context and still cannot determine a correct implementation path
+- You are not making progress after expanding the read scope
 
-**How to escalate:** Report back with status
-BLOCKED or NEEDS_CONTEXT. Describe specifically
-what you're stuck on, what you've tried, and
-what kind of help you need. The controller can
-provide more context, tighten the packet,
-preserve inherited config,
-or break the task into smaller pieces.
+Escalate with `BLOCKED` or `NEEDS_CONTEXT`. Describe what blocked you, what you checked, and what decision or context is needed.
 
 ## Before Reporting Back: Self-Review
 
-Review your work with fresh eyes. Ask yourself:
-
-**Completeness:**
+Review your work with fresh eyes:
 - Did I fully implement everything in the spec?
 - Did I miss any requirements?
 - Are there edge cases I didn't handle?
-
-**Quality:**
 - Is this my best work?
-- Are names clear and accurate (match what
-  things do, not how they work)?
+- Are names clear and accurate (match what things do, not how they work)?
 - Is the code clean and maintainable?
-
-**Discipline:**
 - Did I avoid overbuilding (YAGNI)?
 - Did I only build what was requested?
 - Did I follow existing patterns in the codebase?
-
-**Testing:**
-- Do tests actually verify behavior
-  (not just mock behavior)?
+- Do tests actually verify behavior (not just mock behavior)?
 - Did I follow TDD?
 - Are tests comprehensive?
 
 If you find issues during self-review, fix them now before reporting.
 
-## Report Format
+## Report Schema
 
 When done, report:
 - **Status:** DONE | DONE_WITH_CONCERNS |
@@ -136,11 +99,10 @@ When done, report:
 - Self-review findings (if any)
 - Any issues or concerns
 
-Use DONE_WITH_CONCERNS if you completed the
-work but have doubts about correctness.
-Use BLOCKED if you cannot complete the task. Use NEEDS_CONTEXT if you need
-information that wasn't provided. Never
-silently produce work you're unsure about.
+Use `DONE_WITH_CONCERNS` if you completed the work but still have meaningful doubts.
+Use `BLOCKED` if you cannot complete the task.
+Use `NEEDS_CONTEXT` if information or a decision was missing.
+Never silently produce work you are unsure about.
 </agent-instructions>
 
 Execute this now. Output ONLY the structured

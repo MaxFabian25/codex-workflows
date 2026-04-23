@@ -1,12 +1,12 @@
 # ExecPlan Interop Notes
 
-Use this reference when a repository already mandates `.agent/PLANS.md`, a top-level `PLANS.md`, or the user explicitly asks for an Execution-Plan / ExecPlan instead of the default superpowers plan format.
+Use this reference when a repository already mandates `.agents/PLANS.md`, a top-level `PLANS.md`, or the user explicitly asks for an Execution-Plan / ExecPlan instead of the default superpowers plan format.
 
 ## When to Switch Formats
 
 Switch from the default `docs/superpowers/plans/...` format to ExecPlan-compatible output when any of these are true:
 
-- the repo already contains `.agent/PLANS.md`;
+- the repo already contains `.agents/PLANS.md`;
 - the repo has another documented planning standard that names `PLANS.md` or `ExecPlan`;
 - the user explicitly asks for `PLANS.md`, `Execution-Plan`, or `ExecPlan`;
 - the repo expects a living plan that remains current during implementation.
@@ -15,7 +15,7 @@ Switch from the default `docs/superpowers/plans/...` format to ExecPlan-compatib
 
 Before writing the plan:
 
-1. Check whether `.agent/PLANS.md` exists and read it fully if present.
+1. Check whether `.agents/PLANS.md` exists and read it fully if present.
 2. Else, check for a top-level `PLANS.md` or another documented planning standard.
 3. If neither exists but the repo needs an ExecPlan workflow, use `PLANS.md` in this directory as the bootstrap reference.
 
@@ -69,8 +69,8 @@ Useful fixtures in this directory:
 
 ## Repo Bootstrap
 
-If the repo needs ExecPlan support but lacks `.agent/PLANS.md`:
+If the repo needs ExecPlan support but lacks `.agents/PLANS.md`:
 
-1. Copy `PLANS.md` from this directory into `.agent/PLANS.md`.
+1. Copy `PLANS.md` from this directory into `.agents/PLANS.md`.
 2. Add the `AGENTS.execplans.snippet.md` guidance to the repo's `AGENTS.md`.
 3. Keep `writing-plans` as the plan-phase owner; do not fold execution guidance back into plan authoring.
