@@ -5,199 +5,48 @@ description: Use when implementation is complete, all tests pass, and you need t
 
 # Finishing a Development Branch
 
-## Overview
-
-Guide completion of development work by presenting clear options and handling chosen workflow.
-
-**Core principle:** Verify tests → Present options → Execute choice → Clean up.
-
-**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
-
 **Contract alignment:** This skill starts after review and verification have already passed. It owns closeout and branch-finish decisions, not earlier quality gates.
 
 **Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
 
-## The Process
+**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
-### Step 1: Verify Tests
+## Use When
 
-**Before presenting options, verify tests pass:**
+- The implementation, review, and verification passes are complete.
+- The remaining task is merge, PR, keep-as-is, or discard closeout.
 
-```bash
-# Run project's test suite
-npm test / cargo test / pytest / go test ./...
-```
+## Preconditions
 
-**If tests fail:**
-```
-Tests failing (<N> failures). Must fix before completing:
+- You know the relevant verification command for the final code state.
+- You can identify the target base branch for merge or PR creation.
 
-[Show failures]
+## Workflow
 
-Cannot proceed with merge/PR until tests pass.
-```
+1. Run the final verification command before offering any closeout choice. If it fails, stop and report the failing command, exit status, and key failure lines.
+2. Determine the base branch. If `main` and `master` are both plausible, confirm the intended base branch in the root thread before continuing.
+3. Use `request_user_input` for the standard non-destructive closeout choice in the root thread.
+   - `Merge locally`
+   - `Push and create PR`
+   - `Keep branch as-is`
+4. Execute the chosen path:
+   - `Merge locally`: switch to the base branch, pull, merge the feature branch, rerun verification on the merged result, then delete the feature branch.
+   - `Push and create PR`: push the branch, create the PR, and keep the worktree for follow-up.
+   - `Keep branch as-is`: report the preserved branch and worktree path without cleanup.
+5. Treat discard as a separate destructive path. Only use it when the user explicitly asks to discard the branch or chooses an equivalent free-form path. For discard, require typed `discard` confirmation before deleting the branch or worktree.
+6. Cleanup the worktree only after `Merge locally` or discard.
 
-Stop. Don't proceed to Step 2.
+## Expected Output
 
-**If tests pass:** Continue to Step 2.
+- The chosen closeout path and the branch/base branch involved
+- Final verification status
+- The resulting branch/worktree state
+- PR URL if a PR was created
 
-### Step 2: Determine Base Branch
+## Hard Rules
 
-```bash
-# Try common base branches
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
-```
-
-If the merge-base is ambiguous or both candidate base branches exist, confirm the intended base branch in the root thread before continuing.
-
-### Step 3: Root-Thread Closeout Choice
-
-Use `request_user_input` for the normal non-destructive closeout choice.
-
-Offer:
-- `Merge locally` - integrate into `<base-branch>` now and clean up the branch/worktree
-- `Push and create PR` - publish the branch for remote review and keep the worktree
-- `Keep branch as-is` - leave the branch and worktree untouched for later follow-up
-
-The client provides an `Other` path for free-form follow-up. Use that if the user wants something outside the standard choices.
-
-Do not replace this decision with a plain-text numbered menu.
-
-### Step 4: Execute Choice
-
-#### Option 1: Merge Locally
-
-```bash
-# Switch to base branch
-git checkout <base-branch>
-
-# Pull latest
-git pull
-
-# Merge feature branch
-git merge <feature-branch>
-
-# Verify tests on merged result
-<test command>
-
-# If tests pass
-git branch -d <feature-branch>
-```
-
-Then: Cleanup worktree (Step 5)
-
-#### Option 2: Push and Create PR
-
-```bash
-# Push branch
-git push -u origin <feature-branch>
-
-# Create PR
-gh pr create --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<2-3 bullets of what changed>
-
-## Test Plan
-- [ ] <verification steps>
-EOF
-)"
-```
-
-Then: Keep worktree for PR follow-up.
-
-#### Option 3: Keep As-Is
-
-Report: "Keeping branch <name>. Worktree preserved at <path>."
-
-**Don't cleanup worktree.**
-
-#### Discard
-
-Use this destructive path only when the user explicitly asks to discard the branch or selects an equivalent free-form option. Keep discard as a separate destructive confirmation flow.
-
-**Confirm first:**
-```
-This will permanently delete:
-- Branch <name>
-- All commits: <commit-list>
-- Worktree at <path>
-
-Type 'discard' to confirm.
-```
-
-Wait for exact confirmation.
-
-If confirmed:
-```bash
-git checkout <base-branch>
-git branch -D <feature-branch>
-```
-
-Then: Cleanup worktree (Step 5)
-
-### Step 5: Cleanup Worktree
-
-**For Options 1 and 4:**
-
-Check if in worktree:
-```bash
-git worktree list | grep $(git branch --show-current)
-```
-
-If yes:
-```bash
-git worktree remove <worktree-path>
-```
-
-**For Option 3:** Keep worktree.
-
-## Quick Reference
-
-| Option | Merge | Push | Keep Worktree | Cleanup Branch |
-|--------|-------|------|---------------|----------------|
-| 1. Merge locally | ✓ | - | - | ✓ |
-| 2. Create PR | - | ✓ | ✓ | - |
-| 3. Keep as-is | - | - | ✓ | - |
-| Discard | - | - | - | ✓ (force) |
-
-## Common Mistakes
-
-**Skipping test verification**
-- **Problem:** Merge broken code, create failing PR
-- **Fix:** Always verify tests before offering options
-
-**Plain-text multiple-choice prompt**
-- **Problem:** Breaks the structured root-thread decision contract
-- **Fix:** Use `request_user_input` for the normal non-destructive choice
-
-**Automatic worktree cleanup**
-- **Problem:** Remove worktree when might need it (Option 2, 3)
-- **Fix:** Only cleanup for Options 1 and 4
-
-**No confirmation for discard**
-- **Problem:** Accidentally delete work
-- **Fix:** Require typed "discard" confirmation
-
-## Red Flags
-
-**Never:**
-- Proceed with failing tests
-- Merge without verifying tests on result
-- Delete work without confirmation
-- Force-push without explicit request
-- Replace the root-thread closeout choice with a plain-text numbered menu
-
-**Always:**
-- Verify tests before offering options
-- Use `request_user_input` for the normal non-destructive closeout choice
-- Get typed confirmation for discard
-- Clean up worktree for Options 1 & 4 only
-
-## Integration
-
-**Called by:**
-- **subagent-driven-development** (Step 7) - After all tasks complete
-- **executing-plans** (Step 5) - After all batches complete
-
-**Pairs with:**
-- **using-git-worktrees** - Cleans up worktree created by that skill
+- Do not proceed with failing tests.
+- Do not merge locally without rerunning verification on the merged result.
+- Do not force-push without explicit request.
+- Do not delete work without typed `discard` confirmation.
+- Do not replace the root-thread closeout choice with a plain-text menu.

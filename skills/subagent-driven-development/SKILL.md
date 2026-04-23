@@ -7,8 +7,6 @@ description: Use when executing an implementation plan with write-owning task wo
 
 Execute an implementation plan by dispatching one fresh write-owning implementer per task, then reviewing that task with two read-only passes: spec compliance first, code quality second.
 
-Prefer bounded dispatch packets. Use full-history fork mode only when the child genuinely needs the same conversation history.
-
 **Core principle:** Fresh implementer per task, then spec review, then code-quality review.
 
 **Contract references:** Follow [../../contract/process-family.md](../../contract/process-family.md), [../../contract/package-standards.md](../../contract/package-standards.md), and [../../contract/prompt-packet.md](../../contract/prompt-packet.md) when writing or updating this workflow.
@@ -20,7 +18,7 @@ Prefer bounded dispatch packets. Use full-history fork mode only when the child 
 - Use `executing-plans` instead when execution must stay inline or in a separate sequential session.
 - Return to planning when tasks are tightly coupled, underspecified, or cannot be reviewed independently.
 
-## The Process
+## Workflow
 
 ### 1. Initialize controller state
 
@@ -63,10 +61,11 @@ Never re-dispatch unchanged after an escalation.
 - Resolve final-review findings before closeout.
 - Use `superpowers:finishing-a-development-branch` for merge, PR, keep, or discard decisions.
 
-## Child Config Inheritance and Role Mapping
+## Child Boundaries and Role Mapping
 
 Child agents inherit the parent session config by default. Preserve that inheritance unless the user explicitly asks for a role-specific override.
 
+- Children may escalate to the parent/root thread, but may not ask the user directly or call `request_user_input`.
 - Do not pass `model` or `reasoning_effort` in `spawn_agent(task_name=..., agent_type="...", message="...")` during normal operation.
 - Use the config-owned superpowers role mapping instead of generic built-in role guessing:
   - `implementer` for the single active write-owning child
@@ -83,87 +82,20 @@ Child agents inherit the parent session config by default. Preserve that inherit
 - `./code-quality-reviewer-prompt.md` - Dispatch code quality reviewer subagent
 - `../requesting-code-review/code-reviewer.md` - Shared read-only review template; `code_quality_reviewer` embeds the filled template inside `./code-quality-reviewer-prompt.md`, while `final_reviewer` receives the filled shared template directly
 
-## Guardrails
+## Hard Rules
 
-- Do not let child agents ask the user directly or call `request_user_input`.
 - Do not use write-capable reviewers.
 - Do not proceed from a task with unresolved spec or Important/Critical quality issues.
 - Do not let review replace parent-side verification.
 - Do not broaden a child packet beyond one task unless the plan has been revised to make that scope explicit.
-
-## Advantages
-
-**vs. Manual execution:**
-- Subagents follow TDD naturally
-- Fresh context per task (no confusion)
-- Parallel-safe (subagents don't interfere)
-- Subagent can ask questions (before AND during work)
-
-**vs. Executing Plans:**
-- Same session (no handoff)
-- Continuous progress (no waiting)
-- Review checkpoints automatic
-
-**Efficiency gains:**
-- No file reading overhead (controller provides full text)
-- Controller curates exactly what context is needed
-- Subagent gets complete information upfront
-- Questions surfaced before work begins (not after)
-
-**Quality gates:**
-- Self-review catches issues before handoff
-- Two-stage review: spec compliance, then code quality
-- Review loops ensure fixes actually work
-- Spec compliance prevents over/under-building
-- Code quality ensures implementation is well-built
-
-**Cost:**
-- More subagent invocations (implementer + 2 reviewers per task)
-- Controller does more prep work (extracting all tasks upfront)
-- Review loops add iterations
-- But catches issues early (cheaper than debugging later)
-
-## Red Flags
-
-**Never:**
-- Start implementation on main/master branch without explicit user consent
-- Skip reviews (spec compliance OR code quality)
-- Proceed with unfixed issues
-- Dispatch multiple implementation subagents in parallel (conflicts)
-- Make subagent read plan file (provide full text instead)
-- Skip scene-setting context (subagent needs to understand where task fits)
-- Ignore subagent questions (answer before letting them proceed)
-- Accept "close enough" on spec compliance (spec reviewer found issues = not done)
-- Skip review loops (reviewer found issues = implementer fixes = review again)
-- Let implementer self-review replace actual review (both are needed)
-- **Start code quality review before spec compliance is ✅** (wrong order)
-- Move to next task while either review has open issues
-
-**If subagent asks questions:**
-- Answer clearly and completely
-- Provide additional context if needed
-- Don't rush them into implementation
-
-**If reviewer finds issues:**
-- Implementer (same subagent) fixes them
-- Reviewer reviews again
-- Repeat until approved
-- Don't skip the re-review
-
-**If subagent fails task:**
-- Dispatch fix subagent with specific instructions
-- Don't try to fix manually (context pollution)
-
-## Integration
-
-**Required workflow skills:**
-- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
-- **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:requesting-code-review** - shared read-only review workflow; `code_quality_reviewer` must receive `../requesting-code-review/code-reviewer.md` through `./code-quality-reviewer-prompt.md`, while `final_reviewer` receives the filled shared template directly
-- **superpowers:finishing-a-development-branch** - Complete development after all tasks
-
-**Subagents should use:**
-- **superpowers:test-driven-development** - Subagents follow TDD for each task
-
-**Alternative workflow:**
-- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+- Do not start implementation on main/master branch without explicit user consent.
+- Do not skip reviews (spec compliance or code quality).
+- Do not proceed with unfixed blocking issues.
+- Do not dispatch multiple implementation subagents in parallel.
+- Do not make the subagent read the plan file from disk when the packet should contain the task text.
+- Do not skip scene-setting context for the implementer packet.
+- Do not accept "close enough" when the spec reviewer found a mismatch.
+- Do not skip review loops after a reviewer finds issues.
+- Do not let implementer self-review replace the actual review passes.
+- Do not start code quality review before spec compliance passes.
+- Do not move to the next task while either review has open issues.

@@ -1402,6 +1402,30 @@ EOF
     "$tmpdir/process-family-brainstorming-plain-text-fallback" \
     'skills/brainstorming/SKILL.md contains stale request_user_input fallback guidance `- If `request_user_input` is unavailable but the session is interactive, ask one concise plain-text question only when the answer is truly blocking.`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-brainstorming-anti-pattern"
+  append_text \
+    "$tmpdir/process-family-brainstorming-anti-pattern/skills/brainstorming/SKILL.md" \
+    $'\n## Anti-Pattern: "This Is Too Simple To Need A Design"\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-brainstorming-anti-pattern" \
+    'skills/brainstorming/SKILL.md contains stale tutorial section heading `## Anti-Pattern:`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-brainstorming-process-flow"
+  append_text \
+    "$tmpdir/process-family-brainstorming-process-flow/skills/brainstorming/SKILL.md" \
+    $'\n## Process Flow\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-brainstorming-process-flow" \
+    'skills/brainstorming/SKILL.md contains stale tutorial section heading `## Process Flow`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-brainstorming-visual-companion-heading"
+  append_text \
+    "$tmpdir/process-family-brainstorming-visual-companion-heading/skills/brainstorming/SKILL.md" \
+    $'\n## Visual Companion\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-brainstorming-visual-companion-heading" \
+    'skills/brainstorming/SKILL.md contains stale inline tutorial section heading `## Visual Companion`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-codex-tools-default-mode-request-user-input"
   append_text \
     "$tmpdir/process-family-codex-tools-default-mode-request-user-input/skills/using-superpowers/references/codex-tools.md" \
@@ -1418,6 +1442,14 @@ EOF
     "$tmpdir/process-family-using-git-worktrees-plain-text-menu" \
     'skills/using-git-worktrees/SKILL.md contains stale plain-text directory-choice menu text `Which would you prefer?`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-using-git-worktrees-common-mistakes"
+  append_text \
+    "$tmpdir/process-family-using-git-worktrees-common-mistakes/skills/using-git-worktrees/SKILL.md" \
+    $'\n## Common Mistakes\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-using-git-worktrees-common-mistakes" \
+    'skills/using-git-worktrees/SKILL.md contains stale tutorial section heading `## Common Mistakes`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-writing-plans-plain-text-menu"
   append_text \
     "$tmpdir/process-family-writing-plans-plain-text-menu/skills/writing-plans/SKILL.md" \
@@ -1425,6 +1457,22 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-writing-plans-plain-text-menu" \
     'skills/writing-plans/SKILL.md contains stale plain-text execution-choice menu text `Which approach?`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-writing-plans-task-structure"
+  append_text \
+    "$tmpdir/process-family-writing-plans-task-structure/skills/writing-plans/SKILL.md" \
+    $'\n## Task Structure\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-writing-plans-task-structure" \
+    'skills/writing-plans/SKILL.md contains stale tutorial section heading `## Task Structure`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-writing-plans-complete-code"
+  append_text \
+    "$tmpdir/process-family-writing-plans-complete-code/skills/writing-plans/SKILL.md" \
+    $'\nComplete code in every step\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-writing-plans-complete-code" \
+    'skills/writing-plans/SKILL.md contains stale unconditional code-snippet guidance `Complete code in every step`'
 
   expect_process_family_fixture_passes "$tmpdir/process-family-finishing-branch-plain-text-menu"
   append_text \
@@ -1434,6 +1482,14 @@ EOF
     "$tmpdir/process-family-finishing-branch-plain-text-menu" \
     'skills/finishing-a-development-branch/SKILL.md contains stale plain-text closeout-menu guidance `Present exactly these 4 options:`'
 
+  expect_process_family_fixture_passes "$tmpdir/process-family-finishing-branch-common-mistakes"
+  append_text \
+    "$tmpdir/process-family-finishing-branch-common-mistakes/skills/finishing-a-development-branch/SKILL.md" \
+    $'\n## Common Mistakes\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-finishing-branch-common-mistakes" \
+    'skills/finishing-a-development-branch/SKILL.md contains stale tutorial section heading `## Common Mistakes`'
+
   expect_process_family_fixture_passes "$tmpdir/process-family-subagent-driven-example-workflow"
   append_text \
     "$tmpdir/process-family-subagent-driven-example-workflow/skills/subagent-driven-development/SKILL.md" \
@@ -1441,6 +1497,14 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-subagent-driven-example-workflow" \
     'skills/subagent-driven-development/SKILL.md contains stale tutorial section heading `## Example Workflow`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-subagent-driven-advantages"
+  append_text \
+    "$tmpdir/process-family-subagent-driven-advantages/skills/subagent-driven-development/SKILL.md" \
+    $'\n## Advantages\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-subagent-driven-advantages" \
+    'skills/subagent-driven-development/SKILL.md contains stale tutorial section heading `## Advantages`'
 
   expect_process_family_fixture_passes "$tmpdir/process-family-dispatching-real-example"
   append_text \
@@ -1465,6 +1529,22 @@ EOF
   expect_process_family_fixture_fails_with \
     "$tmpdir/process-family-executing-plans-plain-clarification" \
     'skills/executing-plans/SKILL.md contains stale plain-text clarification guidance `Ask for clarification rather than guessing.`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-receiving-review-source-specific"
+  append_text \
+    "$tmpdir/process-family-receiving-review-source-specific/skills/receiving-code-review/SKILL.md" \
+    $'\n## Source-Specific Handling\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-receiving-review-source-specific" \
+    'skills/receiving-code-review/SKILL.md contains stale tutorial section heading `## Source-Specific Handling`'
+
+  expect_process_family_fixture_passes "$tmpdir/process-family-receiving-review-human-partner-rule"
+  append_text \
+    "$tmpdir/process-family-receiving-review-human-partner-rule/skills/receiving-code-review/SKILL.md" \
+    $'\n**your human partner'\''s rule:** "External feedback - be skeptical, but check carefully"\n'
+  expect_process_family_fixture_fails_with \
+    "$tmpdir/process-family-receiving-review-human-partner-rule" \
+    "skills/receiving-code-review/SKILL.md contains stale user-specific wording \`your human partner's rule\`"
 
   expect_process_family_fixture_passes "$tmpdir/process-family-systematic-debugging-iron-law"
   append_text \
@@ -1509,6 +1589,12 @@ run_repo_contract_checks() {
   require_path "hooks/hooks.json"
   require_path "hooks/session-start"
   require_path "scripts/install_codex_hooks.py"
+
+  require_fixed 'Use `superpowers-codex:using-superpowers` as the session router before responding.' hooks/session-start
+  require_fixed 'User and repo instructions win over superpowers skills.' hooks/session-start
+  require_fixed 'If you are a dispatched subagent executing a bounded task, skip this session router.' hooks/session-start
+  reject_fixed 'Follow `contract/process-family.md` when choosing process skills' hooks/session-start
+  reject_fixed 'Use `skills/using-superpowers/references/codex-tools.md` when a skill mentions a platform-specific Codex tool.' hooks/session-start
 
   python3 scripts/install_codex_hooks.py --codex-home "$tmpdir/codex-home" >/dev/null
   test -f "$tmpdir/codex-home/hooks.json"

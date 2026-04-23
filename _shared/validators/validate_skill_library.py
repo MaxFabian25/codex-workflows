@@ -197,23 +197,15 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         'Dispatch this packet with `agent_type="parallel_explorer"` in the local V2-only contract.',
     ],
     "skills/brainstorming/SKILL.md": [
-        "3. **Ask clarifying questions / branch-point questions** — one at a time; use `request_user_input` for discrete decisions and prose when the user needs rich feedback",
-        '"Ask clarifying questions / branch-point questions" [shape=box];',
-        "## Structured Elicitation In Codex",
-        "The root thread owns user decisions and user-facing elicitation.",
-        "Use `request_user_input` for discrete branch-point decisions instead of writing a plain-text multiple-choice question.",
-        "Use it for wedge-lock questions, approach selection, section approval, and the written-spec approval gate.",
-        "Keep it to one decision per tool call unless two choices are inseparable and the user cannot answer one without the other.",
-        "If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before asking the next wedge-lock question.",
-        "Use normal prose for explanatory discussion, editorial feedback, and rich free text that does not fit a discrete branch.",
-        "## Local Runtime Rule",
-        "In this local runtime, use `request_user_input` for every eligible discrete branch-point decision in the root thread.",
-        "Do not replace an eligible branch-point question with a plain-text fallback or plain-text multiple-choice prompt.",
-        "## Overuse Guardrails",
-        "Do not issue back-to-back structured questions unless the previous answer unlocked a genuinely new branch.",
-        "Do not use `request_user_input` when rich prose is the real need.",
-        "Do not re-ask an accepted branch-point under a different wrapper.",
-        "- **Structured decisions preferred** - Use `request_user_input` for discrete branches and prose when the user needs nuance",
+        "## Use When",
+        "## Do Not Use When",
+        "## Workflow",
+        "## Root-Thread Decisions",
+        "Use `request_user_input` for eligible discrete branch-point decisions such as approach selection, section approval, and the written-spec approval gate.",
+        "Do not replace an eligible branch-point with a plain-text multiple-choice prompt.",
+        "Use normal prose for explanatory discussion, editorial feedback, and questions that need rich free text.",
+        "If the user asked for subagents and the request decomposes cleanly into read-only lanes, use `dispatching-parallel-agents` to map the slices before the next branch-point question.",
+        "After written-spec approval, invoke `writing-plans` and no other next-phase skill.",
     ],
     "skills/dispatching-parallel-agents/SKILL.md": [
         "### 4. Return unresolved decisions to the parent",
@@ -223,8 +215,12 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "Children may recommend options but may not ask the user directly.",
     ],
     "skills/subagent-driven-development/SKILL.md": [
+        "## Workflow",
         "Fresh implementer per task, then spec review, then code-quality review.",
+        "Keep only one write-owning implementer active for the current task.",
         "Never re-dispatch unchanged after an escalation.",
+        "Children may escalate to the parent/root thread, but may not ask the user directly or call `request_user_input`.",
+        'Do not pass `model` or `reasoning_effort` in `spawn_agent(task_name=..., agent_type="...", message="...")` during normal operation.',
         "After all tasks are complete, dispatch `final_reviewer` with the filled shared `../requesting-code-review/code-reviewer.md` template directly.",
     ],
     "skills/executing-plans/SKILL.md": [
@@ -238,13 +234,31 @@ TARGETED_REQUIRED_SUBSTRINGS = {
         "Use `apply_patch` or another non-heredoc file-write path",
     ],
     "skills/using-git-worktrees/SKILL.md": [
-        "Use `request_user_input` in the root thread for this directory choice.",
+        "## Preconditions",
+        "Priority: existing directory > AGENTS.md preference > root-thread `request_user_input`.",
+        "Use `request_user_input` in the root thread for the directory choice only when no existing directory or AGENTS.md preference decides it.",
+        "If a project-local worktree directory is not ignored, add the ignore rule and commit that hygiene change before creating the worktree.",
+        "If baseline verification fails, report the failing command, exit status, and key failure lines, then use `request_user_input` in the root thread for the proceed-vs-investigate decision with `Investigate baseline first (Recommended)` and `Proceed with known-red baseline`.",
     ],
     "skills/writing-plans/SKILL.md": [
+        "## Workflow",
+        "Default to zero-shot plan writing.",
+        "Include code or interface snippets only when the repo standard requires them, an interface would otherwise be ambiguous, or a high-risk seam needs an exact example.",
         "After saving the plan, use `request_user_input` to offer the execution choice.",
+        "Do not write this as a plain-text numbered menu.",
     ],
     "skills/finishing-a-development-branch/SKILL.md": [
-        "Use `request_user_input` for the normal non-destructive closeout choice.",
+        "## Workflow",
+        "Use `request_user_input` for the standard non-destructive closeout choice in the root thread.",
+        "For discard, require typed `discard` confirmation before deleting the branch or worktree.",
+        "Cleanup the worktree only after `Merge locally` or discard.",
+    ],
+    "skills/receiving-code-review/SKILL.md": [
+        "## Workflow",
+        "Verify each review item against the code, tests, spec, and current branch state before changing code.",
+        "If feedback conflicts with the user's architecture, scope, or support contract, escalate in the root thread before changing code.",
+        "Unrequested compatibility shims, fallback surfaces, and dual-path behavior are regressions by default.",
+        "When replying to inline review comments on GitHub, reply in the comment thread",
     ],
     "skills/systematic-debugging/SKILL.md": [
         "Evidence first, one hypothesis at a time, fix the cause rather than the symptom.",
@@ -298,6 +312,14 @@ TARGETED_CONTENT_GUARDS = {
             re.compile(r"## Example Workflow"),
             'contains stale tutorial section heading `## Example Workflow`',
         ),
+        (
+            re.compile(r"## Advantages"),
+            'contains stale tutorial section heading `## Advantages`',
+        ),
+        (
+            re.compile(r"## Red Flags"),
+            'contains stale tutorial section heading `## Red Flags`',
+        ),
     ],
     "skills/executing-plans/SKILL.md": [
         (
@@ -313,16 +335,20 @@ TARGETED_CONTENT_GUARDS = {
     ],
     "skills/brainstorming/SKILL.md": [
         (
-            re.compile(r'"Ask clarifying questions"\s*\[shape=box\]'),
-            'contains stale plain-text-only diagram node for clarifying questions',
+            re.compile(r"## Anti-Pattern:"),
+            'contains stale tutorial section heading `## Anti-Pattern:`',
         ),
         (
-            re.compile(r'"Ask clarifying questions"\s*->'),
-            'contains stale plain-text-only diagram edge for clarifying questions',
+            re.compile(r"## Process Flow"),
+            'contains stale tutorial section heading `## Process Flow`',
         ),
         (
-            re.compile(r'->\s*"Ask clarifying questions"'),
-            'contains stale plain-text-only diagram edge target for clarifying questions',
+            re.compile(r"## Key Principles"),
+            'contains stale tutorial section heading `## Key Principles`',
+        ),
+        (
+            re.compile(r"## Visual Companion"),
+            'contains stale inline tutorial section heading `## Visual Companion`',
         ),
         (
             re.compile(r"\*\*Multiple choice preferred\*\*"),
@@ -372,11 +398,35 @@ TARGETED_CONTENT_GUARDS = {
             re.compile(r"Which would you prefer\?"),
             'contains stale plain-text directory-choice menu text `Which would you prefer?`',
         ),
+        (
+            re.compile(r"## Quick Reference"),
+            'contains stale tutorial section heading `## Quick Reference`',
+        ),
+        (
+            re.compile(r"## Common Mistakes"),
+            'contains stale tutorial section heading `## Common Mistakes`',
+        ),
+        (
+            re.compile(r"## Red Flags"),
+            'contains stale tutorial section heading `## Red Flags`',
+        ),
     ],
     "skills/writing-plans/SKILL.md": [
         (
             re.compile(r"Which approach\?"),
             'contains stale plain-text execution-choice menu text `Which approach?`',
+        ),
+        (
+            re.compile(r"## Task Structure"),
+            'contains stale tutorial section heading `## Task Structure`',
+        ),
+        (
+            re.compile(r"## No Placeholders"),
+            'contains stale tutorial section heading `## No Placeholders`',
+        ),
+        (
+            re.compile(r"Complete code in every step"),
+            'contains stale unconditional code-snippet guidance `Complete code in every step`',
         ),
     ],
     "skills/finishing-a-development-branch/SKILL.md": [
@@ -387,6 +437,40 @@ TARGETED_CONTENT_GUARDS = {
         (
             re.compile(r"Which option\?"),
             'contains stale plain-text closeout prompt text `Which option?`',
+        ),
+        (
+            re.compile(r"## Common Mistakes"),
+            'contains stale tutorial section heading `## Common Mistakes`',
+        ),
+        (
+            re.compile(r"## Red Flags"),
+            'contains stale tutorial section heading `## Red Flags`',
+        ),
+    ],
+    "skills/receiving-code-review/SKILL.md": [
+        (
+            re.compile(r"## Source-Specific Handling"),
+            'contains stale tutorial section heading `## Source-Specific Handling`',
+        ),
+        (
+            re.compile(r'## YAGNI Check for "Professional" Features'),
+            'contains stale tutorial section heading `## YAGNI Check for "Professional" Features`',
+        ),
+        (
+            re.compile(r"## Implementation Order"),
+            'contains stale tutorial section heading `## Implementation Order`',
+        ),
+        (
+            re.compile(r"## Common Mistakes"),
+            'contains stale tutorial section heading `## Common Mistakes`',
+        ),
+        (
+            re.compile(r"your human partner's rule"),
+            "contains stale user-specific wording `your human partner's rule`",
+        ),
+        (
+            re.compile(r"## The Bottom Line"),
+            'contains stale tutorial section heading `## The Bottom Line`',
         ),
     ],
     "skills/systematic-debugging/SKILL.md": [

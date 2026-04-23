@@ -7,15 +7,9 @@ import sys
 def build_session_context() -> str:
     return (
         "<EXTREMELY_IMPORTANT>\n"
-        "You have superpowers.\n\n"
-        "Use `superpowers-codex:using-superpowers` as the session router before responding.\n\n"
-        "Session routing contract:\n"
-        "- User and repo instructions win over superpowers skills, which win over defaults.\n"
-        "- If a requested or relevant skill may apply, load that `SKILL.md` before acting.\n"
-        "- Follow `contract/process-family.md` when choosing process skills: process skills route first, implementation skills second.\n"
-        "- This fork is Codex-only and skills live under `skills/`.\n"
-        "- Use `skills/using-superpowers/references/codex-tools.md` when a skill mentions a platform-specific Codex tool.\n"
-        "- If you are a dispatched subagent executing a bounded task, skip this session router.\n"
+        "Use `superpowers-codex:using-superpowers` as the session router before responding.\n"
+        "User and repo instructions win over superpowers skills.\n"
+        "If you are a dispatched subagent executing a bounded task, skip this session router.\n"
         "</EXTREMELY_IMPORTANT>"
     )
 
