@@ -4,6 +4,17 @@ All notable changes to the Codex-only fork are documented here.
 
 ## Unreleased
 
+## 6.0.5 - 2026-05-05
+
+- Moved the npm package identity to
+  `@maximilianfabiankirchner/superpowers-codex` for publication from the
+  `maximilianfabiankirchner` npm account.
+- Kept the Codex plugin manifest name and skill namespace as
+  `superpowers-codex`, so installed skill references such as
+  `superpowers-codex:using-superpowers` remain stable.
+- Preserved the `v6.0.4` GitHub tag and release as historical metadata for the
+  unscoped package publication attempt.
+
 ## 6.0.4 - 2026-05-05
 
 - Normalized npm package repository metadata to the structured git repository

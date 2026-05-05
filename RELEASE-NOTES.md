@@ -1,9 +1,11 @@
 # Superpowers Release Notes
 
-## 6.0.4
+## 6.0.5
 
 Highlights:
 
+- Public npm publication now uses the scoped package identity `@maximilianfabiankirchner/superpowers-codex` because the unscoped `superpowers-codex` package is owned by another npm maintainer.
+- The Codex plugin manifest name and skill namespace remain `superpowers-codex`, so skill invocations such as `superpowers-codex:using-superpowers` do not change.
 - Normalized npm repository metadata to the structured git repository form before public npm publication.
 - Native `.codex-plugin/plugin.json` packaging for Codex.
 - Codex-only installation and workflow documentation.
