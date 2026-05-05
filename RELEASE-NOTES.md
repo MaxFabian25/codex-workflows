@@ -1,9 +1,10 @@
 # Superpowers Release Notes
 
-## 6.0.3
+## 6.0.4
 
 Highlights:
 
+- Normalized npm repository metadata to the structured git repository form before public npm publication.
 - Native `.codex-plugin/plugin.json` packaging for Codex.
 - Codex-only installation and workflow documentation.
 - Fork-owned issue tracking, security reporting, and release metadata.

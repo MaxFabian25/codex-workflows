@@ -1,10 +1,13 @@
 {
   "name": "superpowers-codex",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "description": "Codex-only workflow and skills library, forked from obra/superpowers.",
   "type": "module",
   "license": "MIT",
-  "repository": "https://github.com/MaxFabian25/superpowers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MaxFabian25/superpowers.git"
+  },
   "homepage": "https://github.com/MaxFabian25/superpowers",
   "bugs": {
     "url": "https://github.com/MaxFabian25/superpowers/issues"

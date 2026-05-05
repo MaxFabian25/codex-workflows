@@ -4,6 +4,13 @@ All notable changes to the Codex-only fork are documented here.
 
 ## Unreleased
 
+## 6.0.4 - 2026-05-05
+
+- Normalized npm package repository metadata to the structured git repository
+  form before public npm publication.
+- Preserved the `v6.0.3` GitHub tag and release as historical release
+  metadata; npm publication continues from this metadata-correct patch line.
+
 ## 6.0.3 - 2026-05-05
 
 - Repository preparation for public publishing as a native Codex plugin fork.
