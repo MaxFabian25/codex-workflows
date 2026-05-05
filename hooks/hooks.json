@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "__SUPERPOWERS_SESSION_START_COMMAND__",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/session-start\"",
             "statusMessage": "loading superpowers"
           }
         ]

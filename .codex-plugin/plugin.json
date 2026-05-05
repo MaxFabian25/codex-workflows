@@ -19,6 +19,7 @@
     "debugging"
   ],
   "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Superpowers for Codex",
     "shortDescription": "Codex-only workflow and skill library",
@@ -27,10 +28,18 @@
     "category": "Developer Tools",
     "capabilities": [
       "Interactive",
+      "Read",
       "Write"
     ],
     "websiteURL": "https://github.com/MaxFabian25/superpowers",
+    "privacyPolicyURL": "https://github.com/MaxFabian25/superpowers",
+    "termsOfServiceURL": "https://github.com/MaxFabian25/superpowers",
     "brandColor": "#0F172A",
-    "defaultPrompt": "Use the using-superpowers skill first to route the task.\nUse brainstorming before implementation planning when design needs exploration.\nUse writing-plans after the spec is approved and before touching code for multi-step work."
+    "composerIcon": "./assets/superpowers-small.svg",
+    "logo": "./assets/app-icon.png",
+    "screenshots": [],
+    "defaultPrompt": [
+      "Use Superpowers for Codex when a design, plan, execution, debugging, review, verification, or branch-finish workflow applies. The package follows a Natural-Language Agent Harness model: read docs/language-contracts/ for human-facing workflow authority, and treat tools/scripts/tests as evidence or explicit code authority only when classified."
+    ]
   }
 }

@@ -12,10 +12,8 @@
   "files": [
     "skills",
     "contract",
-    "_shared",
+    "assets",
     "hooks",
-    "scripts",
-    "tests",
     "README.md",
     "LICENSE",
     "SECURITY.md",
@@ -25,11 +23,7 @@
     "package.json",
     ".codex-plugin/plugin.json",
     ".codex/INSTALL.md",
-    "docs/README.codex.md"
-  ],
-  "scripts": {
-    "validate:public-fork": "bash tests/codex-public-fork/run.sh",
-    "validate:process-family": "python3 _shared/validators/validate_skill_library.py --root . --family process",
-    "validate:cmux-superpowers": "bash tests/cmux-superpowers/install.sh && bash tests/cmux-superpowers/doctor.sh && bash tests/cmux-superpowers/team_smoke.sh"
-  }
+    "docs/README.codex.md",
+    "docs/language-contracts"
+  ]
 }
