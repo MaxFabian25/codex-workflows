@@ -15,7 +15,7 @@ Execute a written implementation plan sequentially when `subagent-driven-develop
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
-Use `superpowers-codex:using-git-worktrees` before implementation unless the user explicitly approved working on the current branch.
+Use `codex-workflows:using-git-worktrees` before implementation unless the user explicitly approved working on the current branch.
 
 ## Required Flow
 
@@ -44,7 +44,7 @@ For each task:
 ### 4. Complete development
 
 After all tasks complete and verified:
-- **REQUIRED SUB-SKILL:** Use superpowers-codex:finishing-a-development-branch
+- **REQUIRED SUB-SKILL:** Use codex-workflows:finishing-a-development-branch
 - Follow that skill for test verification and closeout decisions
 
 ## Stop Conditions
@@ -66,6 +66,6 @@ Do not force through blockers. Revise the plan or route the decision through the
 ## Integration
 
 **Required workflow skills:**
-- **superpowers-codex:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
-- **superpowers-codex:writing-plans** - Creates the plan this skill executes
-- **superpowers-codex:finishing-a-development-branch** - Complete development after all tasks
+- **codex-workflows:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **codex-workflows:writing-plans** - Creates the plan this skill executes
+- **codex-workflows:finishing-a-development-branch** - Complete development after all tasks

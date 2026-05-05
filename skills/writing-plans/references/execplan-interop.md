@@ -1,10 +1,10 @@
 # ExecPlan Interop Notes
 
-Use this reference when a repository already mandates `.agents/PLANS.md`, a top-level `PLANS.md`, or the user explicitly asks for an Execution-Plan / ExecPlan instead of the default superpowers plan format.
+Use this reference when a repository already mandates `.agents/PLANS.md`, a top-level `PLANS.md`, or the user explicitly asks for an Execution-Plan / ExecPlan instead of the default Codex Workflows plan format.
 
 ## When to Switch Formats
 
-Switch from the default `docs/superpowers/plans/...` format to ExecPlan-compatible output when any of these are true:
+Switch from the default Codex Workflows plan format under `docs/codex-workflows/plans/...` to ExecPlan-compatible output when any of these are true:
 
 - the repo already contains `.agents/PLANS.md`;
 - the repo has another documented planning standard that names `PLANS.md` or `ExecPlan`;

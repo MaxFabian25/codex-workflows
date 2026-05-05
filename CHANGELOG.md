@@ -4,6 +4,23 @@ All notable changes to the Codex-only fork are documented here.
 
 ## Unreleased
 
+## 6.0.6 - 2026-05-05
+
+- Rebranded the live package, plugin, and skill namespace to Codex Workflows:
+  `@maximilianfabiankirchner/codex-workflows`, `codex-workflows`, and
+  `codex-workflows:session-router`.
+- Updated public repository metadata for the `MaxFabian25/codex-workflows`
+  GitHub repository rename.
+- Renamed the session router skill directory from `skills/using-superpowers/`
+  to `skills/session-router/`.
+- Renamed current brainstorming runtime storage from `.superpowers/` to
+  `.codex-workflows/`.
+- Moved old `docs/superpowers/` plans and specs under `docs/archive/superpowers/`
+  as historical records.
+- Planned deprecation for the old
+  `@maximilianfabiankirchner/superpowers-codex@6.0.5` package after the new
+  package verifies.
+
 ## 6.0.5 - 2026-05-05
 
 - Moved the npm package identity to

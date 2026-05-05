@@ -59,7 +59,7 @@ Never re-dispatch unchanged after an escalation.
 
 - After all tasks are complete, dispatch `final_reviewer` with the filled shared `../requesting-code-review/code-reviewer.md` template directly.
 - Resolve final-review findings before closeout.
-- Use `superpowers-codex:finishing-a-development-branch` for merge, PR, keep, or discard decisions.
+- Use `codex-workflows:finishing-a-development-branch` for merge, PR, keep, or discard decisions.
 
 ## Child Boundaries and Role Mapping
 
@@ -67,7 +67,7 @@ Child agents inherit the parent session config by default. Preserve that inherit
 
 - Children may escalate to the parent/root thread, but may not ask the user directly or call `request_user_input`.
 - Do not pass `model` or `reasoning_effort` in `spawn_agent(task_name=..., agent_type="...", message="...")` during normal operation.
-- Use the config-owned superpowers role mapping instead of generic built-in role guessing:
+- Use the config-owned Codex Workflows role mapping instead of generic built-in role guessing:
   - `implementer` for the single active write-owning child
   - `spec_reviewer` for the read-only spec compliance pass
   - `code_quality_reviewer` for the read-only code quality pass

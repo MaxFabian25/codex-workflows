@@ -31,7 +31,7 @@ The formerly unresolved surfaces from the broad prose-only pass are now disposit
 
 ## Manual Replacements
 
-- Session start: use the native SessionStart hook adapter when the host loads plugin hooks; otherwise read `session-router-playbook.md` and `skills/using-superpowers/SKILL.md`.
+- Session start: use the native SessionStart hook adapter when the host loads plugin hooks; otherwise read `session-router-playbook.md` and `skills/session-router/SKILL.md`.
 - Process-family review: use `process-family-playbook.md`.
 - Subagent packet review: use `prompt-packet-playbook.md`.
 - Package/release review: use `package-and-release-playbook.md`.

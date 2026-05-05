@@ -35,7 +35,7 @@ If anything important is unclear, raise a blocking question before you start cha
 
 ## Required Steps
 
-1. For any code-changing task, invoke the `superpowers-codex:test-driven-development` skill before writing implementation code
+1. For any code-changing task, invoke the `codex-workflows:test-driven-development` skill before writing implementation code
 2. Follow RED-GREEN-REFACTOR: write the failing test first and prove it fails, then write the minimum implementation to make the test pass and prove it passes
 3. Verify the implementation works
 4. Commit your work

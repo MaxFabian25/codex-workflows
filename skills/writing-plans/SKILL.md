@@ -22,7 +22,7 @@ Assume the implementer is technically strong but new to this codebase, toolchain
 ```markdown
 # [Feature Name] Implementation Plan
 
-> **For agentic workers:** REQUIRED FLOW: First use superpowers-codex:using-git-worktrees to create the isolated workspace for this plan. Then use superpowers-codex:subagent-driven-development (recommended) or superpowers-codex:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED FLOW: First use codex-workflows:using-git-worktrees to create the isolated workspace for this plan. Then use codex-workflows:subagent-driven-development (recommended) or codex-workflows:executing-plans to implement it task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** [One sentence describing what this builds]
 
@@ -41,7 +41,7 @@ Assume the implementer is technically strong but new to this codebase, toolchain
 4. Write bite-sized tasks with exact file paths, verification commands, and commit boundaries. Keep tasks self-contained and ordered so another engineer can execute them without re-deciding the design.
 5. Default to zero-shot plan writing. Include code or interface snippets only when the repo standard requires them, an interface would otherwise be ambiguous, or a high-risk seam needs an exact example.
 6. Keep placeholders out of the plan. If a step depends on a concrete name, command, path, or behavior, write it explicitly.
-7. Self-review the finished plan against the spec, then save it to `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` unless the user or repo specifies a different location.
+7. Self-review the finished plan against the spec, then save it to `docs/codex-workflows/plans/YYYY-MM-DD-<feature-name>.md` unless the user or repo specifies a different location.
 
 ## Required Output
 
@@ -60,7 +60,7 @@ Assume the implementer is technically strong but new to this codebase, toolchain
 
 ## Execution Handoff
 
-After the plan is approved, the next required step is isolation. Use `superpowers-codex:using-git-worktrees` to create the isolated workspace before either execution mode.
+After the plan is approved, the next required step is isolation. Use `codex-workflows:using-git-worktrees` to create the isolated workspace before either execution mode.
 
 After saving the plan, use `request_user_input` to offer the execution choice.
 
@@ -71,13 +71,13 @@ Offer:
 Do not write this as a plain-text numbered menu.
 
 **If Subagent-Driven chosen:**
-- First use `superpowers-codex:using-git-worktrees` to create the isolated workspace
-- **REQUIRED SUB-SKILL:** Use superpowers-codex:subagent-driven-development
+- First use `codex-workflows:using-git-worktrees` to create the isolated workspace
+- **REQUIRED SUB-SKILL:** Use codex-workflows:subagent-driven-development
 - Fresh subagent per task + two-stage review
 
 **If Inline Execution chosen:**
-- First use `superpowers-codex:using-git-worktrees` to create the isolated workspace
-- **REQUIRED SUB-SKILL:** Use superpowers-codex:executing-plans
+- First use `codex-workflows:using-git-worktrees` to create the isolated workspace
+- **REQUIRED SUB-SKILL:** Use codex-workflows:executing-plans
 - Batch execution with checkpoints for review
 
 ## References

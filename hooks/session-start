@@ -7,8 +7,8 @@ import sys
 def build_session_context() -> str:
     return (
         "<EXTREMELY_IMPORTANT>\n"
-        "Use `superpowers-codex:using-superpowers` as the session router before responding.\n"
-        "User and repo instructions win over superpowers skills.\n"
+        "Use `codex-workflows:session-router` as the session router before responding.\n"
+        "User and repo instructions win over Codex Workflows skills.\n"
         "If you are a dispatched subagent executing a bounded task, skip this session router.\n"
         "</EXTREMELY_IMPORTANT>"
     )

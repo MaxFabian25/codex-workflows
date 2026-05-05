@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "python3 \"${PLUGIN_ROOT}/hooks/session-start\"",
-            "statusMessage": "loading superpowers"
+            "statusMessage": "loading codex workflows"
           }
         ]
       }

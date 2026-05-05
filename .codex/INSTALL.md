@@ -1,4 +1,4 @@
-# Installing Superpowers for Codex
+# Installing Codex Workflows
 
 This fork installs as a native Codex plugin. It assumes you already have Codex CLI and Git.
 
@@ -8,7 +8,7 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
 
    ```bash
    mkdir -p ~/plugins
-   git clone https://github.com/MaxFabian25/superpowers.git ~/plugins/superpowers-codex
+   git clone https://github.com/MaxFabian25/codex-workflows.git ~/plugins/codex-workflows
    ```
 
 2. Register the local plugin.
@@ -23,10 +23,10 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
      },
      "plugins": [
        {
-         "name": "superpowers-codex",
+         "name": "codex-workflows",
          "source": {
            "source": "local",
-           "path": "./plugins/superpowers-codex"
+           "path": "./plugins/codex-workflows"
          },
          "policy": {
            "installation": "AVAILABLE",
@@ -42,10 +42,10 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
 
    ```json
    {
-     "name": "superpowers-codex",
+     "name": "codex-workflows",
      "source": {
        "source": "local",
-       "path": "./plugins/superpowers-codex"
+       "path": "./plugins/codex-workflows"
      },
      "policy": {
        "installation": "AVAILABLE",
@@ -60,7 +60,7 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
 4. Start with the router.
 
    ```text
-   Use superpowers-codex:using-superpowers before we start.
+   Use codex-workflows:session-router before we start.
    ```
 
    The package ships a native SessionStart hook that injects this router instruction when the host loads plugin hooks. The explicit prompt is the manual fallback. See `docs/language-contracts/session-router-playbook.md`.
@@ -71,22 +71,22 @@ Run:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
-test -f ~/plugins/superpowers-codex/hooks/hooks.json
-test -x ~/plugins/superpowers-codex/hooks/session-start
-test -f ~/plugins/superpowers-codex/docs/language-contracts/README.md
-test -f ~/plugins/superpowers-codex/docs/language-contracts/session-router-playbook.md
+test -f ~/plugins/codex-workflows/hooks/hooks.json
+test -x ~/plugins/codex-workflows/hooks/session-start
+test -f ~/plugins/codex-workflows/docs/language-contracts/README.md
+test -f ~/plugins/codex-workflows/docs/language-contracts/session-router-playbook.md
 ```
 
 If automatic routing is unavailable, start a new session with:
 
 ```text
-Use superpowers-codex:using-superpowers before we start.
+Use codex-workflows:session-router before we start.
 ```
 
 ## Update
 
 ```bash
-git -C ~/plugins/superpowers-codex pull
+git -C ~/plugins/codex-workflows pull
 ```
 
 Restart Codex after updating.
@@ -95,12 +95,12 @@ If you moved the clone to a different path, update the plugin registration path 
 
 ## Uninstall
 
-First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
+First remove the `codex-workflows` entry from `~/.agents/plugins/marketplace.json`.
 
 Then delete the clone:
 
 ```bash
-rm -rf ~/plugins/superpowers-codex
+rm -rf ~/plugins/codex-workflows
 ```
 
-The optional `cmux-superpowers` launcher is outside this core package unless a companion package explicitly owns it. Feature runtime should not be retired solely because it is executable; see `docs/language-contracts/runtime-automation-playbook.md`.
+The optional cmux team launcher is outside this core package unless a companion package explicitly owns it. Feature runtime should not be retired solely because it is executable; see `docs/language-contracts/runtime-automation-playbook.md`.

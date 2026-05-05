@@ -7,15 +7,15 @@ The earlier broad prose-only retirement rationale is superseded. Each surface be
 | Surface | Refined disposition | Authority or evidence role |
 | --- | --- | --- |
 | `hooks/hooks.json` | retained lightweight adapter | Native plugin hook adapter that points SessionStart at `hooks/session-start`; source of truth remains `session-router-playbook.md`. |
-| `hooks/session-start` | retained lightweight adapter | Emits the `superpowers-codex:using-superpowers` router instruction as SessionStart context. |
+| `hooks/session-start` | retained lightweight adapter | Emits the `codex-workflows:session-router` router instruction as SessionStart context. |
 | `.codex-plugin/plugin.json` `hooks` field | retained lightweight adapter | Declares the native plugin hook file. |
 | `scripts/install_codex_hooks.py` | accepted retirement | User-level hook installer mutates `~/.codex/hooks.json`; native plugin hooks are the supported adapter path. |
 | `scripts/install_cmux_superpowers_launcher.py` | companion-owned | Launcher ownership belongs outside this core package if a companion plugin exists. |
 | `scripts/cmux_superpowers_team.py` | companion-owned | Team launcher runtime belongs outside this core package if retained. |
 | `tests/cmux-superpowers/` | companion-owned | Companion package should own these tests if the launcher remains supported. |
-| `commands/brainstorm.md` | accepted retirement | Deprecated alias; use `superpowers-codex:brainstorming`. |
-| `commands/write-plan.md` | accepted retirement | Deprecated alias; use `superpowers-codex:writing-plans`. |
-| `commands/execute-plan.md` | accepted retirement | Deprecated alias; use `superpowers-codex:executing-plans` or `superpowers-codex:subagent-driven-development`. |
+| `commands/brainstorm.md` | accepted retirement | Deprecated alias; use `codex-workflows:brainstorming`. |
+| `commands/write-plan.md` | accepted retirement | Deprecated alias; use `codex-workflows:writing-plans`. |
+| `commands/execute-plan.md` | accepted retirement | Deprecated alias; use `codex-workflows:executing-plans` or `codex-workflows:subagent-driven-development`. |
 | `_shared/validators/validate_skill_library.py` | accepted retirement | Human-facing policy moved to process/prompt playbooks; exact-string and stale-route checks are accepted as reviewer/search evidence rather than code gates. |
 | `_shared/validators/process_family_targets.txt` | prose-controlled human decision | Target inventory is visible in `process-family-playbook.md`; no runtime mechanic is required. |
 | `scripts/validate_codex_public_fork.py` | accepted retirement | Public-fork readiness is ledger-controlled; package metadata/path checks use `npm pack --dry-run --json`, manifest inspection, docs inspection, and ledger review. |

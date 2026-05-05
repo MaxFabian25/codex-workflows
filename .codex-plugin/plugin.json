@@ -1,13 +1,13 @@
 {
-  "name": "superpowers-codex",
-  "version": "6.0.5",
-  "description": "Codex-only workflow and skills library forked from obra/superpowers.",
+  "name": "codex-workflows",
+  "version": "6.0.6",
+  "description": "Codex workflow harness and skills library.",
   "author": {
     "name": "Max Fabian",
     "url": "https://github.com/MaxFabian25"
   },
-  "homepage": "https://github.com/MaxFabian25/superpowers",
-  "repository": "https://github.com/MaxFabian25/superpowers",
+  "homepage": "https://github.com/MaxFabian25/codex-workflows",
+  "repository": "https://github.com/MaxFabian25/codex-workflows",
   "license": "MIT",
   "keywords": [
     "codex",
@@ -21,9 +21,9 @@
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
   "interface": {
-    "displayName": "Superpowers for Codex",
-    "shortDescription": "Codex-only workflow and skill library",
-    "longDescription": "A Codex-specific fork of obra/superpowers focused on design, planning, execution, debugging, and review workflows.",
+    "displayName": "Codex Workflows",
+    "shortDescription": "Codex workflow harness and skill library",
+    "longDescription": "A Codex-focused workflow harness for design, planning, execution, debugging, review, verification, and branch closeout.",
     "developerName": "Max Fabian",
     "category": "Developer Tools",
     "capabilities": [
@@ -31,15 +31,15 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://github.com/MaxFabian25/superpowers",
-    "privacyPolicyURL": "https://github.com/MaxFabian25/superpowers",
-    "termsOfServiceURL": "https://github.com/MaxFabian25/superpowers",
+    "websiteURL": "https://github.com/MaxFabian25/codex-workflows",
+    "privacyPolicyURL": "https://github.com/MaxFabian25/codex-workflows",
+    "termsOfServiceURL": "https://github.com/MaxFabian25/codex-workflows",
     "brandColor": "#0F172A",
-    "composerIcon": "./assets/superpowers-small.svg",
+    "composerIcon": "./assets/codex-workflows-small.svg",
     "logo": "./assets/app-icon.png",
     "screenshots": [],
     "defaultPrompt": [
-      "Use Superpowers for Codex when a design, plan, execution, debugging, review, verification, or branch-finish workflow applies. The package follows a Natural-Language Agent Harness model: read docs/language-contracts/ for human-facing workflow authority, and treat tools/scripts/tests as evidence or explicit code authority only when classified."
+      "Use Codex Workflows when a design, plan, execution, debugging, review, verification, or branch-finish workflow applies. The package follows a Natural-Language Agent Harness model: read docs/language-contracts/ for human-facing workflow authority, and treat tools/scripts/tests as evidence or explicit code authority only when classified."
     ]
   }
 }

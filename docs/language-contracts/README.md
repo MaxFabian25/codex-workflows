@@ -1,6 +1,6 @@
 # Natural-Language Agent Harness
 
-This directory defines the human-facing harness authority and agent-computer interface for Superpowers for Codex.
+This directory defines the human-facing harness authority and agent-computer interface for Codex Workflows.
 
 Agents and reviewers should be able to understand human-facing workflow authority by reading small, scoped harness artifacts. This does not mean every executable mechanic should be replaced with prose. Parsers, adapters, builds, tests, migrations, formatters, safety checks, reproducible calculations, low-level malformed-input validation, unsafe-write prevention, and real feature runtime should remain in code when code is the right tool.
 
@@ -9,10 +9,10 @@ Search, diff, package inspection, scripts, tests, hashes, generated manifests, a
 ## Authority Order
 
 1. System, developer, user, and repo instructions still outrank this package.
-2. These harness artifacts define Superpowers human-facing workflow authority.
+2. These harness artifacts define Codex Workflows human-facing workflow authority.
 3. Deterministic mechanics and safety checks remain authoritative for the behavior they implement.
 4. `contract/*.md` files are compatibility pointers to these playbooks.
-5. Historical plans and specs under `docs/plans/` and `docs/superpowers/` are archived context, not live acceptance rules.
+5. Historical plans and specs under `docs/plans/` and `docs/archive/superpowers/` are archived context, not live acceptance rules.
 
 ## Playbooks
 

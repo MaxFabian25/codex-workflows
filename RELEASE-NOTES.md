@@ -1,11 +1,14 @@
-# Superpowers Release Notes
+# Codex Workflows Release Notes
 
-## 6.0.5
+## 6.0.6
 
 Highlights:
 
-- Public npm publication now uses the scoped package identity `@maximilianfabiankirchner/superpowers-codex` because the unscoped `superpowers-codex` package is owned by another npm maintainer.
-- The Codex plugin manifest name and skill namespace remain `superpowers-codex`, so skill invocations such as `superpowers-codex:using-superpowers` do not change.
+- Public npm publication now uses the practical package identity `@maximilianfabiankirchner/codex-workflows`.
+- The Codex plugin manifest name and skill namespace are now `codex-workflows`.
+- The session router skill is now invoked as `codex-workflows:session-router`.
+- Public repository metadata now points to `https://github.com/MaxFabian25/codex-workflows`.
+- The old `@maximilianfabiankirchner/superpowers-codex@6.0.5` package is deprecated in favor of this package.
 - Normalized npm repository metadata to the structured git repository form before public npm publication.
 - Native `.codex-plugin/plugin.json` packaging for Codex.
 - Codex-only installation and workflow documentation.
@@ -17,6 +20,8 @@ Highlights:
 Breaking behavior changes:
 
 - Prior broad prose-only retirement claims are superseded by the Natural-Language Agent Harness boundary.
+- Old `superpowers-codex:*` skill invocations are not retained as live compatibility aliases.
+- Current brainstorming runtime state now uses `.codex-workflows/` instead of `.superpowers/`.
 - Native SessionStart routing is restored as a lightweight adapter to the playbook contract; manual router invocation remains the fallback.
 - cmux launcher automation is outside this core package unless a companion package explicitly owns it.
 - Visual brainstorming browser runtime and useful helper scripts are retained when classified as feature runtime, deterministic mechanics, or evidence providers.

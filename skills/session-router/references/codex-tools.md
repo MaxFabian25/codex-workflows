@@ -40,13 +40,13 @@ Use `request_user_input(...)` as the tool name, with `request_user_input(questio
 - Review and guardian review sub-sessions intentionally disable `multi_agent_v2`; do not assume nested review agents can spawn further child agents even when the root session has V2 enabled.
 - In `multi_agent_v2`-only sessions, legacy `send_input` and `resume_agent` remain hidden; use `send_message`, `followup_task`, and `wait_agent` for live child control.
 - On `codex-cli 0.129.0-alpha.6`, the surfaced Codex tool schema requires `task_name` and `message`; the upstream handler still treats `agent_type` as optional metadata.
-- This local superpowers implementation requires explicit `agent_type` on every multi-agent dispatch because role selection is part of the contract.
+- This local Codex Workflows implementation requires explicit `agent_type` on every multi-agent dispatch because role selection is part of the contract.
 - The built-in roles listed above are common on this machine, but surfaced roles are not guaranteed to be exhaustive.
 - `followup_task` has only `target` and `message` fields in this runtime. Do not pass an `interrupt` parameter.
 - `multi_agent_v2` is configured as `[features.multi_agent_v2]`, not `[agents]`. Keep `enabled = true`, `max_concurrent_threads_per_session = 32`, and `min_wait_timeout_ms = 300000` on this workstation.
 - Do not set `[agents].max_threads` while V2 is enabled; the runtime rejects that combination.
 - Do not set `[agents].max_depth` to control V2 spawn trees; alpha.15 ignores the legacy V1 depth guard when `multi_agent_v2` is enabled.
-- Remaining optional V2 subkeys are `usage_hint_enabled`, `usage_hint_text`, `root_agent_usage_hint_text`, `subagent_usage_hint_text`, and `hide_spawn_agent_metadata`. Leave them unset unless deliberately changing global runtime behavior; Superpowers owns dispatch guidance locally.
+- Remaining optional V2 subkeys are `usage_hint_enabled`, `usage_hint_text`, `root_agent_usage_hint_text`, `subagent_usage_hint_text`, and `hide_spawn_agent_metadata`. Leave them unset unless deliberately changing global runtime behavior; Codex Workflows owns dispatch guidance locally.
 - This workstation sets `min_wait_timeout_ms = 300000`, so default waits fit xhigh subagent startup latency.
 - `update_plan(...)` is a progress/checklist tool. It is not Plan Mode and must not be used in Plan Mode.
 - `functions.exec` is useful for orchestration when surfaced, but it has no Node APIs, filesystem access, network access, persistent bindings, image emission helpers, or `codex.tool(...)` helpers unless the active tool definition says otherwise.
@@ -65,7 +65,7 @@ Use `request_user_input(...)` as the tool name, with `request_user_input(questio
 - `plugin_hooks` is under development and enabled on this workstation.
 - `remote_compaction_v2` is under development and currently disabled in this workstation config.
 - `tool_search`, `tool_suggest`, and `tool_call_mcp_elicitation` are stable and enabled on this workstation.
-- Superpowers no longer depends on native plugin hooks for its core routing contract. Start sessions manually with `superpowers-codex:using-superpowers` when the workflow applies.
+- Codex Workflows no longer depends on native plugin hooks for its core routing contract. Start sessions manually with `codex-workflows:session-router` when the workflow applies.
 
 ## Dispatch Rules
 

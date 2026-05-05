@@ -6,13 +6,13 @@ This playbook defines package/release authority and evidence roles. Package tool
 
 Manual package review reads `package.json` and `.codex-plugin/plugin.json` directly. Expected identity for this release line:
 
-- npm package name: `@maximilianfabiankirchner/superpowers-codex`;
-- version: `6.0.5`;
+- npm package name: `@maximilianfabiankirchner/codex-workflows`;
+- version: `6.0.6`;
 - type: `module`;
 - license: `MIT`;
-- repository, homepage, and issues point to `https://github.com/MaxFabian25/superpowers`;
-- Codex plugin manifest name is `superpowers-codex`;
-- plugin display name is `Superpowers for Codex`;
+- repository, homepage, and issues point to `https://github.com/MaxFabian25/codex-workflows`;
+- Codex plugin manifest name is `codex-workflows`;
+- plugin display name is `Codex Workflows`;
 - skill root is `./skills/`.
 
 ## Shipped Files
