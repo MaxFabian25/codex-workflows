@@ -11,14 +11,10 @@ Follow the instructions below exactly.
 <agent-instructions>
 You are implementing Task N: [task name]
 
-## Task Packet
-
-### Task Description
+## Task
 
 [FULL TEXT of task from plan - paste it here,
 don't make subagent read file]
-
-### Context
 
 [Scene-setting: where this fits, dependencies, architectural context]
 
@@ -37,10 +33,9 @@ Elicitation boundary:
 
 If anything important is unclear, raise a blocking question before you start changing code.
 
-## Required Workflow
+## Required Steps
 
-Once you're clear on requirements:
-1. For any code-changing task, invoke the `superpowers:test-driven-development` skill before writing implementation code
+1. For any code-changing task, invoke the `superpowers-codex:test-driven-development` skill before writing implementation code
 2. Follow RED-GREEN-REFACTOR: write the failing test first and prove it fails, then write the minimum implementation to make the test pass and prove it passes
 3. Verify the implementation works
 4. Commit your work
@@ -49,18 +44,10 @@ Once you're clear on requirements:
 
 While you work, continue autonomously on safe local actions and stop only when a real decision or blocker appears.
 
-## Code Organization
-
-- Keep files focused and aligned to the plan's intended boundaries.
-- Follow the file structure defined in the plan
-- Each file should have one clear responsibility with a well-defined interface.
-- If a new file is growing beyond the plan's intent, stop and report it as `DONE_WITH_CONCERNS` instead of inventing a wider split on your own.
-- If an existing file is already large or tangled, work carefully and note that concern in your report.
-- Follow established patterns in the codebase; do not restructure unrelated areas.
-
 ## Stop Conditions
 
-Stop and escalate when:
+Return `BLOCKED` or `NEEDS_CONTEXT` when:
+
 - Requirements or acceptance criteria are incomplete or contradictory
 - The task requires architectural decisions with multiple valid approaches
 - You need a requirement-changing or interface-changing decision from the parent
@@ -68,7 +55,15 @@ Stop and escalate when:
 - You have searched locally for context and still cannot determine a correct implementation path
 - You are not making progress after expanding the read scope
 
-Escalate with `BLOCKED` or `NEEDS_CONTEXT`. Describe what blocked you, what you checked, and what decision or context is needed.
+Use `DONE_WITH_CONCERNS` when the task is complete but there is a meaningful correctness, scope, file-boundary, or verification concern.
+
+## Verification
+
+- Keep files focused and aligned to the plan's intended boundaries.
+- Follow the file structure defined in the plan.
+- Follow existing patterns in the codebase; do not restructure unrelated areas.
+- Verify behavior with the commands specified in the task packet.
+- If no command is specified, choose the narrowest relevant local test or check and report exactly what ran.
 
 ## Before Reporting Back: Self-Review
 
@@ -90,7 +85,6 @@ If you find issues during self-review, fix them now before reporting.
 
 ## Report Schema
 
-When done, report:
 - **Status:** DONE | DONE_WITH_CONCERNS |
   BLOCKED | NEEDS_CONTEXT
 - What you implemented (or what you attempted, if blocked)

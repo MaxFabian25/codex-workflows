@@ -2,6 +2,8 @@
 
 This public fork is the Codex-only packaging of `obra/superpowers`. It installs as a native Codex plugin and ships a skills library for design, planning, execution, debugging, and review.
 
+The package follows a Natural-Language Agent Harness model. Use [language-contracts/](language-contracts/) for human-facing routing, package, public-fork, runtime, and review obligations. Tools, tests, scripts, and package tasks provide evidence by default and become code-gated authority only when explicitly declared.
+
 ## Install
 
 ### 1. Clone the plugin
@@ -55,67 +57,42 @@ If `~/.agents/plugins/marketplace.json` already exists, append this object insid
 }
 ```
 
-### 3. Install the local cmux launcher
+### 3. Restart Codex
 
-```bash
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+Quit and relaunch Codex after plugin registration or package updates.
+
+### 4. Start with the router
+
+The package ships a native SessionStart hook that injects the router instruction when the host loads plugin hooks. If automatic routing is unavailable, start sessions explicitly:
+
+```text
+Use superpowers-codex:using-superpowers before we start.
 ```
 
-### 4. Install the Superpowers SessionStart hook
-
-```bash
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
-```
-
-### 5. Install the cmux Codex hooks
-
-```bash
-cmux codex install-hooks
-```
-
-### 6. Enable Codex hooks in persistent config
-
-The launcher and `cmux-superpowers doctor` read the persisted setting from `~/.codex/config.toml`, so set it there instead of relying on a one-shot flag.
-
-Persistent config:
-
-```toml
-[features]
-codex_hooks = true
-```
-
-### 7. Restart Codex
-
-Quit and relaunch Codex after the plugin registration or hook change.
+The routing contract is [language-contracts/session-router-playbook.md](language-contracts/session-router-playbook.md).
 
 ## Verify
 
-Confirm the local launcher is installed and the workstation is ready:
-
-```bash
-command -v cmux-superpowers
-cmux-superpowers doctor
-```
-
-Confirm the plugin manifest exists:
+Confirm the plugin manifest and language-contract authority exist:
 
 ```bash
 test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
-test -f ~/.codex/hooks.json
-rg 'loading superpowers|session-start' ~/.codex/hooks.json
+test -f ~/plugins/superpowers-codex/hooks/hooks.json
+test -x ~/plugins/superpowers-codex/hooks/session-start
+test -f ~/plugins/superpowers-codex/docs/language-contracts/README.md
+test -f ~/plugins/superpowers-codex/docs/language-contracts/session-router-playbook.md
 ```
 
-Confirm plugin and hook support is enabled:
+Confirm plugin support is enabled:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
-codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'
 ```
 
-`cmux-superpowers doctor` only goes green when the launcher is on `PATH`, the `cmux` binary and live runtime are reachable, the Superpowers SessionStart hook is installed, the cmux Codex hooks are installed, and `codex_hooks` is enabled. Start new sessions with:
+If automatic routing is unavailable, start new sessions with:
 
 ```text
-Use superpowers:using-superpowers before we start.
+Use superpowers-codex:using-superpowers before we start.
 ```
 
 ## Recommended workflow order
@@ -128,11 +105,7 @@ Use superpowers:using-superpowers before we start.
 
 Use `subagent-driven-development` when the task benefits from bounded implementation slices with review gates. Use `executing-plans` when you want the same plan executed sequentially in one session.
 
-For a pane-based local team session in cmux, use:
-
-```bash
-cmux-superpowers team --worker review --worker implement "Implement the approved plan in this repository"
-```
+Pane-based local team sessions in cmux are outside this core package unless a companion package explicitly owns them.
 
 ## Updating
 
@@ -144,23 +117,15 @@ git -C ~/plugins/superpowers-codex pull
 
 Restart Codex after updating so the refreshed plugin and skill content are loaded into new sessions.
 
-If you moved the clone to a different path, rerun:
-
-```bash
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
-```
+If you moved the clone to a different path, update the plugin registration path and restart Codex.
 
 ## Uninstalling
 
 First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
 
-Then remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, and delete the local clone:
+Then delete the local clone:
 
 ```bash
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
-cmux codex uninstall-hooks
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 rm -rf ~/plugins/superpowers-codex
 ```
 
@@ -187,28 +152,14 @@ codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
 
 If that command prints nothing, update Codex to a build with stable plugin support before relying on the plugin install.
 
-### SessionStart or doctor still failing
+### Session routing not happening automatically
 
-Check that `~/.codex/hooks.json` exists and still points at your current plugin clone:
-
-```bash
-test -f ~/.codex/hooks.json
-rg 'loading superpowers|session-start' ~/.codex/hooks.json
-```
-
-Then rerun the three install steps and re-check the doctor output:
-
-```bash
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
-cmux codex install-hooks
-cmux-superpowers doctor
-```
+First confirm the hook files are present in the installed plugin. If the host still does not load plugin hooks, start a new session with the explicit router instruction and read [language-contracts/session-router-playbook.md](language-contracts/session-router-playbook.md). The hook is a lightweight adapter whose contract remains the playbook.
 
 ### Skills not routing as expected
 
 Start a fresh session and use the explicit entry instruction:
 
 ```text
-Use superpowers:using-superpowers before we start.
+Use superpowers-codex:using-superpowers before we start.
 ```

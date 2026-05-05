@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Use when executing a written implementation plan in a separate or sequential session with review checkpoints
+description: Use when executing an approved implementation plan sequentially
 ---
 
 # Executing Plans
@@ -11,11 +11,11 @@ Execute a written implementation plan sequentially when `subagent-driven-develop
 
 **Contract alignment:** This skill owns sequential or separate-session implementation when `subagent-driven-development` is not the right fit.
 
-**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
+**Contract references:** Follow `../../docs/language-contracts/process-family-playbook.md` and `../../docs/language-contracts/package-and-release-playbook.md` for lifecycle ownership and package structure.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
-Use `superpowers:using-git-worktrees` before implementation unless the user explicitly approved working on the current branch.
+Use `superpowers-codex:using-git-worktrees` before implementation unless the user explicitly approved working on the current branch.
 
 ## Required Flow
 
@@ -44,7 +44,7 @@ For each task:
 ### 4. Complete development
 
 After all tasks complete and verified:
-- **REQUIRED SUB-SKILL:** Use superpowers:finishing-a-development-branch
+- **REQUIRED SUB-SKILL:** Use superpowers-codex:finishing-a-development-branch
 - Follow that skill for test verification and closeout decisions
 
 ## Stop Conditions
@@ -66,6 +66,6 @@ Do not force through blockers. Revise the plan or route the decision through the
 ## Integration
 
 **Required workflow skills:**
-- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
-- **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+- **superpowers-codex:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
+- **superpowers-codex:writing-plans** - Creates the plan this skill executes
+- **superpowers-codex:finishing-a-development-branch** - Complete development after all tasks

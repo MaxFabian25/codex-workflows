@@ -1,13 +1,13 @@
 ---
 name: using-git-worktrees
-description: Use when implementation is about to start and the work needs an isolated workspace
+description: Use when implementation needs an isolated workspace
 ---
 
 # Using Git Worktrees
 
 **Contract alignment:** This skill owns the `isolate` phase only. Use it after planning is complete and before `subagent-driven-development` or `executing-plans` begin write-owning work.
 
-**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for phase ownership and package structure.
+**Contract references:** Follow `../../docs/language-contracts/process-family-playbook.md` and `../../docs/language-contracts/package-and-release-playbook.md` for phase ownership and package structure.
 
 **Announce at start:** "I'm using the using-git-worktrees skill to set up an isolated workspace."
 

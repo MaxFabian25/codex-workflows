@@ -1,13 +1,13 @@
 ---
 name: writing-skills
-description: Use when creating or editing skills and validating that they satisfy the library contract before deployment
+description: Use when creating, editing, or validating skills
 ---
 
 # Writing Skills
 
 Writing skills is test-driven documentation for Codex.
 
-**Contract references:** Process-family skill edits must align with `../../contract/process-family.md`, and every skill package must satisfy `../../contract/package-standards.md`.
+**Contract references:** Process-family skill edits must align with `../../docs/language-contracts/process-family-playbook.md`, and every skill package must satisfy `../../docs/language-contracts/package-and-release-playbook.md`.
 
 Personal skills for Codex live under `~/.agents/skills/`.
 
@@ -41,4 +41,4 @@ Descriptions explain when to use the skill, not the workflow summary. Future Cod
 
 ## Validation
 
-After editing a skill package, run the relevant validator or quick-check script for that package before publishing it.
+After editing a skill package, perform the manual review described in `../../docs/language-contracts/process-family-playbook.md` and record any package-level evidence required by `../../docs/language-contracts/cutover-ledger.md`.

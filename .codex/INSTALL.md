@@ -55,61 +55,32 @@ This fork installs as a native Codex plugin. It assumes you already have Codex C
    }
    ```
 
-3. Install the local cmux launcher.
+3. Restart Codex.
 
-   ```bash
-   python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
+4. Start with the router.
+
+   ```text
+   Use superpowers-codex:using-superpowers before we start.
    ```
 
-4. Install the Superpowers SessionStart hook.
-
-   ```bash
-   python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
-   ```
-
-5. Install the cmux Codex hooks.
-
-   ```bash
-   cmux codex install-hooks
-   ```
-
-6. Enable Codex hooks in persistent config.
-
-   The launcher and `cmux-superpowers doctor` read the persisted setting from `~/.codex/config.toml`, so set it there instead of relying on a one-shot flag.
-
-   Persistent config:
-
-   ```toml
-   [features]
-   codex_hooks = true
-   ```
-
-7. Restart Codex.
+   The package ships a native SessionStart hook that injects this router instruction when the host loads plugin hooks. The explicit prompt is the manual fallback. See `docs/language-contracts/session-router-playbook.md`.
 
 ## Verify
-
-Confirm the local launcher is installed and the workstation is ready:
-
-```bash
-command -v cmux-superpowers
-cmux-superpowers doctor
-```
-
-`cmux-superpowers doctor` verifies both the `cmux` binary and a live `cmux list-workspaces` runtime probe, not just PATH discovery.
 
 Run:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
-codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'
-test -f ~/.codex/hooks.json
-rg 'loading superpowers|session-start' ~/.codex/hooks.json
+test -f ~/plugins/superpowers-codex/hooks/hooks.json
+test -x ~/plugins/superpowers-codex/hooks/session-start
+test -f ~/plugins/superpowers-codex/docs/language-contracts/README.md
+test -f ~/plugins/superpowers-codex/docs/language-contracts/session-router-playbook.md
 ```
 
-Then start a new session with:
+If automatic routing is unavailable, start a new session with:
 
 ```text
-Use superpowers:using-superpowers before we start.
+Use superpowers-codex:using-superpowers before we start.
 ```
 
 ## Update
@@ -120,22 +91,16 @@ git -C ~/plugins/superpowers-codex pull
 
 Restart Codex after updating.
 
-If you moved the clone to a different path, rerun:
-
-```bash
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
-```
+If you moved the clone to a different path, update the plugin registration path and restart Codex.
 
 ## Uninstall
 
 First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
 
-Then remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, and delete the clone:
+Then delete the clone:
 
 ```bash
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
-cmux codex uninstall-hooks
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 rm -rf ~/plugins/superpowers-codex
 ```
+
+The optional `cmux-superpowers` launcher is outside this core package unless a companion package explicitly owns it. Feature runtime should not be retired solely because it is executable; see `docs/language-contracts/runtime-automation-playbook.md`.

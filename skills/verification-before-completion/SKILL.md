@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+description: Use when claiming work is complete, fixed, or passing
 ---
 
 # Verification Before Completion
@@ -13,7 +13,7 @@ Do not claim success until a fresh command proves the claim.
 
 **Contract alignment:** This skill ends at verified evidence. It does not decide merge, cleanup, or branch-finish actions; those belong to `finishing-a-development-branch`.
 
-**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
+**Contract references:** Follow `../../docs/language-contracts/process-family-playbook.md` and `../../docs/language-contracts/package-and-release-playbook.md` for lifecycle ownership and package structure.
 
 ## Required Flow
 

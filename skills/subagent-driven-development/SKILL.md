@@ -1,6 +1,6 @@
 ---
 name: subagent-driven-development
-description: Use when executing an implementation plan with write-owning task work in the current session
+description: Use when an approved plan should be executed by subagents
 ---
 
 # Subagent-Driven Development
@@ -9,7 +9,7 @@ Execute an implementation plan by dispatching one fresh write-owning implementer
 
 **Core principle:** Fresh implementer per task, then spec review, then code-quality review.
 
-**Contract references:** Follow [../../contract/process-family.md](../../contract/process-family.md), [../../contract/package-standards.md](../../contract/package-standards.md), and [../../contract/prompt-packet.md](../../contract/prompt-packet.md) when writing or updating this workflow.
+**Contract references:** Follow [../../docs/language-contracts/process-family-playbook.md](../../docs/language-contracts/process-family-playbook.md), [../../docs/language-contracts/package-and-release-playbook.md](../../docs/language-contracts/package-and-release-playbook.md), and [../../docs/language-contracts/prompt-packet-playbook.md](../../docs/language-contracts/prompt-packet-playbook.md) when writing or updating this workflow.
 
 ## When to Use
 
@@ -59,7 +59,7 @@ Never re-dispatch unchanged after an escalation.
 
 - After all tasks are complete, dispatch `final_reviewer` with the filled shared `../requesting-code-review/code-reviewer.md` template directly.
 - Resolve final-review findings before closeout.
-- Use `superpowers:finishing-a-development-branch` for merge, PR, keep, or discard decisions.
+- Use `superpowers-codex:finishing-a-development-branch` for merge, PR, keep, or discard decisions.
 
 ## Child Boundaries and Role Mapping
 

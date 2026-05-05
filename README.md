@@ -2,6 +2,8 @@
 
 Superpowers for Codex is a Codex-only fork of `obra/superpowers`. It packages the workflow as a native Codex plugin plus a skills library for design, planning, execution, debugging, and review.
 
+The package now follows a Natural-Language Agent Harness model. Agents and reviewers should start from [docs/language-contracts/](docs/language-contracts/) for human-facing workflow authority, while deterministic mechanics and explicit tool interfaces remain in code when code is the right tool.
+
 ## Included workflow skills
 
 - `brainstorming`
@@ -67,69 +69,34 @@ Superpowers for Codex is a Codex-only fork of `obra/superpowers`. It packages th
    }
    ```
 
-3. Install the local cmux launcher:
+3. Restart Codex.
 
-   ```bash
-   python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
-   ```
-
-4. Install the Superpowers SessionStart hook:
-
-   ```bash
-   python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
-   ```
-
-5. Install the cmux Codex hooks:
-
-   ```bash
-   cmux codex install-hooks
-   ```
-
-6. Enable Codex hooks in persistent config.
-
-   The launcher and `cmux-superpowers doctor` read the persisted setting from `~/.codex/config.toml`, so set it there instead of relying on a one-shot flag.
-
-   Persistent config:
-
-   ```toml
-   [features]
-   codex_hooks = true
-   ```
-
-7. Restart Codex.
-
-8. Start a new session with:
+4. Start a new session with:
 
    ```text
-   Use superpowers:using-superpowers before we start.
+   Use superpowers-codex:using-superpowers before we start.
    ```
+
+The package ships a native SessionStart hook as a lightweight adapter for the same router instruction. Manual session start remains the fallback when a host does not load plugin hooks.
 
 Detailed Codex setup and workflow guidance lives in [docs/README.codex.md](docs/README.codex.md).
 
 ## Verify
 
-Confirm the local launcher is installed and the workstation is ready:
-
-```bash
-command -v cmux-superpowers
-cmux-superpowers doctor
-```
-
-`cmux-superpowers doctor` verifies both the `cmux` binary and a live `cmux list-workspaces` runtime probe, not just PATH discovery.
-
-Confirm the plugin and hook surfaces exist:
+Confirm the plugin and language-contract surfaces exist:
 
 ```bash
 test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
-test -f ~/.codex/hooks.json
-rg 'loading superpowers|session-start' ~/.codex/hooks.json
+test -f ~/plugins/superpowers-codex/hooks/hooks.json
+test -x ~/plugins/superpowers-codex/hooks/session-start
+test -f ~/plugins/superpowers-codex/docs/language-contracts/README.md
+test -f ~/plugins/superpowers-codex/docs/language-contracts/session-router-playbook.md
 ```
 
-Confirm Codex plugin and hook support is enabled:
+Confirm Codex plugin support is enabled:
 
 ```bash
 codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
-codex features list | rg '^codex_hooks[[:space:]]+under development[[:space:]]+true$'
 ```
 
 ## Updating
@@ -140,25 +107,19 @@ Pull the local plugin clone, then restart Codex:
 git -C ~/plugins/superpowers-codex pull
 ```
 
-If you moved the clone to a different path, rerun:
-
-```bash
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py
-```
+If you moved the clone to a different path, update the plugin registration path and restart Codex.
 
 ## Uninstalling
 
 First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
 
-Then remove the installed Superpowers hook, remove the cmux Codex hooks, remove the launcher wrapper, and delete the local clone:
+Then delete the local clone:
 
 ```bash
-python3 ~/plugins/superpowers-codex/scripts/install_codex_hooks.py --remove
-cmux codex uninstall-hooks
-python3 ~/plugins/superpowers-codex/scripts/install_cmux_superpowers_launcher.py --remove
 rm -rf ~/plugins/superpowers-codex
 ```
+
+The optional `cmux-superpowers` launcher is outside this core package unless a companion package explicitly owns it. The visual brainstorming companion remains package feature runtime when the brainstorming skill offers it and the user accepts it.
 
 ## Support
 

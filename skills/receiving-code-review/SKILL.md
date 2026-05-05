@@ -1,13 +1,13 @@
 ---
 name: receiving-code-review
-description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
+description: Use when triaging code review feedback before changing code
 ---
 
 # Code Review Reception
 
 **Core principle:** Verify before implementing. Ask before assuming. Technical correctness over performance or politeness theater.
 
-**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for review ownership and package structure.
+**Contract references:** Follow `../../docs/language-contracts/process-family-playbook.md` and `../../docs/language-contracts/package-and-release-playbook.md` for review ownership and package structure.
 
 **Hard-cut review rule:** Unrequested compatibility shims, fallback surfaces, and dual-path behavior are regressions by default. Only preserve them when the request explicitly calls for that support contract.
 
