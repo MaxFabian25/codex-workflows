@@ -55,21 +55,25 @@ of human involvement will be closed without review.
   the session that led to this change?
 - How many eval sessions did you run AFTER making the change?
 - How did outcomes change compared to before the change?
+- If this changes package contracts, which `docs/language-contracts/`
+  playbook and `cutover-ledger.md` entries did you review?
 
 <!-- "It works" is not evaluation. Describe the before/after difference
      you observed across multiple sessions. -->
 
 ## Rigor
 
-- [ ] If this is a skills change: I used `superpowers:writing-skills` and
-      completed adversarial pressure testing (paste results below)
+- [ ] If this is a skills change: I used `superpowers-codex:writing-skills` and
+      completed manual review against `docs/language-contracts/`
 - [ ] This change was tested adversarially, not just on the happy path
 - [ ] I did not modify carefully-tuned content (Red Flags table,
       rationalizations, "human partner" language) without extensive evals
       showing the change is an improvement
+- [ ] If this removes or changes a code gate, hook, test harness, script, or
+      package surface, I updated the relevant language-contract ledger entry
 
 <!-- If you changed wording in skills that shape agent behavior, show your
-     eval methodology and results. These are not prose — they are code. -->
+     eval methodology, manual review notes, and relevant ledger links. -->
 
 ## Human review
 - [ ] A human has reviewed the COMPLETE proposed diff before submission
