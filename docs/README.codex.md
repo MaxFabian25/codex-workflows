@@ -1,4 +1,4 @@
-# Superpowers for Codex
+# Codex Workflows
 
 This public fork is the Codex-only packaging of `obra/superpowers`. It installs as a native Codex plugin and ships a skills library for design, planning, execution, debugging, and review.
 
@@ -10,7 +10,7 @@ The package follows a Natural-Language Agent Harness model. Use [language-contra
 
 ```bash
 mkdir -p ~/plugins
-git clone https://github.com/MaxFabian25/superpowers.git ~/plugins/superpowers-codex
+git clone https://github.com/MaxFabian25/codex-workflows.git ~/plugins/codex-workflows
 ```
 
 ### 2. Register the local plugin
@@ -25,10 +25,10 @@ If `~/.agents/plugins/marketplace.json` does not exist yet, create it with this 
   },
   "plugins": [
     {
-      "name": "superpowers-codex",
+      "name": "codex-workflows",
       "source": {
         "source": "local",
-        "path": "./plugins/superpowers-codex"
+        "path": "./plugins/codex-workflows"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -44,10 +44,10 @@ If `~/.agents/plugins/marketplace.json` already exists, append this object insid
 
 ```json
 {
-  "name": "superpowers-codex",
+  "name": "codex-workflows",
   "source": {
     "source": "local",
-    "path": "./plugins/superpowers-codex"
+    "path": "./plugins/codex-workflows"
   },
   "policy": {
     "installation": "AVAILABLE",
@@ -66,7 +66,7 @@ Quit and relaunch Codex after plugin registration or package updates.
 The package ships a native SessionStart hook that injects the router instruction when the host loads plugin hooks. If automatic routing is unavailable, start sessions explicitly:
 
 ```text
-Use superpowers-codex:using-superpowers before we start.
+Use codex-workflows:session-router before we start.
 ```
 
 The routing contract is [language-contracts/session-router-playbook.md](language-contracts/session-router-playbook.md).
@@ -76,11 +76,11 @@ The routing contract is [language-contracts/session-router-playbook.md](language
 Confirm the plugin manifest and language-contract authority exist:
 
 ```bash
-test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
-test -f ~/plugins/superpowers-codex/hooks/hooks.json
-test -x ~/plugins/superpowers-codex/hooks/session-start
-test -f ~/plugins/superpowers-codex/docs/language-contracts/README.md
-test -f ~/plugins/superpowers-codex/docs/language-contracts/session-router-playbook.md
+test -f ~/plugins/codex-workflows/.codex-plugin/plugin.json
+test -f ~/plugins/codex-workflows/hooks/hooks.json
+test -x ~/plugins/codex-workflows/hooks/session-start
+test -f ~/plugins/codex-workflows/docs/language-contracts/README.md
+test -f ~/plugins/codex-workflows/docs/language-contracts/session-router-playbook.md
 ```
 
 Confirm plugin support is enabled:
@@ -92,12 +92,12 @@ codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
 If automatic routing is unavailable, start new sessions with:
 
 ```text
-Use superpowers-codex:using-superpowers before we start.
+Use codex-workflows:session-router before we start.
 ```
 
 ## Recommended workflow order
 
-1. `using-superpowers`
+1. `session-router`
 2. `brainstorming`
 3. `writing-plans`
 4. `using-git-worktrees`
@@ -112,7 +112,7 @@ Pane-based local team sessions in cmux are outside this core package unless a co
 Pull the local clone:
 
 ```bash
-git -C ~/plugins/superpowers-codex pull
+git -C ~/plugins/codex-workflows pull
 ```
 
 Restart Codex after updating so the refreshed plugin and skill content are loaded into new sessions.
@@ -121,12 +121,12 @@ If you moved the clone to a different path, update the plugin registration path 
 
 ## Uninstalling
 
-First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
+First remove the `codex-workflows` entry from `~/.agents/plugins/marketplace.json`.
 
 Then delete the local clone:
 
 ```bash
-rm -rf ~/plugins/superpowers-codex
+rm -rf ~/plugins/codex-workflows
 ```
 
 ## Troubleshooting
@@ -136,11 +136,11 @@ rm -rf ~/plugins/superpowers-codex
 Check that the local clone exists and the manifest is present:
 
 ```bash
-test -d ~/plugins/superpowers-codex
-test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
+test -d ~/plugins/codex-workflows
+test -f ~/plugins/codex-workflows/.codex-plugin/plugin.json
 ```
 
-Then confirm `~/.agents/plugins/marketplace.json` still contains the `superpowers-codex` entry and restart Codex.
+Then confirm `~/.agents/plugins/marketplace.json` still contains the `codex-workflows` entry and restart Codex.
 
 ### Plugins feature not enabled
 
@@ -161,5 +161,5 @@ First confirm the hook files are present in the installed plugin. If the host st
 Start a fresh session and use the explicit entry instruction:
 
 ```text
-Use superpowers-codex:using-superpowers before we start.
+Use codex-workflows:session-router before we start.
 ```

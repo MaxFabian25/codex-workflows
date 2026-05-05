@@ -4,7 +4,7 @@ Use this template when dispatching a spec document reviewer subagent.
 
 **Purpose:** Verify the spec document is complete, consistent, and ready for implementation planning.
 
-**Dispatch after:** Spec document is written to docs/superpowers/specs/
+**Dispatch after:** Spec document is written to docs/codex-workflows/specs/
 
 Pass the following content directly as the `message` string in `spawn_agent(task_name="...", agent_type="...", message="...")`:
 

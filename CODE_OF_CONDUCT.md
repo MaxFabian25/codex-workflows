@@ -60,7 +60,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported privately through
-https://github.com/MaxFabian25/superpowers/security/advisories/new.
+https://github.com/MaxFabian25/codex-workflows/security/advisories/new.
 Until a dedicated conduct-reporting inbox exists for this fork, GitHub Security
 Advisories is the private reporting channel for both security issues and Code of
 Conduct reports.

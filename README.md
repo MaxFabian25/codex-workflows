@@ -1,6 +1,6 @@
-# Superpowers for Codex
+# Codex Workflows
 
-Superpowers for Codex is a Codex-only fork of `obra/superpowers`. It packages the workflow as a native Codex plugin plus a skills library for design, planning, execution, debugging, and review.
+Codex Workflows is a Codex-only fork of `obra/superpowers`. It packages the workflow as a native Codex plugin plus a skills library for design, planning, execution, debugging, and review.
 
 The package now follows a Natural-Language Agent Harness model. Agents and reviewers should start from [docs/language-contracts/](docs/language-contracts/) for human-facing workflow authority, while deterministic mechanics and explicit tool interfaces remain in code when code is the right tool.
 
@@ -22,7 +22,7 @@ The package now follows a Natural-Language Agent Harness model. Agents and revie
 
    ```bash
    mkdir -p ~/plugins
-   git clone https://github.com/MaxFabian25/superpowers.git ~/plugins/superpowers-codex
+   git clone https://github.com/MaxFabian25/codex-workflows.git ~/plugins/codex-workflows
    ```
 
 2. Register the local plugin.
@@ -37,10 +37,10 @@ The package now follows a Natural-Language Agent Harness model. Agents and revie
      },
      "plugins": [
        {
-         "name": "superpowers-codex",
+         "name": "codex-workflows",
          "source": {
            "source": "local",
-           "path": "./plugins/superpowers-codex"
+           "path": "./plugins/codex-workflows"
          },
          "policy": {
            "installation": "AVAILABLE",
@@ -56,10 +56,10 @@ The package now follows a Natural-Language Agent Harness model. Agents and revie
 
    ```json
    {
-     "name": "superpowers-codex",
+     "name": "codex-workflows",
      "source": {
        "source": "local",
-       "path": "./plugins/superpowers-codex"
+       "path": "./plugins/codex-workflows"
      },
      "policy": {
        "installation": "AVAILABLE",
@@ -74,7 +74,7 @@ The package now follows a Natural-Language Agent Harness model. Agents and revie
 4. Start a new session with:
 
    ```text
-   Use superpowers-codex:using-superpowers before we start.
+   Use codex-workflows:session-router before we start.
    ```
 
 The package ships a native SessionStart hook as a lightweight adapter for the same router instruction. Manual session start remains the fallback when a host does not load plugin hooks.
@@ -86,11 +86,11 @@ Detailed Codex setup and workflow guidance lives in [docs/README.codex.md](docs/
 Confirm the plugin and language-contract surfaces exist:
 
 ```bash
-test -f ~/plugins/superpowers-codex/.codex-plugin/plugin.json
-test -f ~/plugins/superpowers-codex/hooks/hooks.json
-test -x ~/plugins/superpowers-codex/hooks/session-start
-test -f ~/plugins/superpowers-codex/docs/language-contracts/README.md
-test -f ~/plugins/superpowers-codex/docs/language-contracts/session-router-playbook.md
+test -f ~/plugins/codex-workflows/.codex-plugin/plugin.json
+test -f ~/plugins/codex-workflows/hooks/hooks.json
+test -x ~/plugins/codex-workflows/hooks/session-start
+test -f ~/plugins/codex-workflows/docs/language-contracts/README.md
+test -f ~/plugins/codex-workflows/docs/language-contracts/session-router-playbook.md
 ```
 
 Confirm Codex plugin support is enabled:
@@ -104,27 +104,27 @@ codex features list | rg '^plugins[[:space:]]+stable[[:space:]]+true$'
 Pull the local plugin clone, then restart Codex:
 
 ```bash
-git -C ~/plugins/superpowers-codex pull
+git -C ~/plugins/codex-workflows pull
 ```
 
 If you moved the clone to a different path, update the plugin registration path and restart Codex.
 
 ## Uninstalling
 
-First remove the `superpowers-codex` entry from `~/.agents/plugins/marketplace.json`.
+First remove the `codex-workflows` entry from `~/.agents/plugins/marketplace.json`.
 
 Then delete the local clone:
 
 ```bash
-rm -rf ~/plugins/superpowers-codex
+rm -rf ~/plugins/codex-workflows
 ```
 
-The optional `cmux-superpowers` launcher is outside this core package unless a companion package explicitly owns it. The visual brainstorming companion remains package feature runtime when the brainstorming skill offers it and the user accepts it.
+The optional cmux team launcher is outside this core package unless a companion package explicitly owns it. The visual brainstorming companion remains package feature runtime when the brainstorming skill offers it and the user accepts it.
 
 ## Support
 
-- Issues: https://github.com/MaxFabian25/superpowers/issues
-- Security advisories: https://github.com/MaxFabian25/superpowers/security/advisories/new
+- Issues: https://github.com/MaxFabian25/codex-workflows/issues
+- Security advisories: https://github.com/MaxFabian25/codex-workflows/security/advisories/new
 
 ## Upstream origin
 

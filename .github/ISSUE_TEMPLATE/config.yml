@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Codex installation guide
-    url: https://github.com/MaxFabian25/superpowers/blob/main/.codex/INSTALL.md
+    url: https://github.com/MaxFabian25/codex-workflows/blob/main/.codex/INSTALL.md
     about: Use the Codex-only install guide before opening setup or installation questions.
   - name: Private security or conduct report
-    url: https://github.com/MaxFabian25/superpowers/security/advisories/new
+    url: https://github.com/MaxFabian25/codex-workflows/security/advisories/new
     about: Report security issues or conduct concerns privately through GitHub Security Advisories.

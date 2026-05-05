@@ -10,7 +10,7 @@ Review these files before public release:
 - `hooks/hooks.json`
 - `hooks/session-start`
 - `assets/app-icon.png`
-- `assets/superpowers-small.svg`
+- `assets/codex-workflows-small.svg`
 - `README.md`
 - `.codex/INSTALL.md`
 - `docs/README.codex.md`
@@ -74,8 +74,8 @@ Historical archive docs may mention old behavior when clearly non-authoritative.
 
 ## Issue, Security, And Conduct Review
 
-- Bug reports ask for Superpowers version, Codex version, model, OS, shell, reproduction steps, and transcript or log evidence.
-- Feature requests ask for problem, proposed solution, alternatives, and whether the request belongs in core Superpowers.
+- Bug reports ask for Codex Workflows version, Codex version, model, OS, shell, reproduction steps, and transcript or log evidence.
+- Feature requests ask for problem, proposed solution, alternatives, and whether the request belongs in core Codex Workflows.
 - Security and conduct reporting use the private GitHub Security Advisories route until a dedicated private channel exists.
 - Pull requests require language-contract ledger links when they change behavior-shaping content.
 

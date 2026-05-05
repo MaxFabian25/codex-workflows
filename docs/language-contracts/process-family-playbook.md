@@ -1,6 +1,6 @@
 # Process Family Playbook
 
-The process family defines which Superpowers skill owns each phase of work. It replaces the former process-family validator and target manifest.
+The process family defines which Codex Workflows skill owns each phase of work. It replaces the former process-family validator and target manifest.
 
 ## Lifecycle Order
 
@@ -48,8 +48,8 @@ These files were the former process-family validator targets. Review them manual
 - `contract/process-family.md`
 - `contract/prompt-packet.md`
 - `contract/runtime-surfaces.md`
-- `skills/using-superpowers/SKILL.md`
-- `skills/using-superpowers/references/codex-tools.md`
+- `skills/session-router/SKILL.md`
+- `skills/session-router/references/codex-tools.md`
 - `skills/brainstorming/SKILL.md`
 - `skills/brainstorming/spec-document-reviewer-prompt.md`
 - `skills/writing-plans/SKILL.md`

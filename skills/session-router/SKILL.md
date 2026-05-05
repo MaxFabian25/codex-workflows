@@ -1,5 +1,5 @@
 ---
-name: using-superpowers
+name: session-router
 description: Use when starting a session to route through applicable skills
 ---
 
@@ -9,12 +9,12 @@ If you were dispatched as a subagent to execute a specific task, skip this skill
 
 # Session Router
 
-Use this skill at session start to decide whether another Superpowers skill should take over before you respond.
+Use this skill at session start to decide whether another Codex Workflows skill should take over before you respond.
 
 ## Instruction Priority
 
 1. User, system, developer, and repo instructions (`AGENTS.md`, direct requests, repo-local contracts)
-2. Superpowers skills
+2. Codex Workflows skills
 3. Default assistant behavior
 
 If a repo contract and a skill disagree, follow the user or repo contract.

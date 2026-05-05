@@ -16,7 +16,7 @@ of human involvement will be closed without review.
 <!-- 1-3 sentences. What, not why — the "why" belongs above. -->
 
 ## Is this change appropriate for the core library?
-<!-- Superpowers core contains general-purpose skills and infrastructure
+<!-- Codex Workflows core contains general-purpose skills and infrastructure
      that benefit all users. Ask yourself:
 
      - Would this be useful to someone working on a completely different
@@ -63,7 +63,7 @@ of human involvement will be closed without review.
 
 ## Rigor
 
-- [ ] If this is a skills change: I used `superpowers-codex:writing-skills` and
+- [ ] If this is a skills change: I used `codex-workflows:writing-skills` and
       completed manual review against `docs/language-contracts/`
 - [ ] This change was tested adversarially, not just on the happy path
 - [ ] I did not modify carefully-tuned content (Red Flags table,

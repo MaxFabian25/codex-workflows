@@ -43,7 +43,7 @@ The broad deletion state recorded below has now been reclassified. SessionStart 
 Observed before applying the language-contract tree:
 
 - Modified package/front-door files: `.codex-plugin/plugin.json`, `.codex/INSTALL.md`, `README.md`, `docs/README.codex.md`, `package.json`.
-- Modified process and prompt files: `agents/code-reviewer.md`, process-family skills, subagent prompt templates, writing-skills references, and `skills/using-superpowers/references/codex-tools.md`.
+- Modified process and prompt files: `agents/code-reviewer.md`, process-family skills, subagent prompt templates, writing-skills references, and `skills/session-router/references/codex-tools.md`.
 - Already deleted legacy aliases and automation: `commands/*.md`, cmux scripts, hook installer, cmux tests, and April 2026 cmux plan/spec docs.
 - Validator files still present or moved: `_shared/validators/validate_skill_library.py`, `_shared/validators/process_family_targets.txt`, `scripts/validate_codex_public_fork.py`, `tests/codex-public-fork/run.sh`.
 - Runtime bridge still present: `.codex-plugin/plugin.json` hook declaration, `hooks/hooks.json`, `hooks/session-start`.
@@ -120,7 +120,7 @@ No unrelated user edits were identified during the baseline pass. The untracked 
 - Old code gate or automation surface: SessionStart hook, hook installer, cmux helpers, visual companion server, ExecPlan validator, diagnostic helper scripts, writing-skill graph helper, fixture tests
 - Replacement prose: `session-router-playbook.md`, `runtime-automation-playbook.md`, `retired-automation-register.md`
 - Classification: runtime bridge, install/convenience, feature runtime, reference validator
-- Invariants retained: native SessionStart routing starts with `using-superpowers`; manual session routing remains the fallback; cmux is named as companion-owned; ExecPlan plans still require manual structure/evidence review
+- Invariants retained: native SessionStart routing starts with `session-router`; manual session routing remains the fallback; cmux is named as companion-owned; ExecPlan plans still require manual structure/evidence review
 - Invariants changed: user-level hook installer, old validators, and stale fixtures are retired instead of restored as compatibility shims
 - Invariants removed: user-level hook installer execution, strict validator command output, public-fork fixture execution, and stale subagent fixture execution
 - Accepted deviations: old validators and stale fixtures are accepted retirements
@@ -139,7 +139,7 @@ No unrelated user edits were identified during the baseline pass. The untracked 
 - Scope: live docs, historical plans/specs, old namespaces, removed validators, hook/bootstrap references
 - Files inspected: tracked Markdown, JSON, Python, shell, JavaScript, package files
 - Old code gate or automation surface: old validator and hook references across live and historical docs
-- Replacement prose: front-door docs, language-contract playbooks, archive notes under `docs/plans/` and `docs/superpowers/`
+- Replacement prose: front-door docs, language-contract playbooks, archive notes under `docs/plans/` and `docs/archive/superpowers/`
 - Classification: stale-reference review
 - Invariants retained: historical docs remain available as context
 - Invariants changed: historical docs are explicitly non-authoritative
@@ -216,8 +216,8 @@ Tracked modified files:
 - `skills/systematic-debugging/root-cause-tracing.md`
 - `skills/test-driven-development/SKILL.md`
 - `skills/using-git-worktrees/SKILL.md`
-- `skills/using-superpowers/SKILL.md`
-- `skills/using-superpowers/references/codex-tools.md`
+- `skills/session-router/SKILL.md`
+- `skills/session-router/references/codex-tools.md`
 - `skills/verification-before-completion/SKILL.md`
 - `skills/writing-plans/SKILL.md`
 - `skills/writing-plans/references/execplan-interop.md`
@@ -232,8 +232,8 @@ Tracked deleted files:
 - `commands/brainstorm.md`
 - `commands/execute-plan.md`
 - `commands/write-plan.md`
-- `docs/superpowers/plans/2026-04-11-cmux-superpowers-team-launcher.md`
-- `docs/superpowers/specs/2026-04-11-cmux-superpowers-team-design.md`
+- `docs/archive/superpowers/plans/2026-04-11-cmux-superpowers-team-launcher.md`
+- `docs/archive/superpowers/specs/2026-04-11-cmux-superpowers-team-design.md`
 - `hooks/hooks.json`
 - `hooks/session-start`
 - `scripts/cmux_superpowers_team.py`
@@ -255,7 +255,7 @@ Tracked deleted files:
 Untracked added files:
 
 - `assets/app-icon.png`
-- `assets/superpowers-small.svg`
+- `assets/codex-workflows-small.svg`
 - `docs/language-contracts/README.md`
 - `docs/language-contracts/cutover-ledger.md`
 - `docs/language-contracts/harness-charter.md`
@@ -269,7 +269,7 @@ Untracked added files:
 - `docs/language-contracts/runtime-automation-playbook.md`
 - `docs/language-contracts/session-router-playbook.md`
 - `docs/plans/README.md`
-- `docs/superpowers/README.md`
+- `docs/codex-workflows/README.md`
 - `openspec/config.yaml`
 - `openspec/specs/cutover-governance/spec.md`
 - `openspec/specs/language-contract-authority/spec.md`
@@ -311,7 +311,7 @@ Untracked added files:
 - `openspec status --change refine-agent-harness-boundary`: 4/4 artifacts complete.
 - `openspec instructions apply --change refine-agent-harness-boundary --json`: 29/29 tasks complete after this closeout entry.
 - `openspec validate refine-agent-harness-boundary --strict`: valid after this closeout entry.
-- `python3 hooks/session-start`: emitted valid `hookSpecificOutput` JSON with `hookEventName` set to `SessionStart` and additional context pointing to `superpowers-codex:using-superpowers`.
+- `python3 hooks/session-start`: emitted valid `hookSpecificOutput` JSON with `hookEventName` set to `SessionStart` and additional context pointing to `codex-workflows:session-router`.
 - `npm --prefix tests/brainstorm-server ci && npm --prefix tests/brainstorm-server test`: 25 passed, 0 failed.
 - `npm pack --dry-run --json`: package inspection succeeded with 79 entries; payload includes `hooks/`, `docs/language-contracts/`, retained feature runtime, and retained helper scripts while excluding `_shared/`, retired validator scripts, and retired fixture harnesses.
 - Focused stale-language search found no live broad prose-only claims matching the searched stale phrases.

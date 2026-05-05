@@ -29,7 +29,7 @@ Turn a request into an approved design and written spec before planning or imple
 4. Ask clarifying questions one at a time until the goal, constraints, success criteria, and boundaries are clear.
 5. Propose 2-3 approaches with tradeoffs and a recommendation.
 6. Present the design in sections scaled to complexity and get user approval as you go.
-7. Write the approved spec to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` unless the user or repo sets a different location.
+7. Write the approved spec to `docs/codex-workflows/specs/YYYY-MM-DD-<topic>-design.md` unless the user or repo sets a different location.
 8. Self-review the spec for placeholders, contradictions, scope drift, and ambiguity, then ask the user to review the written spec.
 9. After written-spec approval, invoke `writing-plans` and no other next-phase skill.
 

@@ -1,16 +1,16 @@
 {
-  "name": "@maximilianfabiankirchner/superpowers-codex",
-  "version": "6.0.5",
-  "description": "Codex-only workflow and skills library, forked from obra/superpowers.",
+  "name": "@maximilianfabiankirchner/codex-workflows",
+  "version": "6.0.6",
+  "description": "Codex workflow harness and skills library for planning, execution, debugging, review, and verification.",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MaxFabian25/superpowers.git"
+    "url": "git+https://github.com/MaxFabian25/codex-workflows.git"
   },
-  "homepage": "https://github.com/MaxFabian25/superpowers",
+  "homepage": "https://github.com/MaxFabian25/codex-workflows",
   "bugs": {
-    "url": "https://github.com/MaxFabian25/superpowers/issues"
+    "url": "https://github.com/MaxFabian25/codex-workflows/issues"
   },
   "files": [
     "skills",

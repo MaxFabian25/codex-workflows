@@ -7,7 +7,7 @@
 #
 # Requirements:
 #   - Node.js in PATH
-#   - Run from the repository root, or set SUPERPOWERS_ROOT
+#   - Run from the repository root, or set CODEX_WORKFLOWS_ROOT
 #   - On Windows: Git Bash (OSTYPE=msys*)
 #
 # Usage:
@@ -17,10 +17,10 @@ set -uo pipefail
 # ========== Configuration ==========
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="${SUPERPOWERS_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+REPO_ROOT="${CODEX_WORKFLOWS_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 START_SCRIPT="$REPO_ROOT/skills/brainstorming/scripts/start-server.sh"
 STOP_SCRIPT="$REPO_ROOT/skills/brainstorming/scripts/stop-server.sh"
-SERVER_JS="$REPO_ROOT/skills/brainstorming/scripts/server.js"
+SERVER_JS="$REPO_ROOT/skills/brainstorming/scripts/server.cjs"
 
 TEST_DIR="${TMPDIR:-/tmp}/brainstorm-win-test-$$"
 
@@ -64,7 +64,7 @@ skip() {
 wait_for_server_info() {
   local dir="$1"
   for _ in $(seq 1 50); do
-    if [[ -f "$dir/.server-info" ]]; then
+    if [[ -f "$dir/state/server-info" ]]; then
       return 0
     fi
     sleep 0.1
@@ -73,9 +73,9 @@ wait_for_server_info() {
 }
 
 get_port_from_info() {
-  # Read the port from .server-info. Use grep/sed instead of Node.js
+  # Read the port from state/server-info. Use grep/sed instead of Node.js
   # to avoid MSYS2-to-Windows path translation issues.
-  grep -o '"port":[0-9]*' "$1/.server-info" | head -1 | sed 's/"port"://'
+  grep -o '"port":[0-9]*' "$1/state/server-info" | head -1 | sed 's/"port"://'
 }
 
 http_check() {
@@ -218,7 +218,7 @@ BRAINSTORM_PORT=$((49152 + RANDOM % 16383)) \
 SERVER_PID=$!
 
 if ! wait_for_server_info "$TEST_DIR/survival"; then
-  fail "Server starts successfully" "Server did not write .server-info within 5 seconds"
+  fail "Server starts successfully" "Server did not write state/server-info within 5 seconds"
   kill "$SERVER_PID" 2>/dev/null || true
   SERVER_PID=""
 else
@@ -254,10 +254,10 @@ else
   SERVER_PID=""
 fi
 
-# ========== Test 5: Bad OWNER_PID causes shutdown (control) ==========
+# ========== Test 5: Bad OWNER_PID degrades to idle timeout ==========
 
 echo ""
-echo "--- Control: Bad OWNER_PID causes shutdown ---"
+echo "--- Control: Bad OWNER_PID degrades safely ---"
 
 mkdir -p "$TEST_DIR/control"
 
@@ -276,29 +276,34 @@ BRAINSTORM_PORT=$((49152 + RANDOM % 16383)) \
 CONTROL_PID=$!
 
 if ! wait_for_server_info "$TEST_DIR/control"; then
-  fail "Control server starts" "Server did not write .server-info within 5 seconds"
+  fail "Control server starts" "Server did not write state/server-info within 5 seconds"
   kill "$CONTROL_PID" 2>/dev/null || true
   CONTROL_PID=""
 else
   pass "Control server starts with bad OWNER_PID=$BAD_PID"
 
-  echo "  Waiting ~75s for lifecycle check to kill server..."
-  sleep 75
-
   if kill -0 "$CONTROL_PID" 2>/dev/null; then
-    fail "Control server self-terminates with bad OWNER_PID" \
-         "Server is still alive (expected it to die)"
-    kill "$CONTROL_PID" 2>/dev/null || true
+    pass "Control server remains alive after invalid startup OWNER_PID"
   else
-    pass "Control server self-terminates with bad OWNER_PID"
+    fail "Control server remains alive after invalid startup OWNER_PID" \
+         "Server died immediately. Log tail: $(tail -5 "$TEST_DIR/control/.server.log" 2>/dev/null)"
+  fi
+
+  if grep -q "owner-pid-invalid" "$TEST_DIR/control/.server.log" 2>/dev/null; then
+    pass "Control server logs invalid owner PID"
+  else
+    fail "Control server logs invalid owner PID" \
+         "Log tail: $(tail -5 "$TEST_DIR/control/.server.log" 2>/dev/null)"
   fi
 
   if grep -q "owner process exited" "$TEST_DIR/control/.server.log" 2>/dev/null; then
-    pass "Control server logs 'owner process exited'"
+    fail "Control server does not log owner-exit shutdown for invalid startup PID" \
+         "Found owner-exit shutdown in log"
   else
-    fail "Control server logs 'owner process exited'" \
-         "Log tail: $(tail -5 "$TEST_DIR/control/.server.log" 2>/dev/null)"
+    pass "Control server does not log owner-exit shutdown for invalid startup PID"
   fi
+
+  kill "$CONTROL_PID" 2>/dev/null || true
 fi
 
 wait "$CONTROL_PID" 2>/dev/null || true
@@ -310,6 +315,7 @@ echo ""
 echo "--- Clean Shutdown ---"
 
 mkdir -p "$TEST_DIR/stop-test"
+mkdir -p "$TEST_DIR/stop-test/state"
 
 BRAINSTORM_DIR="$TEST_DIR/stop-test" \
 BRAINSTORM_HOST="127.0.0.1" \
@@ -318,7 +324,7 @@ BRAINSTORM_OWNER_PID="" \
 BRAINSTORM_PORT=$((49152 + RANDOM % 16383)) \
   node "$SERVER_JS" > "$TEST_DIR/stop-test/.server.log" 2>&1 &
 STOP_TEST_PID=$!
-echo "$STOP_TEST_PID" > "$TEST_DIR/stop-test/.server.pid"
+echo "$STOP_TEST_PID" > "$TEST_DIR/stop-test/state/server.pid"
 
 if ! wait_for_server_info "$TEST_DIR/stop-test"; then
   fail "Stop-test server starts" "Server did not start"

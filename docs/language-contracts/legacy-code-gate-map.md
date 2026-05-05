@@ -22,14 +22,14 @@ Each surface needs one refined disposition:
 | `package.json` scripts `validate:process-family` and `validate:public-fork` | human-facing orchestration policy | Exposed validators as release-facing commands. | No package script silently decides release readiness. Future scripts must declare evidence or explicit authority role. |
 | `.codex-plugin/plugin.json` `hooks` field | retained lightweight adapter | Advertised native SessionStart hook discovery. | Restored as a native plugin hook declaration. |
 | `hooks/hooks.json` | retained lightweight adapter | Declared native SessionStart command using `${PLUGIN_ROOT}`. | Restored with `python3 "${PLUGIN_ROOT}/hooks/session-start"` as the plugin-native command. |
-| `hooks/session-start` | retained lightweight adapter | Emitted compact `hookSpecificOutput.additionalContext` that told Codex to route through `using-superpowers`. | Restored; source of truth remains `session-router-playbook.md`. |
+| `hooks/session-start` | retained lightweight adapter | Emitted compact `hookSpecificOutput.additionalContext` that told Codex to route through `session-router`. | Restored; source of truth remains `session-router-playbook.md`. |
 | `scripts/install_codex_hooks.py` | accepted retirement | Installed or removed user-level hook bootstrap. | Retired because it mutates `~/.codex/hooks.json`; native plugin hooks are the supported adapter path. |
 | `scripts/install_cmux_superpowers_launcher.py` | companion-owned | Installed local cmux launcher wrapper. | Companion package ownership if retained. |
 | `scripts/cmux_superpowers_team.py` | companion-owned | Launched cmux team sessions. | Companion-owned by `cmux-superpowers`; not shipped here. |
 | `tests/cmux-superpowers/*` | companion-owned | Tested cmux launcher install, doctor, and team smoke behavior. | Companion package should own tests if the launcher remains supported. |
-| `commands/brainstorm.md` | accepted retirement | Legacy command alias for brainstorming. | Use direct `superpowers-codex:brainstorming` skill invocation. |
-| `commands/write-plan.md` | accepted retirement | Legacy command alias for writing plans. | Use direct `superpowers-codex:writing-plans` skill invocation. |
-| `commands/execute-plan.md` | accepted retirement | Legacy command alias for execution. | Use direct `superpowers-codex:executing-plans` or `subagent-driven-development` skill invocation. |
+| `commands/brainstorm.md` | accepted retirement | Legacy command alias for brainstorming. | Use direct `codex-workflows:brainstorming` skill invocation. |
+| `commands/write-plan.md` | accepted retirement | Legacy command alias for writing plans. | Use direct `codex-workflows:writing-plans` skill invocation. |
+| `commands/execute-plan.md` | accepted retirement | Legacy command alias for execution. | Use direct `codex-workflows:executing-plans` or `subagent-driven-development` skill invocation. |
 | `skills/brainstorming/scripts/server.cjs` | retained feature runtime | Served browser visual brainstorming sessions and state events. | Restored as feature runtime used only through `visual-companion.md`. |
 | `skills/brainstorming/scripts/start-server.sh` | retained feature runtime | Started the visual companion server. | Restored as feature runtime. |
 | `skills/brainstorming/scripts/stop-server.sh` | retained feature runtime | Stopped the visual companion server. | Restored as feature runtime. |
@@ -40,7 +40,7 @@ Each surface needs one refined disposition:
 | `skills/systematic-debugging/find-polluter.sh` | retained deterministic mechanic | Ran candidate tests one by one to locate filesystem pollution. | Restored as debugging evidence. |
 | `skills/writing-skills/render-graphs.js` | retained deterministic mechanic | Rendered Graphviz blocks from skill docs. | Restored as utility mechanic/evidence. |
 | `tests/subagent-driven-dev/*` | accepted retirement | Held sample project plans and shell scaffolds, including stale non-Codex setup. | Retired because the fixtures use obsolete `superpowers:` framing and are not current deterministic runtime or safety mechanics. |
-| Historical `docs/plans/*` and `docs/superpowers/*` | historical record | Older implementation plans and specs may reference removed validators or old namespaces. | Non-authoritative archive. New package obligations live in `docs/language-contracts/`. |
+| Historical `docs/plans/*` and `docs/archive/superpowers/*` | historical record | Older implementation plans and specs may reference removed validators or old namespaces. | Non-authoritative archive. New package obligations live in `docs/language-contracts/`. |
 
 ## Current Status
 
