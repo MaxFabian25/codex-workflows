@@ -4,6 +4,8 @@ All notable changes to the Codex-only fork are documented here.
 
 ## Unreleased
 
+## 6.0.3 - 2026-05-05
+
 - Repository preparation for public publishing as a native Codex plugin fork.
 - Corrected the broad prose-only cutover into a Natural-Language Agent Harness
   boundary: human-facing orchestration authority lives in scoped harness

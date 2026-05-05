@@ -1,6 +1,6 @@
 # Superpowers Release Notes
 
-## 5.0.6-codex.1
+## 6.0.3
 
 Highlights:
 
