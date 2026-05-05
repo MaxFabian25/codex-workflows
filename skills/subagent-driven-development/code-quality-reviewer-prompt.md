@@ -45,4 +45,4 @@ response following the format
 specified in the instructions above.
 ```
 
-**Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Recommendations, Assessment
+**Code reviewer returns:** Findings, Open Questions, Change Summary, Assessment

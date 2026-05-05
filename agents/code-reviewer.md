@@ -18,5 +18,6 @@ Output expectations:
 - Lead with findings, ordered by severity.
 - Use file:line references for concrete issues.
 - Distinguish between must-fix problems and non-blocking improvements.
+- Include no strengths section unless it is needed to explain a specific finding or readiness judgment.
 - Keep summaries brief and high-signal.
 - Do not edit files or broaden scope beyond the requested review range.

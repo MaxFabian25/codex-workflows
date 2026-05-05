@@ -53,18 +53,16 @@ git diff {BASE_SHA}..{HEAD_SHA}
 
 ## Output Format
 
-### Strengths
-[What's well done? Be specific.]
+### Findings
+[Lead with concrete issues, ordered by severity. Use `None.` if no issues were found.]
 
-### Issues
-
-#### Critical (Must Fix)
+#### Critical
 [Bugs, security issues, data loss risks, broken functionality]
 
-#### Important (Should Fix)
+#### Important
 [Architecture problems, missing features, poor error handling, test gaps]
 
-#### Minor (Nice to Have)
+#### Minor
 [Code style, optimization opportunities, documentation improvements]
 
 **For each issue:**
@@ -75,8 +73,11 @@ git diff {BASE_SHA}..{HEAD_SHA}
 
 Write `None.` for any severity bucket with no issues.
 
-### Recommendations
-[Only include high-signal next steps.]
+### Open Questions
+[Only include ambiguity that changes the readiness verdict.]
+
+### Change Summary
+[Brief scope summary only when it helps interpret findings.]
 
 ### Assessment
 

@@ -1,64 +1,40 @@
 ---
 name: requesting-code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
+description: Use when task, feature, or merge-ready work needs review
 ---
 
 # Requesting Code Review
 
-Dispatch a focused read-only review child to catch issues before they cascade. The reviewer inspects the work product, returns findings, and stops; the parent owns packet quality, arbitration, and final decisions.
+Dispatch a focused read-only review child. The child reports findings; the parent owns packet quality, arbitration, and final decisions.
 
-**Core principle:** Review early, review often.
+**Contract references:** Follow [../../docs/language-contracts/process-family-playbook.md](../../docs/language-contracts/process-family-playbook.md), [../../docs/language-contracts/package-and-release-playbook.md](../../docs/language-contracts/package-and-release-playbook.md), and [../../docs/language-contracts/prompt-packet-playbook.md](../../docs/language-contracts/prompt-packet-playbook.md) when writing or updating review-dispatch guidance.
 
-**Contract references:** Follow [../../contract/process-family.md](../../contract/process-family.md), [../../contract/package-standards.md](../../contract/package-standards.md), and [../../contract/prompt-packet.md](../../contract/prompt-packet.md) when writing or updating review-dispatch guidance.
+## Use When
 
-## When to Request Review
+- After each task in `subagent-driven-development`.
+- After a major feature or implementation batch.
+- Before merge or handoff.
+- When a fresh read-only pass could surface a bug, scope drift, or test gap.
 
-**Mandatory:**
-- After each task in `subagent-driven-development`
-- After completing a major feature or implementation batch
-- Before merge to main
+## Roles
 
-**Optional but valuable:**
-- When stuck and a fresh read-only pass could surface the issue
-- Before a risky refactor
-- After fixing a complex bug
+- `code_quality_reviewer`: task or batch review for correctness, tests, architecture, maintainability, and risks.
+- `final_reviewer`: whole-change review before merge or handoff.
+- Reviewers are read-only. Do not use write-capable child roles for review.
 
-## Role Selection
+## Workflow
 
-- Use `code_quality_reviewer` after a completed task or implementation batch to review code quality, testing, architecture, and maintainability.
-- Use `final_reviewer` for the final whole-change review before handing work off or merging.
-- Both roles are read-only. Do not use write-capable child roles for review.
-
-Dispatch them differently:
-- `code_quality_reviewer`: fill `code-reviewer.md`, then paste that entire filled template into `../subagent-driven-development/code-quality-reviewer-prompt.md` and dispatch the filled message template. Use that template because it adds the extra task-quality checks that apply only to this role.
-- `final_reviewer`: fill `code-reviewer.md` and dispatch that filled shared template directly with `spawn_agent(task_name=..., agent_type="final_reviewer", message="...")`.
-
-## How to Request
-
-### 1. Capture the review boundary
+1. Capture the review boundary:
 
 ```bash
-# Save this before the task starts if you expect a multi-commit task-level review
 TASK_START_SHA=$(git rev-parse HEAD)
-
-# After the task is implemented and committed, review exactly that task scope
 BASE_SHA=$TASK_START_SHA
 HEAD_SHA=$(git rev-parse HEAD)
-
-# Whole-change or final_reviewer scope against main
-BASE_SHA=$(git merge-base HEAD origin/main)
-HEAD_SHA=$(git rev-parse HEAD)
-
-# Whole-change review against another target branch
-# BASE_SHA=$(git merge-base HEAD origin/<target-branch>)
-# HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-Use a saved pre-task SHA or another explicit task-start commit for task-level review scopes. `HEAD~1` is only correct when the requested scope is exactly one commit. For `final_reviewer`, set `BASE_SHA` to the merge-base against the target branch so the child reviews the whole change, not just the most recent task commit.
+For final review, set `BASE_SHA=$(git merge-base HEAD origin/main)` or the target branch merge-base.
 
-### 2. Fill the shared review packet
-
-Use `code-reviewer.md` as the shared inner template.
+2. Fill `code-reviewer.md`.
 
 Placeholders:
 - `{WHAT_WAS_IMPLEMENTED}` - short review-scope label
@@ -67,43 +43,30 @@ Placeholders:
 - `{HEAD_SHA}` - ending commit
 - `{DESCRIPTION}` - fuller implementation summary
 
-The packet contract is governed by `../../contract/process-family.md`, `../../contract/package-standards.md`, and `../../contract/prompt-packet.md`.
+The packet contract is governed by `../../docs/language-contracts/process-family-playbook.md`, `../../docs/language-contracts/package-and-release-playbook.md`, and `../../docs/language-contracts/prompt-packet-playbook.md`.
 
-### 3. Dispatch by role
+3. Dispatch by role:
 
-**Task-level `code_quality_reviewer`:**
-- Fill the shared template at `code-reviewer.md`.
-- Paste the entire filled shared template into `../subagent-driven-development/code-quality-reviewer-prompt.md`.
-- Dispatch the resulting full message with `spawn_agent(task_name=..., agent_type="code_quality_reviewer", message="...")`.
-
-**Whole-change `final_reviewer`:**
-- Fill the shared template at `code-reviewer.md`.
-- Dispatch that filled shared template directly with `spawn_agent(task_name=..., agent_type="final_reviewer", message="...")`.
+- Task-level `code_quality_reviewer`: paste the filled shared template into `../subagent-driven-development/code-quality-reviewer-prompt.md`, then call `spawn_agent(task_name=..., agent_type="code_quality_reviewer", message="...")`.
+- Whole-change `final_reviewer`: dispatch the filled `code-reviewer.md` template directly with `spawn_agent(task_name=..., agent_type="final_reviewer", message="...")`.
 
 Do not send a summary or excerpt when the contract expects the full filled packet. Pass the final packet directly as the outer `message=` string for the child.
 
-### 4. Act on feedback
+4. Act on findings:
+- Fix Critical issues immediately.
+- Fix Important issues before proceeding, or record why the reviewer is wrong with evidence.
+- Note Minor issues only when they are not worth blocking on.
 
-- Fix Critical issues immediately
-- Fix Important issues before proceeding, or record why the reviewer is wrong
-- Note Minor issues for later if they are not worth blocking on
+## Parent Arbitration
 
-## Parent Arbitrates Disagreements
+- If the reviewer is right, fix the issue and rerun review when needed.
+- If the reviewer is wrong, push back with technical reasoning and evidence from code, tests, or plan.
+- Do not ask the reviewer to arbitrate its own disputed finding.
 
-The review child reports findings. The parent decides what to do next.
+## Guardrails
 
-- If the reviewer is right, fix the issue and re-run review if needed.
-- If the reviewer is wrong, push back with technical reasoning and evidence from the code, tests, or plan.
-- Do not ask the reviewer to arbitrate its own disputed finding. The parent owns that decision.
-
-## Red Flags
-
-**Never:**
-- Skip review because a change seems simple
-- Use a write-capable child to review
-- Proceed with unfixed Critical issues
-- Ignore Important issues without explicit parent justification
-- Let review replace verification
-- Send a partial or ad-hoc review packet when the contract requires the full filled template
-
-See template at: code-reviewer.md
+- Do not skip review because a change seems simple.
+- Do not use a write-capable child to review.
+- Do not proceed with unresolved Critical or unjustified Important issues.
+- Do not let review replace verification.
+- Do not dispatch a partial or ad-hoc review packet when the full template is required.

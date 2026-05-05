@@ -1,13 +1,13 @@
 ---
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
+description: Use when verified work needs branch closeout decisions
 ---
 
 # Finishing a Development Branch
 
 **Contract alignment:** This skill starts after review and verification have already passed. It owns closeout and branch-finish decisions, not earlier quality gates.
 
-**Contract references:** Follow `../../contract/process-family.md` and `../../contract/package-standards.md` for lifecycle ownership and package structure.
+**Contract references:** Follow `../../docs/language-contracts/process-family-playbook.md` and `../../docs/language-contracts/package-and-release-playbook.md` for lifecycle ownership and package structure.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 

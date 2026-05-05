@@ -34,30 +34,27 @@ Use the implementer report as a pointer for what to inspect, not as evidence tha
 Verify the code and behavior directly against the requirements.
 Approve unless you find concrete evidence of a mismatch, omission, or unrequested scope.
 
-## Your Job
+## Review Checks
 
 Read the implementation code and verify:
 
-**Missing requirements**
 - Did they implement everything that was requested?
 - Are there requirements they skipped or missed?
 - Did they claim something works but didn't actually implement it?
-
-**Extra or unneeded work**
 - Did they build things that weren't requested?
 - Did they over-engineer or add unnecessary features?
 - Did they add "nice to haves" that weren't in spec?
-
-**Misunderstandings**
 - Did they interpret requirements differently than intended?
 - Did they solve the wrong problem?
 - Did they implement the right feature but the wrong way?
 
 If a requirement is ambiguous, say what is ambiguous and why it prevents a confident pass or fail.
 
-Report:
-- ✅ Spec compliant
-- ❌ Issues found: [list specific missing or extra items with file references]
+## Report Schema
+
+- **Status:** Spec compliant | Issues found
+- **Findings:** concrete missing, extra, or misunderstood requirements with file references
+- **Ambiguity:** requirement ambiguity that prevents a confident pass or fail
 </agent-instructions>
 
 Execute this now. Output ONLY the structured

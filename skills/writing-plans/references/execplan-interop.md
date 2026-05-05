@@ -50,17 +50,21 @@ Use these patterns when the plan needs explicit dependency structure:
 
 Use dependency notes only when they clarify execution. Do not turn a simple plan into a dependency graph for its own sake.
 
-## Validation
+## Manual Review
 
-When ExecPlan validation is warranted, run:
+When ExecPlan compatibility review is warranted, inspect the plan directly and confirm:
 
-    python3 references/validate_execplan.py <plan-file> --strict-evidence
+- required living sections are present;
+- progress uses checkboxes;
+- evidence blocks are complete when strict evidence is required;
+- no nested triple-backtick fences break rendering;
+- concrete steps are executable by a new agent;
+- validation and acceptance criteria cover every objective;
+- idempotence and recovery are explicit.
 
-For machine-readable output:
+Record the review conclusion in the plan handoff or the relevant repository evidence ledger. `references/validate_execplan.py` is a deterministic structure checker and may be cited as evidence, but it does not replace the human-facing review conclusion.
 
-    python3 references/validate_execplan.py <plan-file> --strict-evidence --json
-
-Useful fixtures in this directory:
+Useful prose fixtures in this directory:
 
 - `execplan.example.valid.md`
 - `execplan.example.invalid.missing-section.md`

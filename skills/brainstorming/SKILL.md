@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: "Use when a request needs design exploration and explicit user approval before implementation planning."
+description: Use when design exploration is needed before implementation planning
 ---
 
 # Brainstorming Ideas Into Designs
@@ -9,7 +9,7 @@ Turn a request into an approved design and written spec before planning or imple
 
 **Contract alignment:** This skill owns the `design` phase only. After the written spec is approved, hand off to `writing-plans`. Workspace isolation starts later via `using-git-worktrees` during implementation, not during brainstorming.
 
-**Contract references:** Follow `../../contract/process-family.md`, `../../contract/prompt-packet.md`, and `../../contract/package-standards.md` when updating this skill and its supporting packets.
+**Contract references:** Follow `../../docs/language-contracts/process-family-playbook.md`, `../../docs/language-contracts/prompt-packet-playbook.md`, and `../../docs/language-contracts/package-and-release-playbook.md` when updating this skill and its supporting packets.
 
 ## Use When
 
