@@ -1,6 +1,6 @@
 {
   "name": "superpowers-codex",
-  "version": "5.0.6-codex.1",
+  "version": "6.0.3",
   "description": "Codex-only workflow and skills library, forked from obra/superpowers.",
   "type": "module",
   "license": "MIT",

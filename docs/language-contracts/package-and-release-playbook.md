@@ -7,7 +7,7 @@ This playbook defines package/release authority and evidence roles. Package tool
 Manual package review reads `package.json` and `.codex-plugin/plugin.json` directly. Expected identity for this release line:
 
 - package name: `superpowers-codex`;
-- version: `5.0.6-codex.1`;
+- version: `6.0.3`;
 - type: `module`;
 - license: `MIT`;
 - repository, homepage, and issues point to `https://github.com/MaxFabian25/superpowers`;
